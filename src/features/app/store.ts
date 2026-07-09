@@ -1,49 +1,18 @@
-import { create } from "zustand";
+import { useSyncExternalStore } from "react";
 
 export type PanelKey =
-  | "memory"
-  | "event"
-  | "note"
-  | "trip"
-  | "music"
-  | "capsule"
-  | "garden"
-  | "pets"
-  | "wall"
-  | "vault"
-  | null;
+  | "memory" | "event" | "note" | "trip" | "music"
+  | "capsule" | "garden" | "pets" | "wall" | "vault"
+  | "calendar" | "dashboard" | null;
 
-interface AppState {
-  openPanel: PanelKey;
-  setPanel: (p: PanelKey) => void;
-  togglePanel: (p: Exclude<PanelKey, null>) => void;
-}
-
-// Minimal internal store (no external dep) — implemented below.
-let state: { openPanel: PanelKey } = { openPanel: null };
+let panel: PanelKey = null;
 const listeners = new Set<() => void>();
+const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const getSnapshot = () => panel;
 
-export function useAppStore(): AppState {
-  const [, force] = useForce();
-  return {
-    openPanel: state.openPanel,
-    setPanel: (p) => { state = { openPanel: p }; listeners.forEach((l) => l()); },
-    togglePanel: (p) => { state = { openPanel: state.openPanel === p ? null : p }; listeners.forEach((l) => l()); },
-  };
-  function useForce() {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [n, setN] = useStateReact(0);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffectReact(() => {
-      const l = () => setN((x) => x + 1);
-      listeners.add(l);
-      return () => { listeners.delete(l); };
-    }, []);
-    return [n, setN] as const;
-  }
+export function usePanel() {
+  const openPanel = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const setPanel = (p: PanelKey) => { panel = p; listeners.forEach((l) => l()); };
+  const togglePanel = (p: Exclude<PanelKey, null>) => setPanel(openPanel === p ? null : p);
+  return { openPanel, setPanel, togglePanel };
 }
-
-// stub the zustand dep away — use React directly
-import { useState as useStateReact, useEffect as useEffectReact } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const create = <T,>(_x: unknown) => null as unknown as T;
