@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
@@ -22,7 +22,7 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
     queryFn: async () => (await supabase.from("relationships").select("*").eq("id", relationshipId).maybeSingle()).data,
   });
 
-  useState(() => { if (rel?.anniversary) setAnniversary(rel.anniversary); return 0; });
+  useEffect(() => { if (rel?.anniversary) setAnniversary(rel.anniversary); }, [rel?.anniversary]);
 
   const saveName = useMutation({
     mutationFn: async () => {
