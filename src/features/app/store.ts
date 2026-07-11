@@ -1,18 +1,29 @@
 import { useSyncExternalStore } from "react";
 
-export type PanelKey =
-  | "memory" | "event" | "note" | "trip" | "music"
-  | "capsule" | "garden" | "pets" | "wall" | "vault"
-  | "calendar" | "dashboard" | null;
+export type TabKey = "home" | "calendar" | "memories" | "wall" | "more";
+export type SheetKey =
+  | "add-memory"
+  | "add-event"
+  | "add-note"
+  | "add-trip"
+  | "add-song"
+  | "settings"
+  | null;
 
-let panel: PanelKey = null;
+type State = { tab: TabKey; sheet: SheetKey };
+let state: State = { tab: "home", sheet: null };
 const listeners = new Set<() => void>();
 const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
-const getSnapshot = () => panel;
+const emit = () => listeners.forEach((l) => l());
+const getSnapshot = () => state;
 
-export function usePanel() {
-  const openPanel = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const setPanel = (p: PanelKey) => { panel = p; listeners.forEach((l) => l()); };
-  const togglePanel = (p: Exclude<PanelKey, null>) => setPanel(openPanel === p ? null : p);
-  return { openPanel, setPanel, togglePanel };
+export function useAppStore() {
+  const s = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return {
+    tab: s.tab,
+    sheet: s.sheet,
+    setTab: (t: TabKey) => { state = { ...state, tab: t, sheet: null }; emit(); },
+    openSheet: (k: Exclude<SheetKey, null>) => { state = { ...state, sheet: k }; emit(); },
+    closeSheet: () => { state = { ...state, sheet: null }; emit(); },
+  };
 }

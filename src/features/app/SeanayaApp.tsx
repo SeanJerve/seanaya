@@ -1,105 +1,83 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { useDaypart, daypartGradient } from "@/hooks/useDaypart";
+import { PinGate } from "@/features/pin/PinGate";
 import { useRelationship } from "@/hooks/useRelationship";
-import { usePanel } from "./store";
-import { WorldScene } from "@/features/scene/WorldScene";
-import { CalendarPanel } from "@/features/panels/CalendarPanel";
-import { DashboardPanel } from "@/features/panels/DashboardPanel";
-import { QuickDock } from "@/features/panels/QuickDock";
-import { SidePanel } from "@/features/panels/SidePanel";
-import { MemoryPanel } from "@/features/panels/MemoryPanel";
-import { EventPanel } from "@/features/panels/EventPanel";
-import { NotePanel } from "@/features/panels/NotePanel";
-import { TripPanel } from "@/features/panels/TripPanel";
-import { MusicPanel } from "@/features/panels/MusicPanel";
+import { useAppStore } from "./store";
+import { AppHeader } from "@/features/nav/AppHeader";
+import { BottomNav } from "@/features/nav/BottomNav";
+import { HomeView } from "@/features/views/HomeView";
+import { CalendarView } from "@/features/views/CalendarView";
+import { MemoriesView } from "@/features/views/MemoriesView";
+import { WallView } from "@/features/views/WallView";
+import { MoreView } from "@/features/views/MoreView";
+import { Sheet } from "./Sheet";
+import { AddMemorySheet } from "@/features/sheets/AddMemorySheet";
+import { AddEventSheet } from "@/features/sheets/AddEventSheet";
+import { AddNoteSheet } from "@/features/sheets/AddNoteSheet";
+import { AddTripSheet } from "@/features/sheets/AddTripSheet";
+import { AddSongSheet } from "@/features/sheets/AddSongSheet";
+import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
-import { TopBar } from "@/features/panels/TopBar";
 
 export function SeanayaApp() {
-  const daypart = useDaypart();
+  return (
+    <PinGate>
+      <Inner />
+    </PinGate>
+  );
+}
+
+function Inner() {
   const { data: rel, isLoading } = useRelationship();
-  const { openPanel, setPanel } = usePanel();
+  const { tab, sheet } = useAppStore();
 
   if (isLoading || !rel) {
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ background: "var(--gradient-sky)" }}>
-        <div className="text-muted-foreground text-sm">Warming the room…</div>
+        <div className="text-sm text-muted-foreground">Preparing your space…</div>
       </div>
     );
   }
 
+  const relId = rel.id;
+  const inviteCode = rel.invite_code ?? "";
+
+  const headerTitle = ({
+    home: "Home",
+    calendar: "Calendar",
+    memories: "Memories",
+    wall: "Wall",
+    more: "More",
+  } as const)[tab];
+
+  const headerSub = ({
+    home: "A quiet place for two",
+    calendar: "What's coming up",
+    memories: "Kept forever",
+    wall: "Little things, always true",
+    more: "Places, songs, settings",
+  } as const)[tab];
+
   return (
-    <div
-      className="fixed inset-0 overflow-hidden transition-[background] duration-[2000ms]"
-      style={{ background: daypartGradient[daypart] }}
-    >
-      {/* Fixed 16:9 canvas centered on screen */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-[1600px] aspect-video grid grid-cols-[320px_1fr_340px] grid-rows-[auto_1fr_auto] gap-4">
-          {/* Top bar spans full */}
-          <div className="col-span-3">
-            <TopBar relationshipId={rel.id} inviteCode={rel.invite_code ?? ""} />
-          </div>
+    <div className="min-h-[100dvh] w-full" style={{ background: "var(--gradient-sky)" }}>
+      <AppHeader title={headerTitle} subtitle={headerSub} relationshipId={relId} />
 
-          {/* Left */}
-          <div className="row-start-2">
-            <CalendarPanel relationshipId={rel.id} />
-          </div>
+      <main>
+        {tab === "home" && <HomeView relationshipId={relId} anniversary={rel.anniversary} />}
+        {tab === "calendar" && <CalendarView relationshipId={relId} />}
+        {tab === "memories" && <MemoriesView relationshipId={relId} />}
+        {tab === "wall" && <WallView relationshipId={relId} />}
+        {tab === "more" && <MoreView relationshipId={relId} />}
+      </main>
 
-          {/* Center scene */}
-          <div className="row-start-2 relative">
-            <WorldScene daypart={daypart} relationshipId={rel.id} />
-          </div>
+      <BottomNav />
 
-          {/* Right */}
-          <div className="row-start-2">
-            <DashboardPanel relationshipId={rel.id} anniversary={rel.anniversary} />
-          </div>
+      <Sheet open={sheet === "add-memory"} title="New memory"><AddMemorySheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-event"}  title="New event"><AddEventSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-note"}   title="New note"><AddNoteSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-trip"}   title="New place"><AddTripSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-song"}   title="New song"><AddSongSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "settings"}   title="Settings"><SettingsSheet relationshipId={relId} inviteCode={inviteCode} /></Sheet>
 
-          {/* Dock */}
-          <div className="col-span-3 row-start-3 flex justify-center">
-            <QuickDock />
-          </div>
-        </div>
-      </div>
-
-      <HugOverlay relationshipId={rel.id} />
-
-      <AnimatePresence>
-        {openPanel && ["memory","event","note","trip","music","capsule","garden","pets","wall","vault"].includes(openPanel) && (
-          <motion.div
-            key={openPanel}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-foreground/10 backdrop-blur-sm"
-            onClick={() => setPanel(null)}
-          >
-            <SidePanel onClose={() => setPanel(null)}>
-              {openPanel === "memory" && <MemoryPanel relationshipId={rel.id} />}
-              {openPanel === "event" && <EventPanel relationshipId={rel.id} />}
-              {openPanel === "note" && <NotePanel relationshipId={rel.id} />}
-              {openPanel === "trip" && <TripPanel relationshipId={rel.id} />}
-              {openPanel === "music" && <MusicPanel relationshipId={rel.id} />}
-              {openPanel === "capsule" && <Placeholder title="Time Capsules" copy="Write a letter your future selves will unlock." />}
-              {openPanel === "garden" && <Placeholder title="Lily Garden" copy="Every memory grows a lily. Watch your garden fill in over time." />}
-              {openPanel === "pets" && <Placeholder title="Little Pets" copy="Your cats live in the room. Add their names and birthdays to bring them to life." />}
-              {openPanel === "wall" && <Placeholder title="Forever Wall" copy="Notes, promises, gratitude — pinned to a wall that never fades." />}
-              {openPanel === "vault" && <MemoryPanel relationshipId={rel.id} />}
-            </SidePanel>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function Placeholder({ title, copy }: { title: string; copy: string }) {
-  return (
-    <div className="p-8">
-      <h2 className="display text-3xl mb-2">{title}</h2>
-      <p className="text-muted-foreground text-sm">{copy}</p>
-      <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-        Coming soon to your Seanaya.
-      </div>
+      <HugOverlay relationshipId={relId} />
     </div>
   );
 }
