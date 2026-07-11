@@ -174,7 +174,7 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    overflow: hidden;
+    min-height: 100dvh;
   }
 
   h1, h2, h3, h4, .display {
