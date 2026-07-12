@@ -3,10 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "./useUser";
 
-export type NotifKind = "memory" | "event" | "note" | "trip" | "song" | "hug";
+export type NotifKind = "memory" | "note" | "hug" | "event" | "capsule" | "trip" | "song";
 export type Notif = {
-  id: string; kind: string; title: string | null; entity_id: string | null;
-  read: boolean; created_at: string;
+  id: string;
+  kind: NotifKind;
+  ref_id: string | null;
+  read: boolean;
+  created_at: string;
 };
 
 export function useNotifications(relationshipId: string | undefined) {
@@ -16,10 +19,10 @@ export function useNotifications(relationshipId: string | undefined) {
   const q = useQuery({
     queryKey: ["notifications", relationshipId, user?.id],
     enabled: !!relationshipId && !!user,
-    queryFn: async () => {
+    queryFn: async (): Promise<Notif[]> => {
       const { data } = await supabase
         .from("notifications")
-        .select("id,kind,title,entity_id,read,created_at")
+        .select("id,kind,ref_id,read,created_at")
         .eq("relationship_id", relationshipId!)
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
@@ -32,10 +35,17 @@ export function useNotifications(relationshipId: string | undefined) {
     if (!relationshipId || !user) return;
     const ch = supabase
       .channel(`notif-${relationshipId}-${user.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => {
-        qc.invalidateQueries({ queryKey: ["notifications"] });
-        qc.invalidateQueries({ queryKey: ["stats"] });
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+          qc.invalidateQueries({ queryKey: ["memories"] });
+          qc.invalidateQueries({ queryKey: ["notes"] });
+          qc.invalidateQueries({ queryKey: ["events"] });
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [relationshipId, user, qc]);

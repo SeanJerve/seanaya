@@ -29,6 +29,6 @@ const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listen
 const getSnapshot = () => current;
 
 export function useTheme(): [Theme, (t: Theme) => void] {
-  const t = useSyncExternalStore(subscribe, getSnapshot, () => "light");
+  const t = useSyncExternalStore(subscribe, getSnapshot, () => "light" as Theme);
   return [t, applyTheme];
 }

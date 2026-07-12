@@ -79,7 +79,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
     pinStorage.set(hash);
     pinStorage.setName(name.trim());
-    pinStorage.setInvite(rel.invite_code);
+    if (rel.invite_code) pinStorage.setInvite(rel.invite_code);
     await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() });
     setStage("unlocked");
   }
