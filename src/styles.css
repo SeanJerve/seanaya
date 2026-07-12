@@ -198,3 +198,28 @@
   0% { transform: scale(0.85); opacity: 0.6; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* Fixed themes chosen from Settings (not time-based) */
+:root[data-theme="light"] .seanaya-bg { background: var(--gradient-sky); }
+:root[data-theme="dusk"]  .seanaya-bg { background: var(--gradient-dusk); }
+:root[data-theme="night"] .seanaya-bg { background: var(--gradient-night); }
+.seanaya-bg { background: var(--gradient-sky); }
+
+:root[data-theme="dusk"] {
+  --background: oklch(0.62 0.07 275);
+  --foreground: oklch(0.97 0.02 240);
+  --muted: oklch(0.55 0.06 275);
+  --muted-foreground: oklch(0.9 0.02 240);
+  --card: oklch(0.5 0.06 275 / 0.55);
+  --border: oklch(0.75 0.05 260 / 0.35);
+  --primary: oklch(0.85 0.08 55);
+}
+:root[data-theme="night"] {
+  --background: oklch(0.24 0.05 265);
+  --foreground: oklch(0.94 0.02 240);
+  --muted: oklch(0.32 0.05 265);
+  --muted-foreground: oklch(0.78 0.03 240);
+  --card: oklch(0.3 0.05 265 / 0.55);
+  --border: oklch(0.55 0.04 260 / 0.35);
+  --primary: oklch(0.8 0.08 240);
+}
