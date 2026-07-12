@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { PinGate } from "@/features/pin/PinGate";
 import { useRelationship } from "@/hooks/useRelationship";
 import { useAppStore } from "./store";
@@ -15,9 +16,12 @@ import { AddNoteSheet } from "@/features/sheets/AddNoteSheet";
 import { AddTripSheet } from "@/features/sheets/AddTripSheet";
 import { AddSongSheet } from "@/features/sheets/AddSongSheet";
 import { SettingsSheet } from "@/features/sheets/SettingsSheet";
+import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
+import { bootTheme } from "@/lib/theme";
 
 export function SeanayaApp() {
+  useEffect(() => { bootTheme(); }, []);
   return (
     <PinGate>
       <Inner />
@@ -40,24 +44,11 @@ function Inner() {
   const relId = rel.id;
   const inviteCode = rel.invite_code ?? "";
 
-  const headerTitle = ({
-    home: "Home",
-    calendar: "Calendar",
-    memories: "Memories",
-    wall: "Wall",
-    more: "More",
-  } as const)[tab];
-
-  const headerSub = ({
-    home: "A quiet place for two",
-    calendar: "What's coming up",
-    memories: "Kept forever",
-    wall: "Little things, always true",
-    more: "Places, songs, settings",
-  } as const)[tab];
+  const headerTitle = ({ home: "Home", calendar: "Calendar", memories: "Memories", wall: "Wall", more: "More" } as const)[tab];
+  const headerSub   = ({ home: "A quiet place for two", calendar: "What's coming up", memories: "Kept forever", wall: "Little things, always true", more: "Places, songs, settings" } as const)[tab];
 
   return (
-    <div className="min-h-[100dvh] w-full" style={{ background: "var(--gradient-sky)" }}>
+    <div className="min-h-[100dvh] w-full seanaya-bg">
       <AppHeader title={headerTitle} subtitle={headerSub} relationshipId={relId} />
 
       <main>
@@ -68,7 +59,7 @@ function Inner() {
         {tab === "more" && <MoreView relationshipId={relId} />}
       </main>
 
-      <BottomNav />
+      <BottomNav relationshipId={relId} />
 
       <Sheet open={sheet === "add-memory"} title="New memory"><AddMemorySheet relationshipId={relId} /></Sheet>
       <Sheet open={sheet === "add-event"}  title="New event"><AddEventSheet relationshipId={relId} /></Sheet>
@@ -76,6 +67,7 @@ function Inner() {
       <Sheet open={sheet === "add-trip"}   title="New place"><AddTripSheet relationshipId={relId} /></Sheet>
       <Sheet open={sheet === "add-song"}   title="New song"><AddSongSheet relationshipId={relId} /></Sheet>
       <Sheet open={sheet === "settings"}   title="Settings"><SettingsSheet relationshipId={relId} inviteCode={inviteCode} /></Sheet>
+      <Sheet open={sheet === "notifications"} title="Whispers"><NotificationsSheet relationshipId={relId} /></Sheet>
 
       <HugOverlay relationshipId={relId} />
     </div>

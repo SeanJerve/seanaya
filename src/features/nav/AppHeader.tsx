@@ -1,12 +1,16 @@
-import { Heart } from "lucide-react";
+import { Heart, Bell } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useAppStore } from "@/features/app/store";
 
 export function AppHeader({ title, subtitle, relationshipId }: { title: string; subtitle?: string; relationshipId?: string }) {
   const { user } = useUser();
   const qc = useQueryClient();
+  const { openSheet } = useAppStore();
+  const { unread } = useNotifications(relationshipId);
 
   const hug = useMutation({
     mutationFn: async () => {
@@ -19,28 +23,34 @@ export function AppHeader({ title, subtitle, relationshipId }: { title: string; 
   });
 
   return (
-    <header
-      className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3
-        backdrop-blur-2xl bg-background/40 border-b border-white/30"
-    >
-      <div className="mx-auto flex max-w-md items-center justify-between">
+    <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-background/40 border-b border-white/30">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Seanaya</div>
-          <h1 className="display truncate text-2xl leading-tight">{title}</h1>
-          {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Seanaya</div>
+          <h1 className="display text-lg leading-tight">{title}</h1>
+          {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
         </div>
-        {relationshipId && (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => openSheet("notifications")}
+            className="relative rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl"
+            aria-label="Notifications"
+          >
+            <Bell size={16} className="text-foreground/70" />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-[color:var(--hug)] px-1 text-[9px] font-semibold text-white text-center leading-4">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => hug.mutate()}
+            className="rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
             aria-label="Send a hug"
-            className="relative h-11 w-11 shrink-0 rounded-full border border-white/50 backdrop-blur-xl
-              bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.75),rgba(255,220,225,0.35)_65%)]
-              shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_8px_22px_-10px_rgba(200,80,90,0.4)]
-              flex items-center justify-center active:scale-95 transition"
           >
-            <Heart size={18} className="text-hug" fill="currentColor" />
+            <Heart size={16} className="text-[color:var(--hug)]" />
           </button>
-        )}
+        </div>
       </div>
     </header>
   );
