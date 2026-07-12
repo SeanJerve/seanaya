@@ -165,9 +165,12 @@ export type Database = {
       memories: {
         Row: {
           category: Database["public"]["Enums"]["memory_category"]
+          cover_path: string | null
+          cover_url: string | null
           created_at: string
           created_by: string
           description: string | null
+          featured: boolean
           id: string
           location: string | null
           memory_date: string | null
@@ -178,9 +181,12 @@ export type Database = {
         }
         Insert: {
           category?: Database["public"]["Enums"]["memory_category"]
+          cover_path?: string | null
+          cover_url?: string | null
           created_at?: string
           created_by: string
           description?: string | null
+          featured?: boolean
           id?: string
           location?: string | null
           memory_date?: string | null
@@ -191,9 +197,12 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["memory_category"]
+          cover_path?: string | null
+          cover_url?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
+          featured?: boolean
           id?: string
           location?: string | null
           memory_date?: string | null
@@ -268,10 +277,15 @@ export type Database = {
           created_at: string
           favorite: boolean
           id: string
+          image_path: string | null
+          image_url: string | null
           kind: string
           permanent: boolean
           pinned: boolean
+          pos_x: number | null
+          pos_y: number | null
           relationship_id: string
+          rotation: number | null
           seen: boolean
           title: string | null
           updated_at: string
@@ -283,10 +297,15 @@ export type Database = {
           created_at?: string
           favorite?: boolean
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           kind?: string
           permanent?: boolean
           pinned?: boolean
+          pos_x?: number | null
+          pos_y?: number | null
           relationship_id: string
+          rotation?: number | null
           seen?: boolean
           title?: string | null
           updated_at?: string
@@ -298,10 +317,15 @@ export type Database = {
           created_at?: string
           favorite?: boolean
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           kind?: string
           permanent?: boolean
           pinned?: boolean
+          pos_x?: number | null
+          pos_y?: number | null
           relationship_id?: string
+          rotation?: number | null
           seen?: boolean
           title?: string | null
           updated_at?: string
@@ -476,6 +500,7 @@ export type Database = {
           id: string
           invite_code: string | null
           name: string | null
+          pin_hash: string | null
           updated_at: string
           user_a_id: string
           user_b_id: string | null
@@ -486,6 +511,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           name?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_a_id: string
           user_b_id?: string | null
@@ -496,6 +522,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           name?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_a_id?: string
           user_b_id?: string | null
