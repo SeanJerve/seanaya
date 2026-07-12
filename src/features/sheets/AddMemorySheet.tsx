@@ -5,27 +5,55 @@ import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
 import { FieldWrap, Input, Select, Textarea, PrimaryButton } from "./form-ui";
+import { useDraft, useOnline } from "@/lib/idb-drafts";
+import { uploadImage } from "@/lib/storage";
+import { DropZone } from "@/lib/DropZone";
+import { ImagePlus, X, CloudOff, Save } from "lucide-react";
 
 const CATS = ["firsts","campus","travel","random","family","future"] as const;
+
+type Form = {
+  title: string; description: string; date: string; category: typeof CATS[number]; location: string;
+};
 
 export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   const { user } = useUser();
   const { closeSheet } = useAppStore();
   const qc = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [cat, setCat] = useState<typeof CATS[number]>("random");
-  const [location, setLocation] = useState("");
+  const online = useOnline();
+
+  const [form, setForm] = useState<Form>({
+    title: "", description: "", date: new Date().toISOString().slice(0, 10), category: "random", location: "",
+  });
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [featured, setFeatured] = useState(false);
+
+  const { clear } = useDraft(`memory:${relationshipId}`, form, setForm);
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const onFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!user || !title.trim()) throw new Error("Title is required");
+      if (!user || !form.title.trim()) throw new Error("Title is required");
       const { data: mem, error } = await supabase.from("memories").insert({
-        relationship_id: relationshipId, created_by: user.id, title, description: desc || null,
-        memory_date: date, category: cat, location: location || null,
+        relationship_id: relationshipId, created_by: user.id,
+        title: form.title, description: form.description || null,
+        memory_date: form.date, category: form.category, location: form.location || null,
+        featured,
       }).select("id").single();
       if (error) throw error;
+
+      if (file) {
+        try {
+          const { path, url } = await uploadImage("memories", relationshipId, file, `${mem.id}/cover`);
+          await supabase.from("memories").update({ cover_url: url, cover_path: path }).eq("id", mem.id);
+        } catch (e) {
+          console.warn("Photo upload failed", e);
+          toast.error("Memory saved, but the photo didn't upload");
+        }
+      }
       await supabase.from("lilies").insert({
         relationship_id: relationshipId, memory_id: mem.id, stage: "sprout",
         position_x: Math.random(), position_y: 0.5 + Math.random() * 0.4,
@@ -35,6 +63,7 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
       toast.success("Memory saved");
       qc.invalidateQueries({ queryKey: ["memories"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
+      clear();
       closeSheet();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
@@ -42,18 +71,56 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
 
   return (
     <div className="space-y-4">
-      <FieldWrap label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="A moment worth keeping" /></FieldWrap>
-      <FieldWrap label="Story"><Textarea rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Tell the story…" /></FieldWrap>
+      {!online && (
+        <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 text-[11px] text-muted-foreground">
+          <CloudOff size={12} /> Offline — draft is saved automatically. Will sync when you're back.
+        </div>
+      )}
+
+      <FieldWrap label="Photo (optional)">
+        {preview ? (
+          <div className="relative overflow-hidden rounded-2xl border border-white/50">
+            <img src={preview} alt="" className="h-40 w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => { setFile(null); setPreview(null); }}
+              className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"
+            ><X size={14} /></button>
+          </div>
+        ) : (
+          <DropZone
+            onFile={onFile}
+            className="flex h-32 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground"
+          >
+            <ImagePlus size={18} />
+            <span>Drop a photo or tap to choose</span>
+          </DropZone>
+        )}
+      </FieldWrap>
+
+      <FieldWrap label="Title"><Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="A moment worth keeping" /></FieldWrap>
+      <FieldWrap label="Story"><Textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Tell the story…" /></FieldWrap>
       <div className="grid grid-cols-2 gap-3">
-        <FieldWrap label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></FieldWrap>
+        <FieldWrap label="Date"><Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></FieldWrap>
         <FieldWrap label="Category">
-          <Select value={cat} onChange={(e) => setCat(e.target.value as typeof CATS[number])}>
+          <Select value={form.category} onChange={(e) => set("category", e.target.value as Form["category"])}>
             {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
         </FieldWrap>
       </div>
-      <FieldWrap label="Location"><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Optional" /></FieldWrap>
-      <PrimaryButton disabled={create.isPending} onClick={() => create.mutate()}>Save memory</PrimaryButton>
+      <FieldWrap label="Location"><Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Optional" /></FieldWrap>
+      <label className="flex items-center gap-2 text-sm text-foreground/80">
+        <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="accent-foreground" />
+        Feature this month (may appear on Monthsary)
+      </label>
+
+      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+        <Save size={11} /> Draft autosaved locally
+      </div>
+
+      <PrimaryButton disabled={create.isPending || !online} onClick={() => create.mutate()}>
+        {online ? "Save memory" : "Waiting to sync…"}
+      </PrimaryButton>
     </div>
   );
 }

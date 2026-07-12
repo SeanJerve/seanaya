@@ -1,6 +1,7 @@
 export const ANNIVERSARY_ISO = "2026-06-19";
 const LS_PIN = "seanaya.pin_hash";
 const LS_NAME = "seanaya.display_name";
+const LS_INVITE = "seanaya.invite_code";
 
 export async function hashPin(pin: string): Promise<string> {
   const enc = new TextEncoder().encode(`seanaya:${pin}`);
@@ -16,10 +17,11 @@ export const pinStorage = {
   clear: () => localStorage.removeItem(LS_PIN),
   getName: () => (typeof window === "undefined" ? null : localStorage.getItem(LS_NAME)),
   setName: (n: string) => localStorage.setItem(LS_NAME, n),
+  getInvite: () => (typeof window === "undefined" ? null : localStorage.getItem(LS_INVITE)),
+  setInvite: (c: string) => localStorage.setItem(LS_INVITE, c.toUpperCase()),
 };
 
 export function isAnniversaryMatch(input: string): boolean {
-  // Accept 2026-06-19 or 06/19/2026 or 19/06/2026 or June 19 2026
   const s = input.trim().toLowerCase().replace(/[,.]/g, "");
   if (s === ANNIVERSARY_ISO) return true;
   const patterns = [

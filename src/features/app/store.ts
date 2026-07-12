@@ -8,6 +8,7 @@ export type SheetKey =
   | "add-trip"
   | "add-song"
   | "settings"
+  | "notifications"
   | null;
 
 type State = { tab: TabKey; sheet: SheetKey };
