@@ -1,16 +1,31 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, format, subMonths } from "date-fns";
+import {
+  differenceInDays, format, subMonths, startOfMonth, endOfMonth,
+  eachDayOfInterval, isSameDay, getDay, isSameMonth, addMonths,
+} from "date-fns";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, BookHeart, MapPin, Heart } from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
 
 export function HomeView({ relationshipId, anniversary }: { relationshipId: string; anniversary: string | null }) {
   const name = pinStorage.getName() ?? "you";
   const { openSheet, setTab } = useAppStore();
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [cursor, setCursor] = useState(new Date());
+
+  const { data: monthEvents = [] } = useQuery({
+    queryKey: ["events", relationshipId, cursor.getFullYear(), cursor.getMonth()],
+    queryFn: async () => {
+      const s = startOfMonth(cursor).toISOString();
+      const e = endOfMonth(cursor).toISOString();
+      const { data } = await supabase.from("events").select("*")
+        .eq("relationship_id", relationshipId).gte("starts_at", s).lte("starts_at", e).order("starts_at");
+      return data ?? [];
+    },
+  });
 
   const { data: stats } = useQuery({
     queryKey: ["stats", relationshipId],
@@ -40,7 +55,6 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     enabled: isMonthsary,
     queryKey: ["monthsary", relationshipId, format(prevMonthStart, "yyyy-MM")],
     queryFn: async () => {
-      // Prefer featured memory from previous month; fall back to any from that month.
       const base = supabase.from("memories")
         .select("id,title,memory_date,description,cover_url,featured")
         .eq("relationship_id", relationshipId)
@@ -57,19 +71,56 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   const days = start ? differenceInDays(new Date(), start) : null;
   const months = start ? (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) : null;
 
+  const gridDays = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
+  const leading = getDay(startOfMonth(cursor));
+
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_18px_40px_-24px_rgba(80,110,160,0.35)]">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A quiet hello</div>
-        <div className="display mt-1 text-3xl leading-tight">Hi, {name}.</div>
-        {days !== null ? (
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="display text-4xl leading-none">{days}</span>
-            <span className="text-sm text-muted-foreground">days together</span>
+
+      {/* Greeting strip */}
+      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl px-5 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A quiet hello</div>
+            <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
           </div>
-        ) : (
-          <div className="mt-3 text-sm text-muted-foreground italic">Set your anniversary in More → Settings.</div>
-        )}
+          {days !== null && (
+            <div className="text-right">
+              <div className="display text-2xl leading-none">{days}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">days</div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Calendar (primary) */}
+      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronLeft size={16} /></button>
+          <button onClick={() => setTab("calendar")} className="display text-lg">{format(cursor, "MMMM yyyy")}</button>
+          <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronRight size={16} /></button>
+        </div>
+        <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+          {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
+          {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
+          {gridDays.map((d) => {
+            const has = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
+            const isToday = isSameDay(d, today);
+            return (
+              <div
+                key={d.toISOString()}
+                className={`relative aspect-square flex items-center justify-center rounded-full
+                  ${isToday ? "bg-foreground text-background font-medium" : "hover:bg-black/5"}
+                  ${!isSameMonth(d, cursor) ? "opacity-30" : ""}`}
+              >
+                {d.getDate()}
+                {has && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug" />}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {isMonthsary && (
@@ -94,62 +145,73 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             </div>
           ) : (
             <div className="border-t border-white/40 bg-white/30 p-4 text-xs italic text-muted-foreground">
-              No memory from last month yet. Add one and it will replay next monthsary.
+              No memory from last month yet.
             </div>
           )}
         </section>
       )}
 
-      <section className="grid grid-cols-3 gap-3">
-        <Stat label="Memories" value={stats?.memories ?? 0} />
-        <Stat label="Trips" value={stats?.trips ?? 0} />
-        <Stat label="Hugs" value={stats?.hugs ?? 0} />
-      </section>
-
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
+      {/* Priorities container */}
+      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Next moment</div>
-          <button onClick={() => setTab("calendar")} className="text-[11px] text-primary">See all</button>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">What matters today</div>
         </div>
-        {stats?.nextEvent ? (
-          <div className="mt-2">
-            <div className="display text-xl leading-tight">{stats.nextEvent.title}</div>
-            <div className="text-xs text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
-            <div className="mt-1 text-xs text-primary">in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))} days</div>
+
+        {/* Next event */}
+        <div className="rounded-2xl bg-white/60 p-4">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <CalendarIcon size={11} /> Next moment
           </div>
-        ) : (
-          <button onClick={() => openSheet("add-event")}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-3 text-sm text-muted-foreground">
-            <Plus size={14} /> Add something to look forward to
-          </button>
-        )}
-      </section>
-
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Recent memories</div>
-          <button onClick={() => setTab("memories")} className="text-[11px] text-primary">See all</button>
+          {stats?.nextEvent ? (
+            <button onClick={() => setTab("calendar")} className="mt-1 block w-full text-left">
+              <div className="display text-lg leading-tight">{stats.nextEvent.title}</div>
+              <div className="text-[11px] text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
+              <div className="mt-0.5 text-[11px] text-primary">in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))} days</div>
+            </button>
+          ) : (
+            <button onClick={() => openSheet("add-event")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground">
+              <Plus size={12} /> Add something to look forward to
+            </button>
+          )}
         </div>
-        {stats?.recent.length ? (
-          <ul className="mt-3 space-y-2">
-            {stats.recent.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/40 px-3 py-2">
-                {m.cover_url ? (
-                  <img src={m.cover_url} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl object-cover" />
-                ) : <span className="h-10 w-10 shrink-0 rounded-xl bg-white/60" />}
-                <span className="min-w-0 flex-1 truncate text-sm">{m.title}</span>
-                <span className="shrink-0 text-[11px] text-muted-foreground">
-                  {m.memory_date ? format(new Date(m.memory_date), "MMM d") : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <button onClick={() => openSheet("add-memory")}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-3 text-sm text-muted-foreground">
-            <Plus size={14} /> Capture your first memory
-          </button>
-        )}
+
+        {/* Recent memory */}
+        <div className="rounded-2xl bg-white/60 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <BookHeart size={11} /> Recent memories
+            </div>
+            <button onClick={() => setTab("memories")} className="text-[11px] text-primary">See all</button>
+          </div>
+          {stats?.recent.length ? (
+            <ul className="mt-2 space-y-1.5">
+              {stats.recent.map((m) => (
+                <li key={m.id} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
+                  {m.cover_url ? (
+                    <img src={m.cover_url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+                  ) : <span className="h-9 w-9 shrink-0 rounded-lg bg-white/70" />}
+                  <span className="min-w-0 flex-1 truncate text-sm">{m.title}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {m.memory_date ? format(new Date(m.memory_date), "MMM d") : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <button onClick={() => openSheet("add-memory")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground">
+              <Plus size={12} /> Capture your first memory
+            </button>
+          )}
+        </div>
+
+        {/* Quiet counters */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <MiniStat icon={<BookHeart size={11} />} label="Memories" value={stats?.memories ?? 0} />
+          <MiniStat icon={<MapPin size={11} />}    label="Trips"    value={stats?.trips ?? 0} />
+          <MiniStat icon={<Heart size={11} />}     label="Hugs"     value={stats?.hugs ?? 0} />
+        </div>
       </section>
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
@@ -157,11 +219,13 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/40 bg-white/50 backdrop-blur-xl p-3 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)]">
-      <div className="display text-2xl leading-none">{value}</div>
-      <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="rounded-xl bg-white/60 py-2 text-center">
+      <div className="display text-lg leading-none">{value}</div>
+      <div className="mt-1 flex items-center justify-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+        {icon} {label}
+      </div>
     </div>
   );
 }
