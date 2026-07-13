@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type Bucket = "memories" | "wall";
+export type Bucket = "memories" | "wall" | "trips";
 
 /** Upload a file under {relationshipId}/{subpath}. Returns { path, url }. */
 export async function uploadImage(bucket: Bucket, relationshipId: string, file: File, subpath: string) {
