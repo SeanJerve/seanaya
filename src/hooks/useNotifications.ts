@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "./useUser";
+import { toast } from "sonner";
 
 export type NotifKind = "memory" | "note" | "hug" | "event" | "capsule" | "trip" | "song";
 export type Notif = {
@@ -12,9 +13,20 @@ export type Notif = {
   created_at: string;
 };
 
+const TOAST_TITLE: Record<NotifKind, string> = {
+  memory: "A new memory was kept",
+  event: "A new moment on the calendar",
+  note: "A note landed on the wall",
+  trip: "A new place was pinned",
+  song: "A song joined your radio",
+  hug: "A hug arrived 💗",
+  capsule: "A time capsule was placed",
+};
+
 export function useNotifications(relationshipId: string | undefined) {
   const { user } = useUser();
   const qc = useQueryClient();
+  const bootstrapped = useRef(false);
 
   const q = useQuery({
     queryKey: ["notifications", relationshipId, user?.id],
@@ -27,6 +39,7 @@ export function useNotifications(relationshipId: string | undefined) {
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(30);
+      bootstrapped.current = true;
       return (data ?? []) as Notif[];
     },
   });
@@ -38,12 +51,18 @@ export function useNotifications(relationshipId: string | undefined) {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => {
+        (payload) => {
           qc.invalidateQueries({ queryKey: ["notifications"] });
           qc.invalidateQueries({ queryKey: ["stats"] });
           qc.invalidateQueries({ queryKey: ["memories"] });
           qc.invalidateQueries({ queryKey: ["notes"] });
           qc.invalidateQueries({ queryKey: ["events"] });
+          qc.invalidateQueries({ queryKey: ["trips"] });
+          qc.invalidateQueries({ queryKey: ["songs"] });
+          // Rich toast — but only after first bootstrap load, to avoid replaying history
+          if (!bootstrapped.current) return;
+          const kind = (payload.new as { kind?: NotifKind } | null)?.kind;
+          if (kind && TOAST_TITLE[kind]) toast(TOAST_TITLE[kind]);
         }
       )
       .subscribe();
