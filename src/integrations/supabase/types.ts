@@ -629,6 +629,8 @@ export type Database = {
       }
       trips: {
         Row: {
+          cover_path: string | null
+          cover_url: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -644,6 +646,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cover_path?: string | null
+          cover_url?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -659,6 +663,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cover_path?: string | null
+          cover_url?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
