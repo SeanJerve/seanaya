@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pin } from "lucide-react";
+import { Plus, Pin, MapPin } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
@@ -11,6 +11,10 @@ import { Lightbox } from "@/lib/Lightbox";
 type Note = {
   id: string; body: string; kind: string; color: string | null; pinned: boolean;
   image_url: string | null; rotation: number | null;
+};
+
+type TripPhoto = {
+  id: string; title: string; location: string; cover_url: string | null;
 };
 
 export function WallView({ relationshipId }: { relationshipId: string }) {
@@ -30,6 +34,18 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         .order("pinned", { ascending: false })
         .order("created_at", { ascending: false })
       ).data ?? []) as Note[],
+  });
+
+  const { data: trips = [] } = useQuery({
+    queryKey: ["trips-photos", relationshipId],
+    queryFn: async () =>
+      ((await supabase
+        .from("trips")
+        .select("id,title,location,cover_url")
+        .eq("relationship_id", relationshipId)
+        .not("cover_url", "is", null)
+        .order("created_at", { ascending: false })
+      ).data ?? []) as TripPhoto[],
   });
 
   const togglePin = useMutation({
@@ -61,6 +77,8 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     photoNotes: notes.filter((n) => !!n.image_url),
   }), [notes]);
 
+  const nothing = notes.length === 0 && trips.length === 0;
+
   return (
     <div
       className="mx-auto max-w-md px-5 py-6 pb-32"
@@ -78,14 +96,14 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         </div>
       )}
 
-      {notes.length === 0 && (
+      {nothing && (
         <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-8 text-center">
           <div className="display text-xl">The wall is quiet.</div>
           <p className="mt-2 text-sm text-muted-foreground">Drop a photo here, or leave a note.</p>
         </div>
       )}
 
-      {photoNotes.length > 0 && (
+      {(photoNotes.length > 0 || trips.length > 0) && (
         <div className="mb-4">
           <div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Photo board</div>
           <div className="flex flex-wrap gap-3">
@@ -103,6 +121,23 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   onClick={(e) => { e.stopPropagation(); togglePin.mutate({ id: n.id, pinned: !n.pinned }); }}
                   className={`absolute -right-1 -top-1 rounded-full bg-white/80 p-1 shadow ${n.pinned ? "text-foreground" : "text-foreground/40"}`}
                 ><Pin size={10} /></button>
+              </button>
+            ))}
+
+            {trips.map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => setLightbox(t.cover_url)}
+                className="group relative shrink-0"
+                style={{ transform: `rotate(${((i % 3) - 1) * 2}deg)` }}
+                title={`${t.title} · ${t.location}`}
+              >
+                <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/60 bg-white p-1.5 shadow-[0_10px_24px_-14px_rgba(80,110,160,0.6)]">
+                  <img src={t.cover_url!} alt="" loading="lazy" className="h-full w-full rounded-lg object-cover" />
+                </div>
+                <span className="absolute -left-1 -top-1 flex items-center gap-0.5 rounded-full bg-white/85 px-1.5 py-0.5 text-[9px] text-foreground/70 shadow">
+                  <MapPin size={9} /> trip
+                </span>
               </button>
             ))}
           </div>
