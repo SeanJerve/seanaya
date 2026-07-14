@@ -44,7 +44,7 @@ const PASTEL_COLORS = [
 
 function getTilt(id: string): number {
   const seed = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
-  return ((seed % 15) - 7.5) * 1.1; // range roughly -8 to 8 degrees
+  return ((seed % 24) - 12) * 1.35; // range roughly -16.2 to 16.2 degrees
 }
 
 function getSeededCoords(id: string) {
@@ -72,7 +72,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         .from("notes")
         .select("id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at")
         .eq("relationship_id", relationshipId)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: true }) // Newer notes are painted last (drawn on top)
       ).data ?? []) as Note[],
   });
 
@@ -131,7 +131,23 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       const { error } = await supabase.from("notes").update({ pos_x, pos_y }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notes", relationshipId] }); },
+    onMutate: async ({ id, pos_x, pos_y }) => {
+      await qc.cancelQueries({ queryKey: ["notes", relationshipId] });
+      const previousNotes = qc.getQueryData<Note[]>(["notes", relationshipId]);
+      qc.setQueryData<Note[]>(["notes", relationshipId], (old) => {
+        if (!old) return [];
+        return old.map((n) => (n.id === id ? { ...n, pos_x, pos_y } : n));
+      });
+      return { previousNotes };
+    },
+    onError: (err, newPos, context) => {
+      if (context?.previousNotes) {
+        qc.setQueryData(["notes", relationshipId], context.previousNotes);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["notes", relationshipId] });
+    },
   });
 
   const deleteNote = useMutation({
@@ -242,10 +258,10 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
             <p className="mt-2 text-sm text-muted-foreground">Drop a photo or click "New note" to begin pinning.</p>
           </div>
         ) : (
-          /* Draggable absolute bulletin board space */
+          /* Draggable absolute bulletin board space (borderless, overflow-visible to support bleeding) */
           <div
             ref={boardRef}
-            className="relative w-full h-[580px] bg-white/25 border border-white/40 rounded-3xl overflow-hidden select-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)]"
+            className="relative w-full h-[620px] overflow-visible select-none"
           >
             {/* Background grid line just for fun */}
             <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
@@ -273,8 +289,9 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                       const rect = card.getBoundingClientRect();
                       const xPct = (rect.left - board.left) / board.width;
                       const yPct = (rect.top - board.top) / board.height;
-                      const newX = Math.min(Math.max(xPct, 0.01), 0.62);
-                      const newY = Math.min(Math.max(yPct, 0.01), 0.72);
+                      // Allow notes to bleed off-screen up to 15% on each edge
+                      const newX = Math.min(Math.max(xPct, -0.15), 0.85);
+                      const newY = Math.min(Math.max(yPct, -0.15), 0.85);
                       updatePosition.mutate({ id: n.id, pos_x: newX, pos_y: newY });
                     }
                   }}

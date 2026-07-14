@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Plus, X, MapPin, Tag, Calendar as CalIcon } from "lucide-react";
+import { Plus, X, MapPin, Tag, Calendar as CalIcon, Trash2 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
+import { toast } from "sonner";
 
 type Memory = {
   id: string;
@@ -20,6 +21,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const { openSheet } = useAppStore();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
+  const qc = useQueryClient();
+
+  const deleteMemory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("memories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Memory deleted");
+      qc.invalidateQueries({ queryKey: ["memories", relationshipId] });
+      setActiveMemory(null);
+    },
+    onError: (e: any) => toast.error(e?.message || String(e)),
+  });
   
   // Track container width for responsive SVG drawing
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,21 +136,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           )}
 
           {/* Grid of Bubbles */}
-          <div className="relative z-10 grid grid-cols-3 gap-y-12">
+          <div className="relative z-10 grid grid-cols-3" style={{ gridAutoRows: `${rowHeight}px` }}>
             {memories.map((m, idx) => {
               const formattedDate = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
               const colClass = getColClass(idx);
+              const rowStart = idx + 1;
 
               return (
                 <div
                   key={m.id}
                   className={`flex flex-col items-center select-none ${colClass}`}
-                  style={{ height: `${rowHeight}px` }}
+                  style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                 >
                   {/* Bubble Container */}
                   <button
                     onClick={() => setActiveMemory(m)}
-                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.4)] transition-all hover:scale-105 active:scale-95"
+                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.4)] transition-all hover:scale-105 active:scale-95 animate-in fade-in zoom-in-90 duration-300"
                   >
                     {/* Cover Photo Background */}
                     {m.cover_url && (
@@ -144,24 +160,24 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           src={m.cover_url}
                           alt=""
                           loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-115"
                         />
                         {/* Glossy overlay with subtle white shine, no heavy blur */}
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.35),rgba(0,0,0,0.1))] transition-opacity group-hover:opacity-60" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.45),transparent_60%)] transition-opacity group-hover:opacity-70" />
                       </>
                     )}
 
                     {/* Date Display */}
-                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "bg-white/50 backdrop-blur-[2px] px-2.5 py-1.5 rounded-2xl border border-white/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)]" : ""}`}>
+                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "bg-white/60 backdrop-blur-[2px] px-2.5 py-1.5 rounded-2xl border border-white/80 shadow-[0_1px_3px_rgba(0,0,0,0.08)]" : ""}`}>
                       {formattedDate ? (
                         <>
-                          <span className="text-[9px] uppercase tracking-widest text-foreground/70 font-semibold leading-none">
+                          <span className="text-[9px] uppercase tracking-widest text-foreground/75 font-bold leading-none">
                             {format(formattedDate, "MMM")}
                           </span>
                           <span className="display text-2xl font-bold mt-0.5 leading-none drop-shadow-sm">
                             {format(formattedDate, "d")}
                           </span>
-                          <span className="text-[8px] text-foreground/50 mt-0.5 leading-none">
+                          <span className="text-[8px] text-foreground/65 mt-0.5 leading-none">
                             {format(formattedDate, "yyyy")}
                           </span>
                         </>
@@ -176,7 +192,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Glass Nameplate */}
                   <div
                     onClick={() => setActiveMemory(m)}
-                    className="mt-3.5 px-3 py-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-[0_4px_12px_-4px_rgba(80,110,160,0.25)] text-[11px] font-semibold text-foreground/90 truncate max-w-[110px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center"
+                    className="mt-3.5 px-3 py-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-[0_4px_12px_-4px_rgba(80,110,160,0.25)] text-[11px] font-semibold text-foreground/90 truncate max-w-[110px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center animate-in fade-in slide-in-from-bottom-2 duration-300"
                     title={m.title}
                   >
                     {m.title}
@@ -202,6 +218,16 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           {/* Modal Card */}
           <div className="relative w-full max-w-sm rounded-3xl border border-white/50 bg-white/70 backdrop-blur-2xl shadow-[0_24px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
+            {/* Delete Button */}
+            <button
+              onClick={() => { if (confirm("Delete this memory kept forever?")) deleteMemory.mutate(activeMemory.id); }}
+              className="absolute left-4 top-4 z-20 rounded-full bg-white/80 p-1.5 text-foreground/60 hover:text-red-500 hover:bg-white border border-white/50 transition-colors shadow-sm"
+              title="Delete memory"
+              disabled={deleteMemory.isPending}
+            >
+              <Trash2 size={16} />
+            </button>
+
             {/* Close Button */}
             <button
               onClick={() => setActiveMemory(null)}
