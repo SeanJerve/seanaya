@@ -7,8 +7,9 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
   const [hearts, setHearts] = useState<{ id: string }[]>([]);
 
   useEffect(() => {
+    const channelId = `hugs:${relationshipId}-${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`hugs:${relationshipId}`)
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "hugs", filter: `relationship_id=eq.${relationshipId}` },

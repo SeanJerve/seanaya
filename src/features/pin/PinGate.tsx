@@ -64,81 +64,130 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         if (error) { toast.error("Could not open your space"); return; }
       }
       const s = await refreshSpace();
-      if (!s)                       setStage("setup-name");
-      else if (s.has_a && s.has_b)  setStage("unlock");
-      else if (s.has_a && !s.has_b) setStage(pinStorage.getName() ? "partner-pin" : "partner-name");
-      else                          setStage("setup-name"); // shouldn't happen but safe
+      const urlInvite = new URLSearchParams(window.location.search).get("invite");
+      const urlReset = new URLSearchParams(window.location.search).get("reset");
+      const urlDate = new URLSearchParams(window.location.search).get("date");
+      
+      if (!s) {
+        setStage("setup-name");
+      } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
+        setResetSlot(urlReset as Slot);
+        setDateInput(urlDate);
+        setStage("forgot-newpin");
+      } else if (s.has_a && s.has_b) {
+        setStage("unlock");
+      } else if (s.has_a && !s.has_b) {
+        if (urlInvite) {
+          setStage(pinStorage.getName() ? "partner-pin" : "partner-name");
+        } else {
+          setStage("unlock");
+        }
+      } else {
+        setStage("setup-name"); 
+      }
     })();
-     
   }, []);
 
   // -------- Setup slot A (creator) --------
   async function completeSetup(finalPin: string) {
-    const hash = await hashPin(finalPin);
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const { data: rel, error } = await supabase
-      .from("relationships")
-      .insert({
-        user_a_id: u.user.id,
-        invite_code: code,
-        name: name.trim() || "Seanaya",
-        name_a: name.trim() || null,
-        pin_hash_a: hash,
-      })
-      .select("id").single();
-    if (error) { toast.error("Could not create your space"); return; }
-    pinStorage.setName(name.trim());
-    pinStorage.setRel(rel.id);
-    pinStorage.setSlot("a");
-    await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() });
-    setStage("unlocked");
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user) return;
+      const hash = await hashPin(finalPin);
+      const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+      const { data: rel, error } = await supabase
+        .from("relationships")
+        .insert({
+          user_a_id: u.user.id,
+          invite_code: code,
+          name: name.trim() || "Seanaya",
+          name_a: name.trim() || null,
+          pin_hash_a: hash,
+        })
+        .select("id").single();
+      
+      if (error) { toast.error("Could not create your space"); return; }
+      pinStorage.setName(name.trim());
+      pinStorage.setRel(rel.id);
+      pinStorage.setSlot("a");
+      pinStorage.setInvite(code);
+      await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() });
+      
+      const inviteLink = `${window.location.origin}/?invite=${code}`;
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteLink).catch(() => {});
+      }
+      toast.success("Space created! Invite link copied to clipboard.", { duration: 6000 });
+      
+      setStage("unlocked");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Something went wrong");
+    }
   }
 
   // -------- Setup slot B (partner) --------
   async function completePartnerSetup(finalPin: string) {
-    const hash = await hashPin(finalPin);
-    if (!space) return;
-    const { error } = await supabase.rpc("set_partner_pin", {
-      _rel_id: space.id, _pin_hash: hash, _name: name.trim() || "",
-    });
-    if (error) {
-      toast.error(error.message.includes("different pin") ? "Pick a different PIN than your partner" : "Couldn't join the space");
-      setPin(""); setPinConfirm(""); setStage("partner-pin"); return;
+    try {
+      const urlInvite = new URLSearchParams(window.location.search).get("invite");
+      if (!space || !urlInvite) return;
+      const hash = await hashPin(finalPin);
+      const { error } = await supabase.rpc("set_partner_pin", {
+        _rel_id: space.id,
+        _pin_hash: hash,
+        _name: name.trim() || "partner",
+      });
+      if (error) {
+        toast.error(error.message.includes("different pin") ? "Pick a different PIN than your partner" : "Could not join space");
+        return;
+      }
+      
+      pinStorage.setSlot("b");
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() || "partner" });
+      
+      setStage("unlocked");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Something went wrong");
     }
-    const { data: u } = await supabase.auth.getUser();
-    if (u.user) await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() || "partner" });
-    pinStorage.setName(name.trim() || "you");
-    pinStorage.setSlot("b");
-    setStage("unlocked");
   }
 
   // -------- Returning: enter PIN → resolve slot --------
   async function tryUnlock(input: string) {
-    if (!space) return;
-    const hash = await hashPin(input);
-    const { data, error } = await supabase.rpc("claim_slot", { _rel_id: space.id, _pin_hash: hash });
-    if (error || !data) { setPin(""); toast.error("PIN doesn't match"); return; }
-    const slot = data as Slot;
-    pinStorage.setSlot(slot);
-    const label = slot === "a" ? (space.name_a || "you") : (space.name_b || "you");
-    pinStorage.setName(label);
-    setStage("unlocked");
+    try {
+      if (!space) return;
+      const hash = await hashPin(input);
+      const { data, error } = await supabase.rpc("claim_slot", { _rel_id: space.id, _pin_hash: hash });
+      if (error || !data) { setPin(""); toast.error("PIN doesn't match"); return; }
+      const slot = data as Slot;
+      pinStorage.setSlot(slot);
+      const label = slot === "a" ? (space.name_a || "you") : (space.name_b || "you");
+      pinStorage.setName(label);
+      setStage("unlocked");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Something went wrong");
+    }
   }
 
   // -------- Forgot: anniversary → reset one slot --------
   async function completeReset(newPin: string) {
     if (!space) return;
     const h = await hashPin(newPin);
-    const { data: rel } = await supabase.from("relationships").select("anniversary").eq("id", space.id).maybeSingle();
-    const iso = rel?.anniversary ?? "2026-06-19";
     const { error } = await supabase.rpc("reset_slot_pin", {
-      _rel_id: space.id, _slot: resetSlot, _new_hash: h, _anniversary: iso,
+      _rel_id: space.id, _slot: resetSlot, _new_hash: h, _anniversary: dateInput,
     });
-    if (error) { toast.error("Couldn't reset. Try again."); return; }
-    toast.success("PIN updated. Enter it now.");
-    setPin(""); setStage("unlock");
+    if (error) { toast.error("Reset link is invalid or expired."); return; }
+    toast.success("PIN updated. You can now log in.");
+    setPin(""); 
+    
+    // Clear the URL parameters so refreshing doesn't bring us back to the reset screen
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    setStage("unlock");
     refreshSpace();
   }
 
@@ -182,7 +231,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           <Screen key="pname">
             <Title
               kicker="A space is already open"
-              title={space?.name_a ? `You must be ${space.name_a}'s person` : "You must be the other half"}
+              title="Hi you must be the loving, sweet, etc. etc. girlfriend, what should we call you?"
               sub="What should we call you here?"
             />
             <NameInput value={name} onChange={setName} />
@@ -212,46 +261,12 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           <Screen key="unlock">
             <Title kicker="Seanaya" title="Enter your PIN" sub={space?.name_a && space?.name_b ? `${space.name_a} · ${space.name_b}` : "Either PIN opens your space"} />
             <div className="mt-10">
-              <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock}
-                bottomAction={
-                  <button
-                    onClick={() => { setPin(""); setDateInput(""); setStage("forgot-who"); }}
-                    className="h-[70px] w-[70px] rounded-full text-[11px] uppercase tracking-wider text-foreground/60 hover:text-foreground transition"
-                  >Forgot</button>
-                } />
+              <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>
           </Screen>
         )}
 
-        {stage === "forgot-who" && (
-          <Screen key="forgot-who">
-            <Title kicker="Reset PIN" title="Whose PIN?" sub="Choose the one to reset." />
-            <div className="mt-8 flex gap-3">
-              <SlotChoice label={space?.name_a || "Partner A"} onClick={() => { setResetSlot("a"); setStage("forgot-date"); }} />
-              <SlotChoice label={space?.name_b || "Partner B"} onClick={() => { setResetSlot("b"); setStage("forgot-date"); }} />
-            </div>
-            <button onClick={() => setStage("unlock")} className="mt-6 text-xs text-muted-foreground underline">Never mind</button>
-          </Screen>
-        )}
-        {stage === "forgot-date" && (
-          <Screen key="forgot">
-            <Title kicker="Reset PIN" title="A gentle question" sub="What date did we become official?" />
-            <input autoFocus value={dateInput} onChange={(e) => setDateInput(e.target.value)}
-              placeholder="YYYY-MM-DD"
-              className="mt-8 w-80 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-6 py-3 text-center text-lg outline-none focus:ring-2 focus:ring-primary/40" />
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setStage("unlock")} className="rounded-full border border-foreground/20 px-6 py-2 text-sm">Cancel</button>
-              <button
-                onClick={async () => {
-                  const { data: rel } = await supabase.from("relationships").select("anniversary").eq("id", space?.id ?? "").maybeSingle();
-                  const iso = rel?.anniversary ?? "2026-06-19";
-                  if (isAnniversaryMatch(dateInput, iso)) { setPin(""); setStage("forgot-newpin"); }
-                  else toast.error("That's not the day.");
-                }}
-                className="rounded-full bg-foreground/90 px-8 py-2 text-sm text-background">Continue</button>
-            </div>
-          </Screen>
-        )}
+
         {stage === "forgot-newpin" && (
           <Screen key="newpin">
             <Title kicker="Reset PIN" title="Pick a new PIN" sub="Four digits." />

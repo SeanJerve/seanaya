@@ -27,6 +27,20 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     },
   });
 
+  // Latest wall note for greeting preview
+  const { data: latestNote } = useQuery({
+    queryKey: ["latest-note", relationshipId],
+    queryFn: async () => {
+      const { data } = await supabase.from("notes")
+        .select("id,body,kind,color,image_url")
+        .eq("relationship_id", relationshipId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data ?? null;
+    },
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["stats", relationshipId],
     queryFn: async () => {
@@ -42,6 +56,22 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
         nextEvent: next.data?.[0] ?? null,
         recent: recent.data ?? [],
       };
+    },
+  });
+
+  // Memories with photos for calendar circles
+  const { data: monthMemories = [] } = useQuery({
+    queryKey: ["memories-cal-home", relationshipId, cursor.getFullYear(), cursor.getMonth()],
+    queryFn: async () => {
+      const s = format(startOfMonth(cursor), "yyyy-MM-dd");
+      const e = format(endOfMonth(cursor), "yyyy-MM-dd");
+      const { data } = await supabase.from("memories")
+        .select("id,memory_date,cover_url")
+        .eq("relationship_id", relationshipId)
+        .gte("memory_date", s)
+        .lte("memory_date", e)
+        .not("cover_url", "is", null);
+      return data ?? [];
     },
   });
 
@@ -77,23 +107,121 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
 
-      {/* Greeting strip */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl px-5 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]">
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="min-w-0">
+      {/* ── Greeting strip with wall preview ── */}
+      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] overflow-hidden">
+        <div className="flex items-stretch gap-0">
+          {/* Left: greeting text */}
+          <div className="flex-1 px-5 py-4 min-w-0">
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A quiet hello</div>
-            <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
+            <div className="display truncate text-2xl leading-tight mt-0.5">Hi, {name}.</div>
+            {days !== null && (
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="display text-3xl leading-none font-semibold">{days}</span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">days together</span>
+              </div>
+            )}
           </div>
-          {days !== null && (
-            <div className="text-right">
-              <div className="display text-2xl leading-none">{days}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">days</div>
-            </div>
-          )}
+
+          {/* Right: latest wall item preview */}
+          <div
+            className="w-28 shrink-0 border-l border-white/40 cursor-pointer relative overflow-hidden"
+            onClick={() => setTab("wall")}
+            title="Latest from your wall"
+          >
+            {latestNote?.image_url ? (
+              <>
+                <img src={latestNote.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px]" />
+                <div className="absolute bottom-0 inset-x-0 px-2 py-1.5 bg-gradient-to-t from-black/30 to-transparent">
+                  <div className="text-[9px] text-white/90 uppercase tracking-wider">Latest pin</div>
+                </div>
+              </>
+            ) : latestNote ? (
+              <div
+                className="absolute inset-0 flex flex-col justify-between p-3"
+                style={{ background: latestNote.color ?? "oklch(0.95 0.03 85 / 0.6)" }}
+              >
+                <div className="text-[9px] uppercase tracking-wider text-foreground/50">Latest pin</div>
+                <p className="text-xs text-foreground/80 line-clamp-4 leading-snug">{latestNote.body}</p>
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-foreground/30">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
+                <span className="text-[9px] uppercase tracking-wider text-center leading-tight">Pin something</span>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Calendar (primary) */}
+      {/* ── What matters today (now FIRST) ── */}
+      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 space-y-4">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">What matters today</div>
+
+        {/* Next event */}
+        <div className="rounded-2xl bg-white/60 p-4">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <CalendarIcon size={11} /> Next moment
+          </div>
+          {stats?.nextEvent ? (
+            <button onClick={() => setTab("calendar")} className="mt-1 block w-full text-left">
+              <div className="display text-lg leading-tight">{stats.nextEvent.title}</div>
+              <div className="text-[11px] text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
+              <div className="mt-0.5 text-[11px] text-primary">
+                in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))} days
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={() => openSheet("add-event")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground"
+            >
+              <Plus size={12} /> Add something to look forward to
+            </button>
+          )}
+        </div>
+
+        {/* Recent memory */}
+        <div className="rounded-2xl bg-white/60 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <BookHeart size={11} /> Recent memories
+            </div>
+            <button onClick={() => setTab("memories")} className="text-[11px] text-primary">See all</button>
+          </div>
+          {stats?.recent.length ? (
+            <ul className="mt-2 space-y-1.5">
+              {stats.recent.map((m) => (
+                <li key={m.id} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
+                  {m.cover_url ? (
+                    <img src={m.cover_url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+                  ) : <span className="h-9 w-9 shrink-0 rounded-lg bg-white/70" />}
+                  <span className="min-w-0 flex-1 truncate text-sm">{m.title}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {m.memory_date ? format(new Date(m.memory_date), "MMM d") : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <button
+              onClick={() => openSheet("add-memory")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground"
+            >
+              <Plus size={12} /> Capture your first memory
+            </button>
+          )}
+        </div>
+
+        {/* Quiet counters */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <MiniStat icon={<BookHeart size={11} />} label="Memories" value={stats?.memories ?? 0} />
+          <MiniStat icon={<MapPin size={11} />}    label="Trips"    value={stats?.trips ?? 0} />
+          <MiniStat icon={<Heart size={11} />}     label="Hugs"     value={stats?.hugs ?? 0} />
+        </div>
+      </section>
+
+      {/* ── Calendar (now SECOND) ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
         <div className="flex items-center justify-between">
           <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronLeft size={16} /></button>
@@ -106,17 +234,26 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
         <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
           {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
           {gridDays.map((d) => {
-            const has = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
+            const hasEvent = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
+            const memPhoto = monthMemories.find((m) => m.memory_date && isSameDay(new Date(m.memory_date + "T00:00:00"), d));
             const isToday = isSameDay(d, today);
             return (
               <div
                 key={d.toISOString()}
-                className={`relative aspect-square flex items-center justify-center rounded-full
-                  ${isToday ? "bg-foreground text-background font-medium" : "hover:bg-black/5"}
+                className={`relative aspect-square flex items-center justify-center rounded-full overflow-hidden
+                  ${isToday ? "ring-2 ring-foreground/40" : "hover:bg-black/5"}
                   ${!isSameMonth(d, cursor) ? "opacity-30" : ""}`}
               >
-                {d.getDate()}
-                {has && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug" />}
+                {memPhoto?.cover_url && (
+                  <>
+                    <img src={memPhoto.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] rounded-full" />
+                  </>
+                )}
+                <span className={`relative z-10 text-xs font-medium ${isToday ? "text-foreground" : memPhoto ? "text-foreground/90" : ""}`}>
+                  {d.getDate()}
+                </span>
+                {hasEvent && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug z-10" />}
               </div>
             );
           })}
@@ -150,69 +287,6 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           )}
         </section>
       )}
-
-      {/* Priorities container */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">What matters today</div>
-        </div>
-
-        {/* Next event */}
-        <div className="rounded-2xl bg-white/60 p-4">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            <CalendarIcon size={11} /> Next moment
-          </div>
-          {stats?.nextEvent ? (
-            <button onClick={() => setTab("calendar")} className="mt-1 block w-full text-left">
-              <div className="display text-lg leading-tight">{stats.nextEvent.title}</div>
-              <div className="text-[11px] text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
-              <div className="mt-0.5 text-[11px] text-primary">in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))} days</div>
-            </button>
-          ) : (
-            <button onClick={() => openSheet("add-event")}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground">
-              <Plus size={12} /> Add something to look forward to
-            </button>
-          )}
-        </div>
-
-        {/* Recent memory */}
-        <div className="rounded-2xl bg-white/60 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              <BookHeart size={11} /> Recent memories
-            </div>
-            <button onClick={() => setTab("memories")} className="text-[11px] text-primary">See all</button>
-          </div>
-          {stats?.recent.length ? (
-            <ul className="mt-2 space-y-1.5">
-              {stats.recent.map((m) => (
-                <li key={m.id} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
-                  {m.cover_url ? (
-                    <img src={m.cover_url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
-                  ) : <span className="h-9 w-9 shrink-0 rounded-lg bg-white/70" />}
-                  <span className="min-w-0 flex-1 truncate text-sm">{m.title}</span>
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
-                    {m.memory_date ? format(new Date(m.memory_date), "MMM d") : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <button onClick={() => openSheet("add-memory")}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 py-2.5 text-[12px] text-muted-foreground">
-              <Plus size={12} /> Capture your first memory
-            </button>
-          )}
-        </div>
-
-        {/* Quiet counters */}
-        <div className="grid grid-cols-3 gap-2 pt-1">
-          <MiniStat icon={<BookHeart size={11} />} label="Memories" value={stats?.memories ?? 0} />
-          <MiniStat icon={<MapPin size={11} />}    label="Trips"    value={stats?.trips ?? 0} />
-          <MiniStat icon={<Heart size={11} />}     label="Hugs"     value={stats?.hugs ?? 0} />
-        </div>
-      </section>
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
     </div>

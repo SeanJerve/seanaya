@@ -48,7 +48,7 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
       clear();
       closeSheet();
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   return (

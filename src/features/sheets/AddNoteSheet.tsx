@@ -8,14 +8,16 @@ import { FieldWrap, Select, Textarea, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { DropZone } from "@/lib/DropZone";
 import { uploadImage } from "@/lib/storage";
-import { ImagePlus, X, CloudOff } from "lucide-react";
+import { ImagePlus, X, CloudOff, Palette } from "lucide-react";
 
 const KINDS = ["note","compliment","promise","gratitude","photo"] as const;
-const COLORS = [
-  "oklch(0.95 0.03 85 / 0.7)",
-  "oklch(0.93 0.04 350 / 0.7)",
-  "oklch(0.92 0.05 190 / 0.7)",
-  "oklch(0.94 0.04 280 / 0.7)",
+const PASTEL_COLORS = [
+  { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
+  { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
+  { label: "Mint",     value: "oklch(0.94 0.06 160 / 0.85)" },
+  { label: "Lavender", value: "oklch(0.93 0.06 290 / 0.85)" },
+  { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
+  { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
 
 type Form = { body: string; kind: typeof KINDS[number] };
@@ -27,6 +29,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
   const online = useOnline();
 
   const [form, setForm] = useState<Form>({ body: "", kind: "note" });
+  const [selectedColor, setSelectedColor] = useState(PASTEL_COLORS[0].value);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const { clear } = useDraft(`note:${relationshipId}`, form, setForm);
@@ -51,7 +54,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
         relationship_id: relationshipId, author_id: user.id,
         body: form.body || (isPhoto ? "(photo)" : ""),
         kind: isPhoto ? "photo" : form.kind,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        color: selectedColor,
         image_url, image_path,
         pos_x: Math.random(), pos_y: Math.random(),
         rotation: (Math.random() - 0.5) * 6,
@@ -64,7 +67,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
       clear();
       closeSheet();
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   return (
@@ -97,6 +100,29 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
           </Select>
         </FieldWrap>
       )}
+
+      <FieldWrap label="Choose Pastel Color">
+        <div className="flex items-center gap-2 py-1 overflow-x-auto">
+          {PASTEL_COLORS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => setSelectedColor(c.value)}
+              className={`h-8 w-8 rounded-full border transition-all flex items-center justify-center ${
+                selectedColor === c.value
+                  ? "border-primary scale-110 ring-2 ring-primary/20 shadow-md"
+                  : "border-white/60 hover:scale-105"
+              }`}
+              style={{ background: c.value }}
+              title={c.label}
+            >
+              {selectedColor === c.value && (
+                <Palette size={12} className="text-foreground/75" />
+              )}
+            </button>
+          ))}
+        </div>
+      </FieldWrap>
 
       <FieldWrap label={file ? "Caption (optional)" : "Body"}>
         <Textarea rows={4} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}

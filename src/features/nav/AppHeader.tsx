@@ -19,7 +19,7 @@ export function AppHeader({ title, subtitle, relationshipId }: { title: string; 
       if (error) throw error;
     },
     onSuccess: () => { toast.success("A hug on its way"); qc.invalidateQueries({ queryKey: ["stats"] }); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   return (

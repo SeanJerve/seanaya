@@ -46,8 +46,9 @@ export function useNotifications(relationshipId: string | undefined) {
 
   useEffect(() => {
     if (!relationshipId || !user) return;
+    const channelId = `notif-${relationshipId}-${user.id}-${Math.random().toString(36).slice(2, 10)}`;
     const ch = supabase
-      .channel(`notif-${relationshipId}-${user.id}`)
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },

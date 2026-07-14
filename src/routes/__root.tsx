@@ -42,11 +42,15 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="glass-panel max-w-md text-center p-10">
+      <div className="glass-panel max-w-md text-center p-10 overflow-auto max-h-screen">
         <h1 className="display text-2xl text-foreground">A gentle pause</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something didn't load. Try again in a moment.
         </p>
+        <div className="mt-4 p-4 bg-black/10 rounded-lg text-left overflow-auto max-h-60">
+          <p className="font-bold text-red-500 text-xs">{error.message}</p>
+          <pre className="text-[10px] text-muted-foreground mt-2 whitespace-pre-wrap">{error.stack}</pre>
+        </div>
         <div className="mt-6 flex justify-center gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}

@@ -37,7 +37,7 @@ export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { rel
       if (user) await supabase.from("profiles").upsert({ id: user.id, display_name: n });
     },
     onSuccess: () => { toast.success("Name updated"); qc.invalidateQueries(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   const savePin = useMutation({
@@ -49,7 +49,7 @@ export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { rel
       if (error) throw error;
     },
     onSuccess: () => { setNewPin(""); toast.success("Your PIN was updated"); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   const saveAnn = useMutation({
@@ -58,7 +58,7 @@ export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { rel
       await supabase.from("relationships").update({ anniversary }).eq("id", relationshipId);
     },
     onSuccess: () => { toast.success("Anniversary saved"); qc.invalidateQueries(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
+    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   const yourName = slot === "a" ? rel?.name_a : rel?.name_b;
@@ -116,6 +116,20 @@ export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { rel
           <Input value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="••••" />
         </FieldWrap>
         <PrimaryButton onClick={() => savePin.mutate()}>Update PIN</PrimaryButton>
+      </section>
+
+      <section className="space-y-3">
+        <SectionHead label="Partner's PIN" />
+        <p className="text-[11px] text-muted-foreground">If your partner forgot their PIN, you can generate a reset link for them.</p>
+        <PrimaryButton onClick={() => {
+          const partnerSlot = slot === "a" ? "b" : "a";
+          const d = anniversary || rel?.anniversary || ANNIVERSARY_ISO;
+          const link = `${window.location.origin}/?reset=${partnerSlot}&date=${d}`;
+          if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).catch(() => {});
+          }
+          toast.success("Reset link copied! Send it to your partner.", { duration: 6000 });
+        }}>Copy Reset Link</PrimaryButton>
       </section>
 
       <section className="space-y-3">

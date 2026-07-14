@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, getDay } from "date-fns";
+import {
+  format, startOfMonth, endOfMonth, eachDayOfInterval,
+  isSameDay, addMonths, subMonths, isSameMonth, getDay,
+} from "date-fns";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
@@ -20,6 +23,22 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     },
   });
 
+  // Fetch memories with photos this month to show in calendar circles
+  const { data: monthMemories = [] } = useQuery({
+    queryKey: ["memories-cal", relationshipId, cursor.getFullYear(), cursor.getMonth()],
+    queryFn: async () => {
+      const s = format(startOfMonth(cursor), "yyyy-MM-dd");
+      const e = format(endOfMonth(cursor), "yyyy-MM-dd");
+      const { data } = await supabase.from("memories")
+        .select("id,memory_date,cover_url,title")
+        .eq("relationship_id", relationshipId)
+        .gte("memory_date", s)
+        .lte("memory_date", e)
+        .not("cover_url", "is", null);
+      return data ?? [];
+    },
+  });
+
   const days = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
   const leading = getDay(startOfMonth(cursor));
   const today = new Date();
@@ -28,48 +47,92 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     <div className="mx-auto max-w-md space-y-4 px-5 py-6 pb-32">
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
         <div className="flex items-center justify-between">
-          <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronLeft size={16} /></button>
+          <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5">
+            <ChevronLeft size={16} />
+          </button>
           <div className="display text-lg">{format(cursor, "MMMM yyyy")}</div>
-          <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronRight size={16} /></button>
+          <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5">
+            <ChevronRight size={16} />
+          </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
           {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
         </div>
 
-        <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
+        <div className="mt-2 grid grid-cols-7 gap-1.5 text-center text-sm">
           {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
           {days.map((d) => {
-            const has = events.some((e) => isSameDay(new Date(e.starts_at), d));
+            const hasEvent = events.some((e) => isSameDay(new Date(e.starts_at), d));
+            // Find a memory photo for this day
+            const memPhoto = monthMemories.find(
+              (m) => m.memory_date && isSameDay(new Date(m.memory_date + "T00:00:00"), d)
+            );
             const isToday = isSameDay(d, today);
+            const inMonth = isSameMonth(d, cursor);
+
             return (
               <div
                 key={d.toISOString()}
-                className={`relative aspect-square flex items-center justify-center rounded-full
-                  ${isToday ? "bg-foreground text-background font-medium" : "hover:bg-black/5"}
-                  ${!isSameMonth(d, cursor) ? "opacity-30" : ""}`}
+                className={`relative aspect-square flex items-center justify-center rounded-full overflow-hidden transition-transform
+                  ${!inMonth ? "opacity-30" : ""}
+                  ${isToday ? "" : "hover:scale-105"}`}
+                title={memPhoto?.title ?? undefined}
               >
-                {d.getDate()}
-                {has && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug" />}
+                {/* Photo background for memory days */}
+                {memPhoto?.cover_url && inMonth && (
+                  <>
+                    <img
+                      src={memPhoto.cover_url}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* Glass overlay */}
+                    <div className="absolute inset-0 rounded-full border border-white/60 bg-white/40 backdrop-blur-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]" />
+                  </>
+                )}
+
+                {/* Today highlight ring */}
+                {isToday && (
+                  <div className="absolute inset-0 rounded-full ring-2 ring-foreground/60 bg-foreground/10" />
+                )}
+
+                {/* Plain day bg if no photo */}
+                {!memPhoto && !isToday && (
+                  <div className="absolute inset-0 rounded-full hover:bg-black/5" />
+                )}
+
+                <span className={`relative z-10 text-xs font-semibold
+                  ${isToday ? "text-foreground" : memPhoto ? "text-foreground/90" : "text-foreground/70"}`}>
+                  {d.getDate()}
+                </span>
+
+                {/* Event dot */}
+                {hasEvent && (
+                  <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug z-10 shadow-[0_0_4px_var(--hug)]" />
+                )}
               </div>
             );
           })}
         </div>
       </section>
 
+      {/* Events list */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
-        <div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">This month</div>
+        <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">This month</div>
         {events.length === 0 ? (
           <div className="text-sm text-muted-foreground italic">Quiet month. Add something below.</div>
         ) : (
           <ul className="space-y-2">
             {events.map((e) => (
-              <li key={e.id} className="flex items-center justify-between rounded-2xl bg-white/50 px-4 py-3">
+              <li key={e.id} className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3 border border-white/50">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{e.title}</div>
                   <div className="text-[11px] text-muted-foreground">{format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}</div>
                 </div>
-                <span className="ml-3 shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">{e.category}</span>
+                <span className="ml-3 shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {e.category}
+                </span>
               </li>
             ))}
           </ul>
@@ -78,8 +141,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
       <button
         onClick={() => openSheet("add-event")}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50
-          bg-white/60 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)]"
+        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/60 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)]"
       >
         <Plus size={16} /> Add event
       </button>
