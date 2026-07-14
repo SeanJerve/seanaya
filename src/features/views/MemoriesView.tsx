@@ -77,9 +77,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
   const getColClass = (idx: number) => {
     const rem = idx % 4;
-    if (rem === 0) return "col-start-1 justify-self-start";
+    if (rem === 0) return "col-start-1 justify-self-center";
     if (rem === 1 || rem === 3) return "col-start-2 justify-self-center";
-    return "col-start-3 justify-self-end";
+    return "col-start-3 justify-self-center";
   };
 
   return (
@@ -135,9 +135,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Bubble Container */}
                   <button
                     onClick={() => setActiveMemory(m)}
-                    className="group relative w-28 h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.4)] transition-all hover:scale-105 active:scale-95"
+                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.4)] transition-all hover:scale-105 active:scale-95"
                   >
-                    {/* Blurred Cover Photo Background */}
+                    {/* Cover Photo Background */}
                     {m.cover_url && (
                       <>
                         <img
@@ -146,26 +146,27 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           loading="lazy"
                           className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] transition-opacity group-hover:opacity-30" />
+                        {/* Glossy overlay with subtle white shine, no heavy blur */}
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.35),rgba(0,0,0,0.1))] transition-opacity group-hover:opacity-60" />
                       </>
                     )}
 
                     {/* Date Display */}
-                    <div className="relative z-10 flex flex-col items-center text-foreground">
+                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "bg-white/50 backdrop-blur-[2px] px-2.5 py-1.5 rounded-2xl border border-white/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)]" : ""}`}>
                       {formattedDate ? (
                         <>
-                          <span className="text-[10px] uppercase tracking-widest text-foreground/60 font-semibold leading-none">
+                          <span className="text-[9px] uppercase tracking-widest text-foreground/70 font-semibold leading-none">
                             {format(formattedDate, "MMM")}
                           </span>
-                          <span className="display text-3xl font-bold mt-1 leading-none drop-shadow-sm">
+                          <span className="display text-2xl font-bold mt-0.5 leading-none drop-shadow-sm">
                             {format(formattedDate, "d")}
                           </span>
-                          <span className="text-[9px] text-foreground/50 mt-1 leading-none">
+                          <span className="text-[8px] text-foreground/50 mt-0.5 leading-none">
                             {format(formattedDate, "yyyy")}
                           </span>
                         </>
                       ) : (
-                        <span className="text-xs uppercase tracking-wider text-foreground/60 font-semibold">
+                        <span className="text-[10px] uppercase tracking-wider text-foreground/60 font-semibold">
                           Special
                         </span>
                       )}

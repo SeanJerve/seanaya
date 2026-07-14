@@ -125,8 +125,18 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
       </FieldWrap>
 
       <FieldWrap label={file ? "Caption (optional)" : "Body"}>
-        <Textarea rows={4} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-          placeholder={file ? "A little caption…" : "Say something soft…"} />
+        <div className="relative">
+          <Textarea 
+            rows={4} 
+            value={form.body} 
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+            placeholder={file ? "A little caption…" : "Say something soft…"} 
+            maxLength={180}
+          />
+          <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">
+            {180 - form.body.length} characters left
+          </div>
+        </div>
       </FieldWrap>
 
       <PrimaryButton disabled={create.isPending || !online} onClick={() => create.mutate()}>

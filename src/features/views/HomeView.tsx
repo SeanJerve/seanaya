@@ -134,45 +134,47 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
       {/* ── Greeting strip with wall preview ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] overflow-hidden">
-        <div className="flex items-stretch gap-0">
+        <div className="grid grid-cols-2 items-stretch divide-x divide-white/40 gap-0">
           {/* Left: greeting text */}
-          <div className="flex-1 px-5 py-4 min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A quiet hello</div>
-            <div className="display truncate text-2xl leading-tight mt-0.5">Hi, {name}.</div>
+          <div className="px-5 py-4 min-w-0 flex flex-col justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">A quiet hello</div>
+              <div className="display truncate text-2xl leading-tight mt-0.5">Hi, {name}.</div>
+            </div>
             {days !== null && (
               <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="display text-3xl leading-none font-semibold">{days}</span>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">days together</span>
+                <span className="display text-3xl leading-none font-bold">{days}</span>
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground">days together</span>
               </div>
             )}
           </div>
 
           {/* Right: latest wall item preview */}
           <div
-            className="w-28 shrink-0 border-l border-white/40 cursor-pointer relative overflow-hidden"
+            className="cursor-pointer relative overflow-hidden min-h-[96px]"
             onClick={() => setTab("wall")}
             title="Latest from your wall"
           >
             {latestNote?.image_url ? (
               <>
                 <img src={latestNote.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px]" />
-                <div className="absolute bottom-0 inset-x-0 px-2 py-1.5 bg-gradient-to-t from-black/30 to-transparent">
-                  <div className="text-[9px] text-white/90 uppercase tracking-wider">Latest pin</div>
+                <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px]" />
+                <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent">
+                  <div className="text-[9px] text-white/95 uppercase tracking-wider font-semibold">Latest pin</div>
                 </div>
               </>
             ) : latestNote ? (
               <div
-                className="absolute inset-0 flex flex-col justify-between p-3"
+                className="absolute inset-0 flex flex-col justify-between p-3.5"
                 style={{ background: latestNote.color ?? "oklch(0.95 0.03 85 / 0.6)" }}
               >
                 <div className="text-[9px] uppercase tracking-wider text-foreground/50">Latest pin</div>
-                <p className="text-xs text-foreground/80 line-clamp-4 leading-snug">{latestNote.body}</p>
+                <p className="text-xs text-foreground/80 line-clamp-3 leading-snug font-[Nunito]">{latestNote.body}</p>
               </div>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-foreground/30">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
-                <span className="text-[9px] uppercase tracking-wider text-center leading-tight">Pin something</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-foreground/30 p-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
+                <span className="text-[8px] uppercase tracking-wider text-center leading-tight">Pin something</span>
               </div>
             )}
           </div>
