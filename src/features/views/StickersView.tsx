@@ -54,7 +54,7 @@ const PAD_BACKGROUNDS = [
 
 export function StickersView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
-  const { openSheet, confirm, setActiveStickerPageId } = useAppStore();
+  const { openSheet, confirm, setActiveStickerPageId, activeStickerPageId } = useAppStore();
   const boardRef = useRef<HTMLDivElement>(null);
   
   const [activePageId, setActivePageId] = useState<string | null>(null);
@@ -118,16 +118,16 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   }, [pages]);
 
   useEffect(() => {
-    if (activePage?.id) {
+    if (activePage?.id && activePage.id !== activeStickerPageId) {
       setActiveStickerPageId(activePage.id);
     }
-  }, [activePage?.id, setActiveStickerPageId]);
+  }, [activePage?.id, activeStickerPageId]);
 
   useEffect(() => {
     return () => {
       setActiveStickerPageId(null);
     };
-  }, [setActiveStickerPageId]);
+  }, []);
 
   // Filter stickers belonging to the active page (fallback legacy stickers without page_id to first page)
   const pageStickers = allStickers.filter(
