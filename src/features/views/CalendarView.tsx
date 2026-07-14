@@ -1,16 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, addMonths, subMonths, isSameMonth, getDay,
 } from "date-fns";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
+import { toast } from "sonner";
 
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [cursor, setCursor] = useState(new Date());
   const { openSheet } = useAppStore();
+  const qc = useQueryClient();
+
+  const deleteEvent = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("events").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Event deleted");
+      qc.invalidateQueries({ queryKey: ["events", relationshipId] });
+    },
+    onError: (e: any) => toast.error(e?.message || String(e)),
+  });
 
   const { data: events = [] } = useQuery({
     queryKey: ["events", relationshipId, cursor.getFullYear(), cursor.getMonth()],
@@ -112,8 +126,8 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    {/* Glass overlay */}
-                    <div className="absolute inset-0 rounded-full border border-white/60 bg-white/40 backdrop-blur-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]" />
+                    {/* Glass overlay (clearer to show background photo) */}
+                    <div className="absolute inset-0 rounded-full border border-white/50 bg-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]" />
                   </>
                 )}
 
@@ -151,13 +165,22 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           <ul className="space-y-2">
             {events.map((e) => (
               <li key={e.id} className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3 border border-white/50">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{e.title}</div>
                   <div className="text-[11px] text-muted-foreground">{format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}</div>
                 </div>
-                <span className="ml-3 shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {e.category}
-                </span>
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <span className="rounded-full bg-white/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {e.category}
+                  </span>
+                  <button
+                    onClick={(evt) => { evt.stopPropagation(); if (confirm("Delete this event?")) deleteEvent.mutate(e.id); }}
+                    className="text-foreground/35 hover:text-red-500 transition-colors p-1"
+                    title="Delete event"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

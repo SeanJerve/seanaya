@@ -274,7 +274,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                 {dayPhoto?.url && (
                   <>
                     <img src={dayPhoto.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] rounded-full" />
+                    <div className="absolute inset-0 bg-white/15 border border-white/40 rounded-full" />
                   </>
                 )}
                 <span className={`relative z-10 text-xs font-medium ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : ""}`}>
