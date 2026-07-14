@@ -64,7 +64,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const [newPageName, setNewPageName] = useState("");
 
   // Fetch sticker book pages
-  const { data: pages = [], refetch: refetchPages } = useQuery({
+  const { data: pages = [], refetch: refetchPages, isFetched } = useQuery({
     queryKey: ["sticker-pages", relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -112,10 +112,10 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const activeBg = PAD_BACKGROUNDS.find((b) => b.key === activePage?.bg_theme) || PAD_BACKGROUNDS[0];
 
   useEffect(() => {
-    if (pages.length === 0 && !createPage.isPending) {
+    if (isFetched && pages.length === 0 && !createPage.isPending) {
       createPage.mutate("Main Page");
     }
-  }, [pages]);
+  }, [pages, isFetched]);
 
   useEffect(() => {
     if (activePage?.id && activePage.id !== activeStickerPageId) {
