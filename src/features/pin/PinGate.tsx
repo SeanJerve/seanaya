@@ -101,7 +101,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const hash = await hashPin(finalPin);
     if (!space) return;
     const { error } = await supabase.rpc("set_partner_pin", {
-      _rel_id: space.id, _pin_hash: hash, _name: name.trim() || null,
+      _rel_id: space.id, _pin_hash: hash, _name: name.trim() || "",
     });
     if (error) {
       toast.error(error.message.includes("different pin") ? "Pick a different PIN than your partner" : "Couldn't join the space");
@@ -131,18 +131,12 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   async function completeReset(newPin: string) {
     if (!space) return;
     const h = await hashPin(newPin);
+    const { data: rel } = await supabase.from("relationships").select("anniversary").eq("id", space.id).maybeSingle();
+    const iso = rel?.anniversary ?? "2026-06-19";
     const { error } = await supabase.rpc("reset_slot_pin", {
-      _rel_id: space.id, _slot: resetSlot, _new_hash: h,
-      _anniversary: (space as unknown as { anniversary?: string }).anniversary ?? null,
+      _rel_id: space.id, _slot: resetSlot, _new_hash: h, _anniversary: iso,
     });
-    // reset_slot_pin needs anniversary; fetch from relationships if RPC returned error about it
-    if (error) {
-      const { data: rel } = await supabase.from("relationships").select("anniversary").eq("id", space.id).maybeSingle();
-      const { error: e2 } = await supabase.rpc("reset_slot_pin", {
-        _rel_id: space.id, _slot: resetSlot, _new_hash: h, _anniversary: rel?.anniversary ?? "2026-06-19",
-      });
-      if (e2) { toast.error("Couldn't reset. Try again."); return; }
-    }
+    if (error) { toast.error("Couldn't reset. Try again."); return; }
     toast.success("PIN updated. Enter it now.");
     setPin(""); setStage("unlock");
     refreshSpace();
