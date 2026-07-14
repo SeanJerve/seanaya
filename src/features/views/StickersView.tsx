@@ -118,9 +118,16 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   }, [pages]);
 
   useEffect(() => {
-    setActiveStickerPageId(activePage?.id || null);
-    return () => setActiveStickerPageId(null);
-  }, [activePage, setActiveStickerPageId]);
+    if (activePage?.id) {
+      setActiveStickerPageId(activePage.id);
+    }
+  }, [activePage?.id, setActiveStickerPageId]);
+
+  useEffect(() => {
+    return () => {
+      setActiveStickerPageId(null);
+    };
+  }, [setActiveStickerPageId]);
 
   // Filter stickers belonging to the active page (fallback legacy stickers without page_id to first page)
   const pageStickers = allStickers.filter(
