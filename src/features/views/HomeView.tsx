@@ -138,8 +138,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           {/* Left: greeting text */}
           <div className="px-5 py-4 min-w-0 flex flex-col justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">A quiet hello</div>
-              <div className="display truncate text-2xl leading-tight mt-0.5">Hi, {name}.</div>
+              <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
             </div>
             {days !== null && (
               <div className="mt-3 flex items-baseline gap-1.5">

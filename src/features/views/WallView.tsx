@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Palette, Trash2 } from "lucide-react";
@@ -22,6 +22,7 @@ type Note = {
   pos_x: number | null;
   pos_y: number | null;
   created_at: string;
+  author_id: string | null;
 };
 
 type PhotoTile = {
@@ -61,16 +62,31 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   const { user } = useUser();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
   const boardRef = useRef<HTMLDivElement>(null);
+  const [lastViewedNotes, setLastViewedNotes] = useState<string | null>(null);
+
+  useEffect(() => {
+    const val = localStorage.getItem("last_viewed_notes");
+    if (!val) {
+      const nowStr = new Date().toISOString();
+      localStorage.setItem("last_viewed_notes", nowStr);
+      setLastViewedNotes(nowStr);
+    } else {
+      setLastViewedNotes(val);
+    }
+
+    return () => {
+      localStorage.setItem("last_viewed_notes", new Date().toISOString());
+    };
+  }, []);
 
   const { data: notes = [] } = useQuery({
     queryKey: ["notes", relationshipId],
     queryFn: async () =>
       ((await supabase
         .from("notes")
-        .select("id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at")
+        .select("id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at,author_id")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: true }) // Newer notes are painted last (drawn on top)
       ).data ?? []) as Note[],
@@ -94,14 +110,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     });
   }, [notes, selectedMonth]);
 
-  const updateColor = useMutation({
-    mutationFn: async ({ id, color }: { id: string; color: string }) => {
-      const { error } = await supabase.from("notes").update({ color }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { setColorPickerFor(null); qc.invalidateQueries({ queryKey: ["notes"] }); },
-    onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
-  });
+
 
   const updatePosition = useMutation({
     mutationFn: async ({ id, pos_x, pos_y }: { id: string; pos_x: number; pos_y: number }) => {
@@ -285,18 +294,14 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   {n.image_url ? (
                     <PolaroidCard
                       note={n}
-                      showColorPicker={colorPickerFor === n.id}
-                      onColorClick={() => setColorPickerFor(colorPickerFor === n.id ? null : n.id)}
-                      onColorSelect={(color) => updateColor.mutate({ id: n.id, color })}
+                      isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
                       onDelete={() => deleteNote.mutate(n)}
                       onImageClick={() => setLightbox(n.image_url)}
                     />
                   ) : (
                     <StickyNote
                       note={n}
-                      showColorPicker={colorPickerFor === n.id}
-                      onColorClick={() => setColorPickerFor(colorPickerFor === n.id ? null : n.id)}
-                      onColorSelect={(color) => updateColor.mutate({ id: n.id, color })}
+                      isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
                       onDelete={() => deleteNote.mutate(n)}
                     />
                   )}
@@ -316,32 +321,24 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       </button>
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
-
-      {colorPickerFor && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setColorPickerFor(null)}
-        />
-      )}
     </div>
   );
 }
 
 // ── Standalone Polaroid Frame Component (Used for Photo Notes) ─────────────────────
 function PolaroidCard({
-  note, showColorPicker, onColorClick, onColorSelect, onDelete, onImageClick
+  note, isNew, onDelete, onImageClick
 }: {
   note: Note;
-  showColorPicker: boolean;
-  onColorClick: () => void;
-  onColorSelect: (c: string) => void;
+  isNew: boolean;
   onDelete: () => void;
   onImageClick?: () => void;
 }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
   return (
     <div
-      className="relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[115px] md:w-[130px] p-2 bg-white pb-3 flex flex-col justify-between"
+      className={`relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[115px] md:w-[130px] p-2 bg-white pb-3 flex flex-col justify-between transition-all duration-500
+        ${isNew ? "ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.85)] scale-[1.03] animate-pulse" : ""}`}
     >
       {/* Push pin */}
       <div
@@ -369,50 +366,24 @@ function PolaroidCard({
       <div className="px-0.5 pt-2 pb-0.5 text-center pointer-events-none min-w-0">
         <p className="text-[10px] text-foreground/75 leading-snug truncate font-[Nunito]">{note.body !== "(photo)" ? note.body : ""}</p>
       </div>
-
-      {/* Color picker triggers */}
-      <div className="flex justify-between items-center mt-1 pt-0.5">
-        <div className="relative">
-          <button
-            onClick={(e) => { e.stopPropagation(); onColorClick(); }}
-            className="text-foreground/30 hover:text-foreground/60 transition-colors p-0.5"
-          >
-            <Palette size={8} />
-          </button>
-          {showColorPicker && (
-            <div className="absolute bottom-5 left-0 z-35 flex gap-1 rounded-2xl border border-white/60 bg-white/90 backdrop-blur-xl p-1 shadow-lg">
-              {PASTEL_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={(e) => { e.stopPropagation(); onColorSelect(c.value); }}
-                  className="h-3.5 w-3.5 rounded-full border border-white/60 shadow-sm hover:scale-110 transition-transform"
-                  style={{ background: c.value }}
-                  title={c.label}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
 
 // ── Sticky Note Component (Only text, no overlaid polaroid anymore!) ────────────────────────────────
 function StickyNote({
-  note, showColorPicker, onColorClick, onColorSelect, onDelete
+  note, isNew, onDelete
 }: {
   note: Note;
-  showColorPicker: boolean;
-  onColorClick: () => void;
-  onColorSelect: (c: string) => void;
+  isNew: boolean;
   onDelete: () => void;
 }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
 
   return (
     <div
-      className="relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[140px] md:w-[155px] min-h-[145px] pb-4 flex flex-col justify-between"
+      className={`relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[140px] md:w-[155px] min-h-[145px] pb-4 flex flex-col justify-between transition-all duration-500
+        ${isNew ? "ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.85)] scale-[1.03] animate-pulse" : ""}`}
       style={{ background: bg }}
     >
       {/* Folded corner effect */}
@@ -444,32 +415,6 @@ function StickyNote({
           <p className="text-xs leading-relaxed text-foreground/80 font-[Nunito] break-words line-clamp-5 overflow-hidden whitespace-pre-wrap select-none pointer-events-none">
             {note.body}
           </p>
-        </div>
-
-        {/* Bottom controls */}
-        <div className="flex items-center justify-between mt-3 pt-1">
-          {/* Color picker */}
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); onColorClick(); }}
-              className="text-foreground/30 hover:text-foreground/60 transition-colors p-0.5"
-            >
-              <Palette size={10} />
-            </button>
-            {showColorPicker && (
-              <div className="absolute bottom-5 left-0 z-35 flex gap-1 rounded-2xl border border-white/60 bg-white/90 backdrop-blur-xl p-1.5 shadow-lg">
-                {PASTEL_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={(e) => { e.stopPropagation(); onColorSelect(c.value); }}
-                    className="h-4.5 w-4.5 rounded-full border border-white/60 shadow-sm hover:scale-110 transition-transform"
-                    style={{ background: c.value }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, MapPin, Music2, Settings, Plus, PawPrint } from "lucide-react";
+import { ChevronRight, MapPin, Music2, Settings, Plus, PawPrint, Trash2 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
+import { toast } from "sonner";
 
 export function MoreView({ relationshipId }: { relationshipId: string }) {
   const { openSheet } = useAppStore();
+  const qc = useQueryClient();
 
   const { data: trips = [] } = useQuery({
     queryKey: ["trips", relationshipId],
@@ -17,6 +19,30 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
   const { data: pets = [] } = useQuery({
     queryKey: ["pets", relationshipId],
     queryFn: async () => (await supabase.from("pets").select("*").eq("relationship_id", relationshipId)).data ?? [],
+  });
+
+  const deleteTrip = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("trips").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Place removed");
+      qc.invalidateQueries({ queryKey: ["trips", relationshipId] });
+    },
+    onError: (e: any) => toast.error(e?.message || String(e)),
+  });
+
+  const deleteSong = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("songs").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Song removed");
+      qc.invalidateQueries({ queryKey: ["songs", relationshipId] });
+    },
+    onError: (e: any) => toast.error(e?.message || String(e)),
   });
 
   return (
@@ -33,11 +59,20 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
           <ul className="space-y-1.5">
             {trips.slice(0, 6).map((t) => (
               <li key={t.id} className="flex items-center justify-between rounded-2xl bg-white/40 px-4 py-2.5">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1 mr-3">
                   <div className="truncate text-sm font-medium">{t.title}</div>
-                  <div className="text-[11px] text-muted-foreground">{t.location}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{t.location}</div>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t.status}</span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t.status}</span>
+                  <button
+                    onClick={() => { if (confirm("Remove this place?")) deleteTrip.mutate(t.id); }}
+                    className="text-foreground/35 hover:text-red-500 transition-colors p-1"
+                    title="Remove place"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -56,11 +91,20 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
           <ul className="space-y-1.5">
             {songs.slice(0, 6).map((s) => (
               <li key={s.id} className="flex items-center justify-between rounded-2xl bg-white/40 px-4 py-2.5">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1 mr-3">
                   <div className="truncate text-sm font-medium">{s.title}</div>
-                  <div className="text-[11px] text-muted-foreground">{s.artist ?? "Unknown"}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{s.artist ?? "Unknown"}</div>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.category}</span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.category}</span>
+                  <button
+                    onClick={() => { if (confirm("Remove this song?")) deleteSong.mutate(s.id); }}
+                    className="text-foreground/35 hover:text-red-500 transition-colors p-1"
+                    title="Remove song"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

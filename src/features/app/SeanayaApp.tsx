@@ -45,11 +45,10 @@ function Inner() {
   const inviteCode = rel.invite_code ?? "";
 
   const headerTitle = ({ home: "Home", calendar: "Calendar", memories: "Memories", wall: "Wall", more: "More" } as const)[tab];
-  const headerSub   = ({ home: "A quiet place for two", calendar: "What's coming up", memories: "Kept forever", wall: "Little things, always true", more: "Places, songs, settings" } as const)[tab];
 
   return (
     <div className="min-h-[100dvh] w-full seanaya-bg">
-      <AppHeader title={headerTitle} subtitle={headerSub} relationshipId={relId} />
+      <AppHeader title={headerTitle} relationshipId={relId} />
 
       <main>
         {tab === "home" && <HomeView relationshipId={relId} anniversary={rel.anniversary} />}

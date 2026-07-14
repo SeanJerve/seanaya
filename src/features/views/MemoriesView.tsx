@@ -98,7 +98,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   };
 
   return (
-    <div ref={containerRef} className="relative mx-auto max-w-md px-5 py-8 pb-32 min-h-screen">
+    <div ref={containerRef} className="relative mx-auto max-w-md px-5 py-8 pb-32 min-h-screen overflow-x-hidden">
+      {/* Dreamy background watercolor elements & stars */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[10%] -left-20 w-80 h-80 rounded-full bg-pink-200/20 blur-[80px]" />
+        <div className="absolute top-[45%] -right-20 w-96 h-96 rounded-full bg-blue-200/25 blur-[100px]" />
+        <div className="absolute bottom-[15%] -left-10 w-80 h-80 rounded-full bg-purple-200/15 blur-[80px]" />
+        <div 
+          className="absolute inset-0 opacity-[0.025]" 
+          style={{ 
+            backgroundImage: "radial-gradient(circle, oklch(0.25 0.05 240) 1px, transparent 1px)", 
+            backgroundSize: "24px 24px" 
+          }} 
+        />
+      </div>
       {memories.length === 0 ? (
         <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-8 text-center relative z-10">
           <div className="display text-xl">Nothing kept yet.</div>
