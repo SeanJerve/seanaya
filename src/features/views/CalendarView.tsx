@@ -23,19 +23,44 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     },
   });
 
-  // Fetch memories with photos this month to show in calendar circles
-  const { data: monthMemories = [] } = useQuery({
-    queryKey: ["memories-cal", relationshipId, cursor.getFullYear(), cursor.getMonth()],
+  // Fetch memories & note photos this month to show in calendar circles
+  const { data: monthPhotos = [] } = useQuery({
+    queryKey: ["photos-cal", relationshipId, cursor.getFullYear(), cursor.getMonth()],
     queryFn: async () => {
-      const s = format(startOfMonth(cursor), "yyyy-MM-dd");
-      const e = format(endOfMonth(cursor), "yyyy-MM-dd");
-      const { data } = await supabase.from("memories")
-        .select("id,memory_date,cover_url,title")
-        .eq("relationship_id", relationshipId)
-        .gte("memory_date", s)
-        .lte("memory_date", e)
-        .not("cover_url", "is", null);
-      return data ?? [];
+      const sStart = startOfMonth(cursor).toISOString();
+      const sEnd = endOfMonth(cursor).toISOString();
+      const sDateStart = format(startOfMonth(cursor), "yyyy-MM-dd");
+      const sDateEnd = format(endOfMonth(cursor), "yyyy-MM-dd");
+
+      const [mems, notes] = await Promise.all([
+        supabase.from("memories")
+          .select("id,memory_date,cover_url,title")
+          .eq("relationship_id", relationshipId)
+          .gte("memory_date", sDateStart)
+          .lte("memory_date", sDateEnd)
+          .not("cover_url", "is", null),
+        supabase.from("notes")
+          .select("id,created_at,image_url,body")
+          .eq("relationship_id", relationshipId)
+          .eq("kind", "photo")
+          .gte("created_at", sStart)
+          .lte("created_at", sEnd)
+          .not("image_url", "is", null)
+      ]);
+
+      const list: { dateStr: string; url: string; title: string }[] = [];
+      mems.data?.forEach((m) => {
+        if (m.memory_date && m.cover_url) {
+          list.push({ dateStr: m.memory_date, url: m.cover_url, title: m.title });
+        }
+      });
+      notes.data?.forEach((n) => {
+        if (n.created_at && n.image_url) {
+          const dStr = format(new Date(n.created_at), "yyyy-MM-dd");
+          list.push({ dateStr: dStr, url: n.image_url, title: n.body !== "(photo)" ? n.body : "Photo Pin" });
+        }
+      });
+      return list;
     },
   });
 
@@ -64,9 +89,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
           {days.map((d) => {
             const hasEvent = events.some((e) => isSameDay(new Date(e.starts_at), d));
-            // Find a memory photo for this day
-            const memPhoto = monthMemories.find(
-              (m) => m.memory_date && isSameDay(new Date(m.memory_date + "T00:00:00"), d)
+            // Find a photo for this day (either memory or note photo)
+            const dayPhoto = monthPhotos.find(
+              (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d)
             );
             const isToday = isSameDay(d, today);
             const inMonth = isSameMonth(d, cursor);
@@ -77,13 +102,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 className={`relative aspect-square flex items-center justify-center rounded-full overflow-hidden transition-transform
                   ${!inMonth ? "opacity-30" : ""}
                   ${isToday ? "" : "hover:scale-105"}`}
-                title={memPhoto?.title ?? undefined}
+                title={dayPhoto?.title ?? undefined}
               >
-                {/* Photo background for memory days */}
-                {memPhoto?.cover_url && inMonth && (
+                {/* Photo background for memory / note photo days */}
+                {dayPhoto?.url && inMonth && (
                   <>
                     <img
-                      src={memPhoto.cover_url}
+                      src={dayPhoto.url}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover"
                     />
@@ -98,7 +123,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 {/* Plain day bg if no photo */}
-                {!memPhoto && !isToday && (
+                {!dayPhoto && !isToday && (
                   <div className="absolute inset-0 rounded-full hover:bg-black/5" />
                 )}
 
