@@ -340,6 +340,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          capsule: boolean
+          event: boolean
+          hug: boolean
+          memory: boolean
+          note: boolean
+          song: boolean
+          trip: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capsule?: boolean
+          event?: boolean
+          hug?: boolean
+          memory?: boolean
+          note?: boolean
+          song?: boolean
+          trip?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capsule?: boolean
+          event?: boolean
+          hug?: boolean
+          memory?: boolean
+          note?: boolean
+          song?: boolean
+          trip?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -500,7 +536,11 @@ export type Database = {
           id: string
           invite_code: string | null
           name: string | null
+          name_a: string | null
+          name_b: string | null
           pin_hash: string | null
+          pin_hash_a: string | null
+          pin_hash_b: string | null
           updated_at: string
           user_a_id: string
           user_b_id: string | null
@@ -511,7 +551,11 @@ export type Database = {
           id?: string
           invite_code?: string | null
           name?: string | null
+          name_a?: string | null
+          name_b?: string | null
           pin_hash?: string | null
+          pin_hash_a?: string | null
+          pin_hash_b?: string | null
           updated_at?: string
           user_a_id: string
           user_b_id?: string | null
@@ -522,7 +566,11 @@ export type Database = {
           id?: string
           invite_code?: string | null
           name?: string | null
+          name_a?: string | null
+          name_b?: string | null
           pin_hash?: string | null
+          pin_hash_a?: string | null
+          pin_hash_b?: string | null
           updated_at?: string
           user_a_id?: string
           user_b_id?: string | null
@@ -694,8 +742,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_slot: {
+        Args: { _pin_hash: string; _rel_id: string }
+        Returns: string
+      }
       current_relationship_id: { Args: never; Returns: string }
+      get_space_state: {
+        Args: never
+        Returns: {
+          has_a: boolean
+          has_b: boolean
+          id: string
+          name: string
+          name_a: string
+          name_b: string
+        }[]
+      }
       is_relationship_member: { Args: { _rel: string }; Returns: boolean }
+      reset_slot_pin: {
+        Args: {
+          _anniversary: string
+          _new_hash: string
+          _rel_id: string
+          _slot: string
+        }
+        Returns: undefined
+      }
+      set_partner_pin: {
+        Args: { _name: string; _pin_hash: string; _rel_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       event_category:
