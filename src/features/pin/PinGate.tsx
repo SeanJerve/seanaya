@@ -58,32 +58,41 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      if (!sess.session) {
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) { toast.error("Could not open your space"); return; }
-      }
-      const s = await refreshSpace();
-      const urlInvite = new URLSearchParams(window.location.search).get("invite");
-      const urlReset = new URLSearchParams(window.location.search).get("reset");
-      const urlDate = new URLSearchParams(window.location.search).get("date");
-      
-      if (!s) {
-        setStage("setup-name");
-      } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
-        setResetSlot(urlReset as Slot);
-        setDateInput(urlDate);
-        setStage("forgot-newpin");
-      } else if (s.has_a && s.has_b) {
-        setStage("unlock");
-      } else if (s.has_a && !s.has_b) {
-        if (urlInvite) {
-          setStage(pinStorage.getName() ? "partner-pin" : "partner-name");
-        } else {
-          setStage("unlock");
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess.session) {
+          const { error } = await supabase.auth.signInAnonymously();
+          if (error) {
+            console.error("Sign in anonymously failed:", error);
+            toast.error(`Could not open your space: ${error.message}`);
+            return;
+          }
         }
-      } else {
-        setStage("setup-name"); 
+        const s = await refreshSpace();
+        const urlInvite = new URLSearchParams(window.location.search).get("invite");
+        const urlReset = new URLSearchParams(window.location.search).get("reset");
+        const urlDate = new URLSearchParams(window.location.search).get("date");
+        
+        if (!s) {
+          setStage("setup-name");
+        } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
+          setResetSlot(urlReset as Slot);
+          setDateInput(urlDate);
+          setStage("forgot-newpin");
+        } else if (s.has_a && s.has_b) {
+          setStage("unlock");
+        } else if (s.has_a && !s.has_b) {
+          if (urlInvite) {
+            setStage(pinStorage.getName() ? "partner-pin" : "partner-name");
+          } else {
+            setStage("unlock");
+          }
+        } else {
+          setStage("setup-name"); 
+        }
+      } catch (err: any) {
+        console.error("Initialization error:", err);
+        toast.error(`Connection error: ${err.message || String(err)}`);
       }
     })();
   }, []);
