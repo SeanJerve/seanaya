@@ -128,7 +128,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 <span className={`relative z-10 text-xs font-semibold
-                  ${isToday ? "text-foreground" : memPhoto ? "text-foreground/90" : "text-foreground/70"}`}>
+                  ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}>
                   {d.getDate()}
                 </span>
 
