@@ -76,19 +76,6 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       ).data ?? []) as Note[],
   });
 
-  const { data: extras = [] } = useQuery({
-    queryKey: ["wall-extras", relationshipId],
-    queryFn: async (): Promise<PhotoTile[]> => {
-      const [trips, mems] = await Promise.all([
-        supabase.from("trips").select("id,title,location,cover_url,created_at").eq("relationship_id", relationshipId).not("cover_url", "is", null).order("created_at", { ascending: false }),
-        supabase.from("memories").select("id,title,location,cover_url,memory_date").eq("relationship_id", relationshipId).not("cover_url", "is", null).order("memory_date", { ascending: false }),
-      ]);
-      const t: PhotoTile[] = (trips.data ?? []).map((r) => ({ id: r.id, title: r.title, sub: r.location ?? "", url: r.cover_url!, kind: "trip", dateStr: r.created_at }));
-      const m: PhotoTile[] = (mems.data ?? []).map((r) => ({ id: r.id, title: r.title, sub: r.location ?? "", url: r.cover_url!, kind: "memory", dateStr: r.memory_date }));
-      return [...m, ...t];
-    },
-  });
-
   // Calculate available months dynamically based on note dates
   const availableMonths = useMemo(() => {
     const list = new Set<string>();
@@ -96,26 +83,16 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     notes.forEach((n) => {
       if (n.created_at) list.add(format(new Date(n.created_at), "yyyy-MM"));
     });
-    extras.forEach((e) => {
-      if (e.dateStr) list.add(format(new Date(e.dateStr), "yyyy-MM"));
-    });
     return Array.from(list).sort((a, b) => b.localeCompare(a));
-  }, [notes, extras]);
+  }, [notes]);
 
-  // Filter notes and extras by selected month
+  // Filter notes by selected month
   const filteredNotes = useMemo(() => {
     return notes.filter((n) => {
       const dateStr = n.created_at ? format(new Date(n.created_at), "yyyy-MM") : format(new Date(), "yyyy-MM");
       return dateStr === selectedMonth;
     });
   }, [notes, selectedMonth]);
-
-  const filteredExtras = useMemo(() => {
-    return extras.filter((e) => {
-      const d = e.dateStr ? new Date(e.dateStr) : new Date();
-      return format(d, "yyyy-MM") === selectedMonth;
-    });
-  }, [extras, selectedMonth]);
 
   const updateColor = useMutation({
     mutationFn: async ({ id, color }: { id: string; color: string }) => {
@@ -187,7 +164,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
-  const nothing = filteredNotes.length === 0 && filteredExtras.length === 0;
+  const nothing = filteredNotes.length === 0;
 
   return (
     <div
@@ -225,7 +202,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
             <div className="text-[10px] uppercase tracking-[0.25em] text-foreground/50">Bulletin Board</div>
             <div className="display text-xl text-foreground/80">Our little wall</div>
           </div>
-          <div className="text-[11px] text-muted-foreground">{filteredNotes.length + filteredExtras.length} items</div>
+          <div className="text-[11px] text-muted-foreground">{filteredNotes.length} items</div>
         </div>
 
         {/* Board Month Selector */}
@@ -266,7 +243,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
             {/* Background grid line just for fun */}
             <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
 
-            {/* Render Draggable Sticky Notes */}
+            {/* Render Draggable Sticky Notes / Polaroid Cards */}
             {filteredNotes.map((n) => {
               const tilt = n.rotation ?? getTilt(n.id);
               const seeded = getSeededCoords(n.id);
@@ -275,7 +252,9 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
               return (
                 <motion.div
-                  key={n.id}
+                  // Force React to remount this element on position coordinate updates,
+                  // clearing Framer Motion's internal drag offset transform instantly!
+                  key={`${n.id}-${px.toFixed(3)}-${py.toFixed(3)}`}
                   drag
                   dragConstraints={boardRef}
                   dragElastic={0}
@@ -303,49 +282,24 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   }}
                   whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
                 >
-                  <StickyNote
-                    note={n}
-                    showColorPicker={colorPickerFor === n.id}
-                    onColorClick={() => setColorPickerFor(colorPickerFor === n.id ? null : n.id)}
-                    onColorSelect={(color) => updateColor.mutate({ id: n.id, color })}
-                    onDelete={() => deleteNote.mutate(n)}
-                    onImageClick={() => setLightbox(n.image_url)}
-                  />
-                </motion.div>
-              );
-            })}
-
-            {/* Render Draggable Extra polaroid tiles (memories & trips) */}
-            {filteredExtras.map((t, i) => {
-              const tilt = getTilt(t.id);
-              const seeded = getSeededCoords(t.id);
-              // Shift Y coordinate down slightly so they interleave nicely
-              const px = seeded.x;
-              const py = Math.min(seeded.y + 0.15, 0.72);
-              const borderColor = PASTEL_COLORS[(i + 2) % PASTEL_COLORS.length].value;
-
-              return (
-                <motion.div
-                  key={`${t.kind}-${t.id}`}
-                  drag
-                  dragConstraints={boardRef}
-                  dragElastic={0}
-                  dragMomentum={false}
-                  className="absolute cursor-grab active:cursor-grabbing touch-none select-none z-10"
-                  style={{
-                    left: `${px * 100}%`,
-                    top: `${py * 100}%`,
-                    transform: `rotate(${tilt}deg)`,
-                  }}
-                  whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
-                >
-                  <PolaroidCard
-                    imageUrl={t.url}
-                    caption={t.title}
-                    badge={t.kind}
-                    borderColor={borderColor}
-                    onImageClick={() => setLightbox(t.url)}
-                  />
+                  {n.image_url ? (
+                    <PolaroidCard
+                      note={n}
+                      showColorPicker={colorPickerFor === n.id}
+                      onColorClick={() => setColorPickerFor(colorPickerFor === n.id ? null : n.id)}
+                      onColorSelect={(color) => updateColor.mutate({ id: n.id, color })}
+                      onDelete={() => deleteNote.mutate(n)}
+                      onImageClick={() => setLightbox(n.image_url)}
+                    />
+                  ) : (
+                    <StickyNote
+                      note={n}
+                      showColorPicker={colorPickerFor === n.id}
+                      onColorClick={() => setColorPickerFor(colorPickerFor === n.id ? null : n.id)}
+                      onColorSelect={(color) => updateColor.mutate({ id: n.id, color })}
+                      onDelete={() => deleteNote.mutate(n)}
+                    />
+                  )}
                 </motion.div>
               );
             })}
@@ -373,52 +327,8 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   );
 }
 
-// ── Standalone Polaroid Frame Component (Trips & Memories) ─────────────────────
+// ── Standalone Polaroid Frame Component (Used for Photo Notes) ─────────────────────
 function PolaroidCard({
-  imageUrl, caption, badge, borderColor, onImageClick
-}: {
-  imageUrl: string;
-  caption?: string;
-  badge?: string;
-  borderColor: string;
-  onImageClick?: () => void;
-}) {
-  return (
-    <div
-      className="relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[110px] md:w-[120px] p-2 bg-white"
-    >
-      {/* Push pin */}
-      <div
-        className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 w-3 h-3 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.25)] border border-white/40"
-        style={{ background: borderColor }}
-      />
-
-      {/* Photo */}
-      <button onClick={onImageClick} className="block w-full">
-        <div className="relative overflow-hidden rounded-sm" style={{ aspectRatio: "1" }}>
-          <img src={imageUrl} alt="" loading="lazy" className="w-full h-full object-cover pointer-events-none" />
-          <div
-            className="absolute inset-0 opacity-15 pointer-events-none"
-            style={{ border: `3px solid ${borderColor}` }}
-          />
-        </div>
-      </button>
-
-      {/* Caption area */}
-      <div className="px-1 pt-1.5 pb-0.5 text-center pointer-events-none">
-        {badge && (
-          <span className="text-[7px] uppercase tracking-widest text-foreground/45 block mb-0.5">{badge}</span>
-        )}
-        {caption && (
-          <p className="text-[9px] text-foreground/75 leading-snug truncate font-[Nunito]">{caption}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Sticky Note Component with Overlay Polaroid ────────────────────────────────
-function StickyNote({
   note, showColorPicker, onColorClick, onColorSelect, onDelete, onImageClick
 }: {
   note: Note;
@@ -429,9 +339,76 @@ function StickyNote({
   onImageClick?: () => void;
 }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
-  // Seed a random tilt for the small overlaid polaroid
-  const seed = note.id.charCodeAt(1) + note.id.charCodeAt(note.id.length - 2);
-  const polaroidTilt = ((seed % 9) - 4.5) * 1.5;
+  return (
+    <div
+      className="relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[115px] md:w-[130px] p-2 bg-white pb-3 flex flex-col justify-between"
+    >
+      {/* Push pin */}
+      <div
+        className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 w-3 h-3 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.25)] border border-white/40"
+        style={{ background: bg }}
+      />
+
+      {/* Delete button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this photo note?")) onDelete(); }}
+        className="absolute top-1.5 right-1.5 text-foreground/35 hover:text-red-500 transition-colors p-0.5 z-20"
+        title="Delete note"
+      >
+        <Trash2 size={10} />
+      </button>
+
+      {/* Photo */}
+      <button onClick={onImageClick} className="block w-full">
+        <div className="relative overflow-hidden rounded-sm" style={{ aspectRatio: "1" }}>
+          <img src={note.image_url!} alt="" loading="lazy" className="w-full h-full object-cover pointer-events-none" />
+        </div>
+      </button>
+
+      {/* Caption area */}
+      <div className="px-0.5 pt-2 pb-0.5 text-center pointer-events-none min-w-0">
+        <p className="text-[10px] text-foreground/75 leading-snug truncate font-[Nunito]">{note.body !== "(photo)" ? note.body : ""}</p>
+      </div>
+
+      {/* Color picker triggers */}
+      <div className="flex justify-between items-center mt-1 pt-0.5">
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); onColorClick(); }}
+            className="text-foreground/30 hover:text-foreground/60 transition-colors p-0.5"
+          >
+            <Palette size={8} />
+          </button>
+          {showColorPicker && (
+            <div className="absolute bottom-5 left-0 z-35 flex gap-1 rounded-2xl border border-white/60 bg-white/90 backdrop-blur-xl p-1 shadow-lg">
+              {PASTEL_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={(e) => { e.stopPropagation(); onColorSelect(c.value); }}
+                  className="h-3.5 w-3.5 rounded-full border border-white/60 shadow-sm hover:scale-110 transition-transform"
+                  style={{ background: c.value }}
+                  title={c.label}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sticky Note Component (Only text, no overlaid polaroid anymore!) ────────────────────────────────
+function StickyNote({
+  note, showColorPicker, onColorClick, onColorSelect, onDelete
+}: {
+  note: Note;
+  showColorPicker: boolean;
+  onColorClick: () => void;
+  onColorSelect: (c: string) => void;
+  onDelete: () => void;
+}) {
+  const bg = note.color ?? PASTEL_COLORS[0].value;
 
   return (
     <div
@@ -465,25 +442,9 @@ function StickyNote({
         <div>
           <div className="text-[8px] uppercase tracking-widest text-foreground/35 mb-1 select-none pointer-events-none">{note.kind}</div>
           <p className="text-xs leading-relaxed text-foreground/80 font-[Nunito] break-words line-clamp-5 overflow-hidden whitespace-pre-wrap select-none pointer-events-none">
-            {note.body !== "(photo)" ? note.body : ""}
+            {note.body}
           </p>
         </div>
-
-        {/* Small Polaroid inside/overlapping bottom-left if there is a photo */}
-        {note.image_url && (
-          <div 
-            className="absolute -bottom-8 -left-4 w-[85px] h-[105px] bg-white rounded-sm p-1.5 shadow-[0_4px_10px_rgba(0,0,0,0.25)] border border-black/5 cursor-pointer z-10"
-            style={{ transform: `rotate(${polaroidTilt}deg)` }}
-            onClick={(e) => { e.stopPropagation(); onImageClick?.(); }}
-          >
-            <div className="w-full h-[70px] overflow-hidden bg-gray-100 rounded-sm">
-              <img src={note.image_url} alt="" className="w-full h-full object-cover pointer-events-none" />
-            </div>
-            <div className="text-[7px] text-foreground/60 text-center mt-1 truncate font-[Nunito] select-none pointer-events-none">
-              {note.body !== "(photo)" ? note.body : "Photo"}
-            </div>
-          </div>
-        )}
 
         {/* Bottom controls */}
         <div className="flex items-center justify-between mt-3 pt-1">

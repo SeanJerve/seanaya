@@ -151,7 +151,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Bubble Container */}
                   <button
                     onClick={() => setActiveMemory(m)}
-                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.4)] transition-all hover:scale-105 active:scale-95 animate-in fade-in zoom-in-90 duration-300"
+                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/25 backdrop-blur-sm shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.35)] transition-all hover:scale-105 active:scale-95 animate-in fade-in zoom-in-90 duration-300"
                   >
                     {/* Cover Photo Background */}
                     {m.cover_url && (
@@ -162,22 +162,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           loading="lazy"
                           className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-115"
                         />
-                        {/* Glossy overlay with subtle white shine, no heavy blur */}
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.45),transparent_60%)] transition-opacity group-hover:opacity-70" />
+                        {/* Full bubble overlay with light blur and white background tint */}
+                        <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px] transition-opacity group-hover:opacity-10" />
                       </>
                     )}
 
                     {/* Date Display */}
-                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "bg-white/60 backdrop-blur-[2px] px-2.5 py-1.5 rounded-2xl border border-white/80 shadow-[0_1px_3px_rgba(0,0,0,0.08)]" : ""}`}>
+                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}>
                       {formattedDate ? (
                         <>
-                          <span className="text-[9px] uppercase tracking-widest text-foreground/75 font-bold leading-none">
+                          <span className="text-[9px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
                             {format(formattedDate, "MMM")}
                           </span>
-                          <span className="display text-2xl font-bold mt-0.5 leading-none drop-shadow-sm">
+                          <span className="display text-2xl font-bold mt-0.5 leading-none">
                             {format(formattedDate, "d")}
                           </span>
-                          <span className="text-[8px] text-foreground/65 mt-0.5 leading-none">
+                          <span className="text-[8px] text-foreground/70 mt-0.5 leading-none">
                             {format(formattedDate, "yyyy")}
                           </span>
                         </>

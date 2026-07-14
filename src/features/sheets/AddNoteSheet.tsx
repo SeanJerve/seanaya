@@ -53,10 +53,11 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
       const { error } = await supabase.from("notes").insert({
         relationship_id: relationshipId, author_id: user.id,
         body: form.body || (isPhoto ? "(photo)" : ""),
-        kind: isPhoto ? "photo" : form.kind,
+        kind: isPhoto ? "note" : form.kind, // Fix: Use 'note' instead of 'photo' to satisfy DB check constraints
         color: selectedColor,
         image_url, image_path,
-        pos_x: Math.random(), pos_y: Math.random(),
+        pos_x: Math.random() * 0.5 + 0.1,
+        pos_y: Math.random() * 0.5 + 0.1,
         rotation: (Math.random() - 0.5) * 6,
       });
       if (error) throw error;
