@@ -1,55 +1,113 @@
-import { motion } from "framer-motion";
-import { Home, Calendar, BookHeart, PinIcon, MoreHorizontal, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, Calendar, BookHeart, PinIcon, Settings, Cat } from "lucide-react";
 import { useAppStore, type TabKey } from "@/features/app/store";
 import { useNotifications } from "@/hooks/useNotifications";
 
-const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
-  { key: "home",     icon: <Home size={22} strokeWidth={1.6} /> },
-  { key: "calendar", icon: <Calendar size={22} strokeWidth={1.6} />, dotKinds: ["event"] },
-  { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["memory"] },
-  { key: "wall",     icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
-  { key: "stickers", icon: <Sparkles size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
-  { key: "more",     icon: <MoreHorizontal size={22} strokeWidth={1.6} />, dotKinds: ["trip","song"] },
+const TOES: { key: TabKey; icon: React.ReactNode; label: string; x: number; y: number; dotKind?: string }[] = [
+  { key: "home",     icon: <Home size={18} strokeWidth={1.8} />,     label: "Home",     x: -74, y: 15 },
+  { key: "calendar", icon: <Calendar size={18} strokeWidth={1.8} />, label: "Calendar", x: -62, y: -36, dotKind: "event" },
+  { key: "memories", icon: <BookHeart size={18} strokeWidth={1.8} />,label: "Memories", x: -22, y: -68, dotKind: "memory" },
+  { key: "wall",     icon: <PinIcon size={18} strokeWidth={1.8} />,  label: "Wall",     x: 24,  y: -68, dotKind: "note" },
+  { key: "stickers", icon: <Cat size={18} strokeWidth={1.8} />,      label: "Stickers", x: 64,  y: -36, dotKind: "sticker" },
 ];
 
 export function BottomNav({ relationshipId }: { relationshipId?: string }) {
   const { tab, setTab } = useAppStore();
+  const [isOpen, setIsOpen] = useState(false);
   const { list } = useNotifications(relationshipId);
+
   const unreadByKind = list.reduce<Record<string, number>>((m, n) => {
     if (!n.read) m[n.kind] = (m[n.kind] ?? 0) + 1;
     return m;
   }, {});
 
+  const handleBaseClick = () => {
+    setIsOpen(!isOpen);
+    // Tapping the main center paw pad takes you to Settings/More view
+    setTab("more");
+  };
+
+  const handleToeClick = (key: TabKey) => {
+    setTab(key);
+    setIsOpen(false);
+  };
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-      <div className="relative flex w-full max-w-md items-stretch justify-between rounded-full border border-white/40 bg-white/40 backdrop-blur-2xl px-2 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_18px_50px_-20px_rgba(80,110,160,0.45)]">
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          const dot = t.dotKinds?.some((k) => (unreadByKind[k] ?? 0) > 0);
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="relative flex flex-1 items-center justify-center rounded-full py-3"
-              aria-label={t.key}
-            >
-              {active && (
-                <motion.span
-                  layoutId="tab-pill"
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                  className="absolute inset-0 rounded-full border border-white/60 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.75),rgba(255,255,255,0.25)_65%)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_6px_18px_-8px_rgba(80,110,160,0.35)]"
-                />
-              )}
-              <span className={`relative z-10 transition-colors ${active ? "text-foreground" : "text-foreground/45"}`}>
-                {t.icon}
-                {dot && !active && (
-                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[color:var(--hug)] shadow-[0_0_6px_var(--hug)]" />
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+    <div className="fixed bottom-6 right-6 z-40 select-none touch-none">
+      
+      {/* ── Outer Toe Buttons (Pop out in a paw shape) ── */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Click-away backdrop */}
+            <div 
+              className="fixed inset-0 z-10 pointer-events-auto" 
+              onClick={() => setIsOpen(false)} 
+            />
+
+            {TOES.map((toe) => {
+              const isActive = tab === toe.key;
+              const hasDot = toe.dotKind ? (unreadByKind[toe.dotKind] ?? 0) > 0 : false;
+
+              return (
+                <motion.button
+                  key={toe.key}
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1, 
+                    x: toe.x, 
+                    y: toe.y 
+                  }}
+                  exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 380, 
+                    damping: 24,
+                    mass: 0.8
+                  }}
+                  onClick={() => handleToeClick(toe.key)}
+                  className={`absolute z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/50 backdrop-blur-xl shadow-md transition-all active:scale-90
+                    ${isActive 
+                      ? "bg-white text-primary border-primary/40 shadow-primary/10" 
+                      : "bg-white/70 text-foreground/70 hover:bg-white hover:text-foreground"
+                    }`}
+                  style={{
+                    left: "8px", // Center coordinate offsets
+                    top: "8px",
+                  }}
+                  title={toe.label}
+                >
+                  {toe.icon}
+                  {hasDot && !isActive && (
+                    <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[color:var(--hug)] shadow-[0_0_5px_var(--hug)]" />
+                  )}
+                </motion.button>
+              );
+            })}
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Main Base Toe Pad (Settings/More Tab) ── */}
+      <motion.button
+        onClick={handleBaseClick}
+        whileHover={{ scale: 1.05 }}
+        whileDrag={{ scale: 0.95 }}
+        className={`relative z-30 flex h-14 w-14 items-center justify-center rounded-[45%_45%_38%_38%] border border-white/50 backdrop-blur-xl shadow-lg transition-all active:scale-95 cursor-pointer
+          ${tab === "more"
+            ? "bg-white text-primary border-primary/40"
+            : "bg-white/70 text-foreground/75 hover:bg-white hover:text-foreground"
+          }`}
+      >
+        <Settings size={22} className={isOpen ? "rotate-45 transition-transform duration-300" : "transition-transform duration-300"} />
+        
+        {/* Glow indicator if settings or more has updates */}
+        {(unreadByKind["trip"] || unreadByKind["song"]) && tab !== "more" && (
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[color:var(--hug)] shadow-[0_0_6px_var(--hug)]" />
+        )}
+      </motion.button>
+    </div>
   );
 }

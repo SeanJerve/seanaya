@@ -122,7 +122,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <Toaster position="top-center" toastOptions={{ className: "glass-panel" }} />
+      <Toaster position="top-center" visibleToasts={1} toastOptions={{ className: "glass-panel" }} />
     </QueryClientProvider>
   );
 }

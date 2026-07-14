@@ -129,6 +129,28 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   const gridDays = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
   const leading = getDay(startOfMonth(cursor));
 
+  const todayDate = new Date().getDate();
+  const basePrompts = [
+    "Share a song that made you think of them today. 🎵",
+    "Pin a cute sticky note to surprise them! 📌",
+    "Send a warm virtual hug right now. 🤗",
+    "Every single second spent together is a gift. ❤️",
+    "What is your favorite memory of us in the past month? 🌸",
+    "Hope your partner is having a wonderful day! ✨",
+    "Daily Prompt: Tell them one thing you appreciate about them today.",
+  ];
+  
+  let promptText = basePrompts[todayDate % basePrompts.length];
+  if (stats) {
+    if (todayDate % 3 === 0 && stats.memories > 0) {
+      promptText = `We have kept ${stats.memories} memories together! 📖`;
+    } else if (todayDate % 3 === 1 && stats.trips > 0) {
+      promptText = `We have ${stats.trips} dream places pinned! 🗺️`;
+    } else if (todayDate % 3 === 2 && stats.hugs > 0) {
+      promptText = `You have sent each other ${stats.hugs} hugs! 🤗`;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
 
@@ -139,6 +161,9 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           <div className="px-5 py-4 min-w-0 flex flex-col justify-between">
             <div>
               <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
+              <p className="text-[10px] text-muted-foreground/80 mt-1 leading-normal italic font-medium max-w-full overflow-hidden text-ellipsis line-clamp-2">
+                {promptText}
+              </p>
             </div>
             {days !== null && (
               <div className="mt-3 flex items-baseline gap-1.5">

@@ -22,9 +22,10 @@ type State = {
   tab: TabKey;
   sheet: SheetKey;
   confirmDialog: ConfirmOptions | null;
+  activeStickerPageId: string | null;
 };
 
-let state: State = { tab: "home", sheet: null, confirmDialog: null };
+let state: State = { tab: "home", sheet: null, confirmDialog: null, activeStickerPageId: null };
 const listeners = new Set<() => void>();
 const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 const emit = () => listeners.forEach((l) => l());
@@ -36,10 +37,12 @@ export function useAppStore() {
     tab: s.tab,
     sheet: s.sheet,
     confirmDialog: s.confirmDialog,
+    activeStickerPageId: s.activeStickerPageId,
     setTab: (t: TabKey) => { state = { ...state, tab: t, sheet: null }; emit(); },
     openSheet: (k: Exclude<SheetKey, null>) => { state = { ...state, sheet: k }; emit(); },
     closeSheet: () => { state = { ...state, sheet: null }; emit(); },
     confirm: (options: ConfirmOptions) => { state = { ...state, confirmDialog: options }; emit(); },
     closeConfirm: () => { state = { ...state, confirmDialog: null }; emit(); },
+    setActiveStickerPageId: (id: string | null) => { state = { ...state, activeStickerPageId: id }; emit(); },
   };
 }

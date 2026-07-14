@@ -18,7 +18,7 @@ const OUTLINE_COLORS = [
   { value: "#C8E6C9", label: "Green" },
 ];
 
-export function AddStickerSheet({ relationshipId }: { relationshipId: string }) {
+export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: string; pageId?: string }) {
   const { user } = useUser();
   const qc = useQueryClient();
   const { closeSheet } = useAppStore();
@@ -90,6 +90,7 @@ export function AddStickerSheet({ relationshipId }: { relationshipId: string }) 
         pos_x: x,
         pos_y: y,
         rotation: rot,
+        page_id: pageId || null,
       });
 
       if (error) throw error;
