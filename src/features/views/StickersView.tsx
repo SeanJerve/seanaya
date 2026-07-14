@@ -240,14 +240,6 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                 </button>
               );
             })}
-            
-            <button
-              onClick={() => setNewPageOpen(true)}
-              className="p-1.5 rounded-full bg-white/40 hover:bg-white/60 text-foreground/50 hover:text-foreground border border-transparent shrink-0 active:scale-95 transition-all"
-              title="New Page"
-            >
-              <PlusCircle size={14} />
-            </button>
           </div>
         </div>
 
@@ -255,7 +247,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         {activePage && (
           <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
             <div className="flex items-center gap-2 text-foreground/55 font-medium">
-              <span>Background Theme:</span>
+              <span>Pad Color:</span>
               <div className="flex items-center gap-1.5">
                 {PAD_BACKGROUNDS.map((b) => (
                   <button
@@ -272,22 +264,30 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               </div>
             </div>
 
-            {pages.length > 1 && (
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => {
-                  confirm({
-                    title: "Delete page?",
-                    message: `Are you sure you want to delete "${activePage.name}" and all stickers inside it?`,
-                    onConfirm: () => deletePage.mutate(activePage.id),
-                  });
-                }}
-                className="flex items-center gap-1 text-red-500/80 hover:text-red-600 transition-colors font-semibold px-2 py-1 rounded-md hover:bg-red-50/50"
-                title="Delete Page"
+                onClick={() => setNewPageOpen(true)}
+                className="p-1.5 rounded-full hover:bg-white/40 text-foreground/50 hover:text-foreground active:scale-95 transition-all"
+                title="New Page"
               >
-                <Trash size={12} />
-                <span>Delete Page</span>
+                <PlusCircle size={14} />
               </button>
-            )}
+              {pages.length > 1 && (
+                <button
+                  onClick={() => {
+                    confirm({
+                      title: "Delete page?",
+                      message: `Are you sure you want to delete "${activePage.name}" and all stickers inside it?`,
+                      onConfirm: () => deletePage.mutate(activePage.id),
+                    });
+                  }}
+                  className="p-1.5 rounded-full hover:bg-red-50/50 text-red-500/80 hover:text-red-600 active:scale-95 transition-all"
+                  title="Delete Page"
+                >
+                  <Trash size={13} />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
