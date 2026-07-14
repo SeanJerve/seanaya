@@ -216,59 +216,62 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   return (
     <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none">
       
-      {/* ── Sticker Book Pages Navigation (Tab Binder look) ── */}
-      <div className="px-4 pt-3 flex items-center justify-between border-b border-white/30 bg-white/20 backdrop-blur-xl z-20 shrink-0 gap-2 flex-wrap">
-        {/* Binder tabs list */}
-        <div className="flex items-end gap-1.5 overflow-x-auto pb-1 max-w-[70%] scrollbar-none">
-          {pages.map((p) => {
-            const active = activePage?.id === p.id;
-            return (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setActivePageId(p.id);
-                  setSelectedStickerId(null);
-                }}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-t-xl border border-b-0 border-white/40 transition-all shrink-0 ${
-                  active
-                    ? "bg-white/80 backdrop-blur-md shadow-sm border-t-2 border-t-primary scale-105"
-                    : "bg-white/30 text-foreground/60 hover:bg-white/50"
-                }`}
-              >
-                {p.name}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => setNewPageOpen(true)}
-            className="p-1.5 rounded-t-xl bg-white/30 hover:bg-white/50 border border-b-0 border-white/40 text-foreground/50 hover:text-foreground shrink-0"
-            title="Add Page"
-          >
-            <PlusCircle size={14} />
-          </button>
+      {/* ── Sticker Book Pages Navigation (Segmented Pill Layout) ── */}
+      <div className="px-4 py-2.5 bg-white/35 backdrop-blur-xl border-b border-white/25 flex flex-col gap-2 shrink-0 z-20">
+        {/* Row 1: Tabs List */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
+            {pages.map((p) => {
+              const active = activePage?.id === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setActivePageId(p.id);
+                    setSelectedStickerId(null);
+                  }}
+                  className={`relative px-3.5 py-1.5 text-[11px] font-semibold rounded-full border transition-all shrink-0 active:scale-95 ${
+                    active
+                      ? "bg-white text-primary border-white shadow-[0_2px_8px_-3px_rgba(0,0,0,0.1)] font-bold scale-105"
+                      : "bg-white/40 text-foreground/60 border-transparent hover:bg-white/60 hover:text-foreground"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+            
+            <button
+              onClick={() => setNewPageOpen(true)}
+              className="p-1.5 rounded-full bg-white/40 hover:bg-white/60 text-foreground/50 hover:text-foreground border border-transparent shrink-0 active:scale-95 transition-all"
+              title="New Page"
+            >
+              <PlusCircle size={14} />
+            </button>
+          </div>
         </div>
 
-        {/* Theme select & page delete controls */}
+        {/* Row 2: Page Tools */}
         {activePage && (
-          <div className="flex items-center gap-3 pb-1 shrink-0">
-            {/* Background color triggers */}
-            <div className="flex items-center gap-1">
-              {PAD_BACKGROUNDS.map((b) => (
-                <button
-                  key={b.key}
-                  onClick={() => updatePageBg.mutate(b.key)}
-                  className={`h-4.5 w-4.5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${
-                    activePage.bg_theme === b.key
-                      ? "ring-2 ring-primary ring-offset-1 scale-110"
-                      : "border-white/50"
-                  } ${b.btnStyle}`}
-                  title={`Pad: ${b.label}`}
-                />
-              ))}
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
+            <div className="flex items-center gap-2 text-foreground/55 font-medium">
+              <span>Background Theme:</span>
+              <div className="flex items-center gap-1.5">
+                {PAD_BACKGROUNDS.map((b) => (
+                  <button
+                    key={b.key}
+                    onClick={() => updatePageBg.mutate(b.key)}
+                    className={`h-5 w-5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${
+                      activePage.bg_theme === b.key
+                        ? "ring-2 ring-primary ring-offset-1 scale-110"
+                        : "border-white/50"
+                    } ${b.btnStyle}`}
+                    title={`Pad: ${b.label}`}
+                  />
+                ))}
+              </div>
             </div>
 
-            {/* Delete active page button (don't allow deleting the last remaining page) */}
             {pages.length > 1 && (
               <button
                 onClick={() => {
@@ -278,10 +281,11 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                     onConfirm: () => deletePage.mutate(activePage.id),
                   });
                 }}
-                className="text-foreground/40 hover:text-red-500 transition-colors p-1"
+                className="flex items-center gap-1 text-red-500/80 hover:text-red-600 transition-colors font-semibold px-2 py-1 rounded-md hover:bg-red-50/50"
                 title="Delete Page"
               >
-                <Trash size={13} />
+                <Trash size={12} />
+                <span>Delete Page</span>
               </button>
             )}
           </div>
