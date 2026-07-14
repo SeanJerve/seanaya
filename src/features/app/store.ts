@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type TabKey = "home" | "calendar" | "memories" | "wall" | "more";
+export type TabKey = "home" | "calendar" | "memories" | "wall" | "stickers" | "more";
 export type SheetKey =
   | "add-memory"
   | "add-event"
@@ -9,7 +9,7 @@ export type SheetKey =
   | "add-song"
   | "settings"
   | "notifications"
-  | "stickers"
+  | "add-sticker"
   | null;
 
 export type ConfirmOptions = {

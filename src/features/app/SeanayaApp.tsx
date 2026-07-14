@@ -8,6 +8,7 @@ import { HomeView } from "@/features/views/HomeView";
 import { CalendarView } from "@/features/views/CalendarView";
 import { MemoriesView } from "@/features/views/MemoriesView";
 import { WallView } from "@/features/views/WallView";
+import { StickersView } from "@/features/views/StickersView";
 import { MoreView } from "@/features/views/MoreView";
 import { Sheet } from "./Sheet";
 import { AddMemorySheet } from "@/features/sheets/AddMemorySheet";
@@ -17,7 +18,7 @@ import { AddTripSheet } from "@/features/sheets/AddTripSheet";
 import { AddSongSheet } from "@/features/sheets/AddSongSheet";
 import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
-import { StickersSheet } from "@/features/sheets/StickersSheet";
+import { AddStickerSheet } from "@/features/sheets/AddStickerSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { bootTheme } from "@/lib/theme";
@@ -46,7 +47,14 @@ function Inner() {
   const relId = rel.id;
   const inviteCode = rel.invite_code ?? "";
 
-  const headerTitle = ({ home: "Home", calendar: "Calendar", memories: "Memories", wall: "Wall", more: "More" } as const)[tab];
+  const headerTitle = ({ 
+    home: "Home", 
+    calendar: "Calendar", 
+    memories: "Memories", 
+    wall: "Wall", 
+    stickers: "Stickers", 
+    more: "More" 
+  } as const)[tab];
 
   return (
     <div className="min-h-[100dvh] w-full seanaya-bg">
@@ -57,6 +65,7 @@ function Inner() {
         {tab === "calendar" && <CalendarView relationshipId={relId} />}
         {tab === "memories" && <MemoriesView relationshipId={relId} />}
         {tab === "wall" && <WallView relationshipId={relId} />}
+        {tab === "stickers" && <StickersView relationshipId={relId} />}
         {tab === "more" && <MoreView relationshipId={relId} />}
       </main>
 
@@ -69,7 +78,7 @@ function Inner() {
       <Sheet open={sheet === "add-song"}   title="New song"><AddSongSheet relationshipId={relId} /></Sheet>
       <Sheet open={sheet === "settings"}   title="Settings"><SettingsSheet relationshipId={relId} inviteCode={inviteCode} /></Sheet>
       <Sheet open={sheet === "notifications"} title="Whispers"><NotificationsSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "stickers"} title="Sticker Pad"><StickersSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-sticker"} title="New sticker"><AddStickerSheet relationshipId={relId} /></Sheet>
 
       <HugOverlay relationshipId={relId} />
       <ConfirmDialog />

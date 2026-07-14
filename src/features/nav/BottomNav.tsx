@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Home, Calendar, BookHeart, PinIcon, MoreHorizontal } from "lucide-react";
+import { Home, Calendar, BookHeart, PinIcon, MoreHorizontal, Sparkles } from "lucide-react";
 import { useAppStore, type TabKey } from "@/features/app/store";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -8,6 +8,7 @@ const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
   { key: "calendar", icon: <Calendar size={22} strokeWidth={1.6} />, dotKinds: ["event"] },
   { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["memory"] },
   { key: "wall",     icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
+  { key: "stickers", icon: <Sparkles size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
   { key: "more",     icon: <MoreHorizontal size={22} strokeWidth={1.6} />, dotKinds: ["trip","song"] },
 ];
 

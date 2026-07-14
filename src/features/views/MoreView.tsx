@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, MapPin, Music2, Settings, Plus, PawPrint, Trash2, Sparkles } from "lucide-react";
+import { ChevronRight, MapPin, Music2, Settings, Plus, PawPrint, Trash2 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 
@@ -132,20 +132,6 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
           </ul>
         )}
       </Section>
-
-      <button
-        onClick={() => openSheet("stickers")}
-        className="flex w-full items-center justify-between rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 text-left mb-3"
-      >
-        <div className="flex items-center gap-3">
-          <Sparkles size={16} className="text-yellow-500 animate-pulse" />
-          <div>
-            <div className="text-sm font-medium">Sticker Pad</div>
-            <div className="text-[11px] text-muted-foreground">Keep your partner's doodles & stickers here.</div>
-          </div>
-        </div>
-        <ChevronRight size={16} className="text-foreground/40" />
-      </button>
 
       <button
         onClick={() => openSheet("settings")}
