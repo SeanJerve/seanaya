@@ -2,8 +2,14 @@
  * Removes the background of an image client-side using HTML Canvas.
  * It analyzes the corners to auto-detect the background color,
  * and sets matching color pixels to transparent.
+ * Optionally applies a die-cut sticker style outline.
  */
-export function removeBackgroundImage(file: File, tolerance = 42): Promise<Blob> {
+export function removeBackgroundImage(
+  file: File,
+  tolerance = 42,
+  outlineColor?: string,
+  outlineSize?: number
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = URL.createObjectURL(file);
@@ -59,8 +65,14 @@ export function removeBackgroundImage(file: File, tolerance = 42): Promise<Blob>
       }
       
       ctx.putImageData(imgData, 0, 0);
+
+      // Apply outline if requested
+      let finalCanvas = canvas;
+      if (outlineColor && outlineSize && outlineSize > 0) {
+        finalCanvas = applyStickerOutline(canvas, outlineColor, outlineSize);
+      }
       
-      canvas.toBlob((blob) => {
+      finalCanvas.toBlob((blob) => {
         if (blob) {
           resolve(blob);
         } else {
@@ -75,4 +87,53 @@ export function removeBackgroundImage(file: File, tolerance = 42): Promise<Blob>
       reject(err);
     };
   });
+}
+
+/**
+ * Traces the silhouette of the transparent image and draws a thick color outline.
+ */
+function applyStickerOutline(
+  originalCanvas: HTMLCanvasElement,
+  outlineColor: string,
+  outlineSize: number
+): HTMLCanvasElement {
+  const width = originalCanvas.width;
+  const height = originalCanvas.height;
+
+  // Create a new padded canvas to fit the outline without clipping
+  const paddedCanvas = document.createElement("canvas");
+  const padding = outlineSize * 2;
+  paddedCanvas.width = width + padding * 2;
+  paddedCanvas.height = height + padding * 2;
+  
+  const ctx = paddedCanvas.getContext("2d");
+  if (!ctx) return originalCanvas;
+
+  // 1. Create a solid color mask of the original transparent drawing
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = width;
+  maskCanvas.height = height;
+  const maskCtx = maskCanvas.getContext("2d");
+  if (!maskCtx) return originalCanvas;
+
+  maskCtx.drawImage(originalCanvas, 0, 0);
+  maskCtx.globalCompositeOperation = "source-in";
+  maskCtx.fillStyle = outlineColor;
+  maskCtx.fillRect(0, 0, width, height);
+
+  // 2. Draw the solid mask shifted in a circle to create the thick traced silhouette outline
+  const centerX = padding;
+  const centerY = padding;
+  const steps = 36; // Number of angles to draw to make it perfectly smooth
+  for (let i = 0; i < steps; i++) {
+    const angle = (i / steps) * Math.PI * 2;
+    const dx = centerX + Math.cos(angle) * outlineSize;
+    const dy = centerY + Math.sin(angle) * outlineSize;
+    ctx.drawImage(maskCanvas, dx, dy);
+  }
+
+  // 3. Draw the original image on top in the center
+  ctx.drawImage(originalCanvas, centerX, centerY);
+
+  return paddedCanvas;
 }
