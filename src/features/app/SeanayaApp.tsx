@@ -18,6 +18,7 @@ import { AddSongSheet } from "@/features/sheets/AddSongSheet";
 import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { bootTheme } from "@/lib/theme";
 
 export function SeanayaApp() {
@@ -69,6 +70,7 @@ function Inner() {
       <Sheet open={sheet === "notifications"} title="Whispers"><NotificationsSheet relationshipId={relId} /></Sheet>
 
       <HugOverlay relationshipId={relId} />
+      <ConfirmDialog />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [cursor, setCursor] = useState(new Date());
-  const { openSheet } = useAppStore();
+  const { openSheet, confirm } = useAppStore();
   const qc = useQueryClient();
 
   const deleteEvent = useMutation({
@@ -174,7 +174,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     {e.category}
                   </span>
                   <button
-                    onClick={(evt) => { evt.stopPropagation(); if (confirm("Delete this event?")) deleteEvent.mutate(e.id); }}
+                    onClick={(evt) => {
+                      evt.stopPropagation();
+                      confirm({
+                        title: "Delete event?",
+                        message: `Are you sure you want to remove "${e.title}" from your calendar?`,
+                        onConfirm: () => deleteEvent.mutate(e.id),
+                      });
+                    }}
                     className="text-foreground/35 hover:text-red-500 transition-colors p-1"
                     title="Delete event"
                   >

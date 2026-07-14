@@ -18,7 +18,7 @@ type Memory = {
 };
 
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
-  const { openSheet } = useAppStore();
+  const { openSheet, confirm } = useAppStore();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
   const qc = useQueryClient();
@@ -233,7 +233,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             
             {/* Delete Button */}
             <button
-              onClick={() => { if (confirm("Delete this memory kept forever?")) deleteMemory.mutate(activeMemory.id); }}
+              onClick={() => {
+                confirm({
+                  title: "Delete memory?",
+                  message: `Are you sure you want to delete the memory "${activeMemory.title}" kept forever?`,
+                  onConfirm: () => deleteMemory.mutate(activeMemory.id),
+                });
+              }}
               className="absolute left-4 top-4 z-20 rounded-full bg-white/80 p-1.5 text-foreground/60 hover:text-red-500 hover:bg-white border border-white/50 transition-colors shadow-sm"
               title="Delete memory"
               disabled={deleteMemory.isPending}

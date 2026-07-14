@@ -58,7 +58,7 @@ function getSeededCoords(id: string) {
 
 export function WallView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
-  const { openSheet } = useAppStore();
+  const { openSheet, confirm } = useAppStore();
   const { user } = useUser();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -295,14 +295,26 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                     <PolaroidCard
                       note={n}
                       isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
-                      onDelete={() => deleteNote.mutate(n)}
+                      onDelete={() => {
+                        confirm({
+                          title: "Delete photo note?",
+                          message: "Are you sure you want to permanently delete this photo note from the board?",
+                          onConfirm: () => deleteNote.mutate(n),
+                        });
+                      }}
                       onImageClick={() => setLightbox(n.image_url)}
                     />
                   ) : (
                     <StickyNote
                       note={n}
                       isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
-                      onDelete={() => deleteNote.mutate(n)}
+                      onDelete={() => {
+                        confirm({
+                          title: "Delete note?",
+                          message: "Are you sure you want to permanently delete this note from the board?",
+                          onConfirm: () => deleteNote.mutate(n),
+                        });
+                      }}
                     />
                   )}
                 </motion.div>
@@ -348,7 +360,7 @@ function PolaroidCard({
 
       {/* Delete button */}
       <button
-        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this photo note?")) onDelete(); }}
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
         className="absolute top-1.5 right-1.5 text-foreground/35 hover:text-red-500 transition-colors p-0.5 z-20"
         title="Delete note"
       >
@@ -402,7 +414,7 @@ function StickyNote({
 
       {/* Delete button (trash icon at top-right) */}
       <button
-        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this note?")) onDelete(); }}
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
         className="absolute top-1.5 right-1.5 text-foreground/35 hover:text-red-500 transition-colors p-0.5 z-20"
         title="Delete note"
       >

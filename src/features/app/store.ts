@@ -11,8 +11,19 @@ export type SheetKey =
   | "notifications"
   | null;
 
-type State = { tab: TabKey; sheet: SheetKey };
-let state: State = { tab: "home", sheet: null };
+export type ConfirmOptions = {
+  title: string;
+  message: string;
+  onConfirm: () => void;
+};
+
+type State = {
+  tab: TabKey;
+  sheet: SheetKey;
+  confirmDialog: ConfirmOptions | null;
+};
+
+let state: State = { tab: "home", sheet: null, confirmDialog: null };
 const listeners = new Set<() => void>();
 const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 const emit = () => listeners.forEach((l) => l());
@@ -23,8 +34,11 @@ export function useAppStore() {
   return {
     tab: s.tab,
     sheet: s.sheet,
+    confirmDialog: s.confirmDialog,
     setTab: (t: TabKey) => { state = { ...state, tab: t, sheet: null }; emit(); },
     openSheet: (k: Exclude<SheetKey, null>) => { state = { ...state, sheet: k }; emit(); },
     closeSheet: () => { state = { ...state, sheet: null }; emit(); },
+    confirm: (options: ConfirmOptions) => { state = { ...state, confirmDialog: options }; emit(); },
+    closeConfirm: () => { state = { ...state, confirmDialog: null }; emit(); },
   };
 }

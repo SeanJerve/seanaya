@@ -5,7 +5,7 @@ import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 
 export function MoreView({ relationshipId }: { relationshipId: string }) {
-  const { openSheet } = useAppStore();
+  const { openSheet, confirm } = useAppStore();
   const qc = useQueryClient();
 
   const { data: trips = [] } = useQuery({
@@ -66,7 +66,13 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
                 <div className="flex items-center gap-2.5 shrink-0">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t.status}</span>
                   <button
-                    onClick={() => { if (confirm("Remove this place?")) deleteTrip.mutate(t.id); }}
+                    onClick={() => {
+                      confirm({
+                        title: "Remove place?",
+                        message: `Are you sure you want to remove "${t.title}" from your places list?`,
+                        onConfirm: () => deleteTrip.mutate(t.id),
+                      });
+                    }}
                     className="text-foreground/35 hover:text-red-500 transition-colors p-1"
                     title="Remove place"
                   >
@@ -98,7 +104,13 @@ export function MoreView({ relationshipId }: { relationshipId: string }) {
                 <div className="flex items-center gap-2.5 shrink-0">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.category}</span>
                   <button
-                    onClick={() => { if (confirm("Remove this song?")) deleteSong.mutate(s.id); }}
+                    onClick={() => {
+                      confirm({
+                        title: "Remove song?",
+                        message: `Are you sure you want to remove "${s.title}" from your radio room?`,
+                        onConfirm: () => deleteSong.mutate(s.id),
+                      });
+                    }}
                     className="text-foreground/35 hover:text-red-500 transition-colors p-1"
                     title="Remove song"
                   >
