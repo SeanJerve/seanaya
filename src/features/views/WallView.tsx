@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pin, MapPin } from "lucide-react";
+import { Plus, Pin, MapPin, BookHeart } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
@@ -13,8 +13,8 @@ type Note = {
   image_url: string | null; rotation: number | null;
 };
 
-type TripPhoto = {
-  id: string; title: string; location: string; cover_url: string | null;
+type PhotoTile = {
+  id: string; title: string; sub: string; url: string; kind: "trip" | "memory";
 };
 
 export function WallView({ relationshipId }: { relationshipId: string }) {
@@ -36,16 +36,17 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       ).data ?? []) as Note[],
   });
 
-  const { data: trips = [] } = useQuery({
-    queryKey: ["trips-photos", relationshipId],
-    queryFn: async () =>
-      ((await supabase
-        .from("trips")
-        .select("id,title,location,cover_url")
-        .eq("relationship_id", relationshipId)
-        .not("cover_url", "is", null)
-        .order("created_at", { ascending: false })
-      ).data ?? []) as TripPhoto[],
+  const { data: extras = [] } = useQuery({
+    queryKey: ["wall-extras", relationshipId],
+    queryFn: async (): Promise<PhotoTile[]> => {
+      const [trips, mems] = await Promise.all([
+        supabase.from("trips").select("id,title,location,cover_url").eq("relationship_id", relationshipId).not("cover_url", "is", null).order("created_at", { ascending: false }),
+        supabase.from("memories").select("id,title,location,cover_url,memory_date").eq("relationship_id", relationshipId).not("cover_url", "is", null).order("memory_date", { ascending: false }),
+      ]);
+      const t: PhotoTile[] = (trips.data ?? []).map((r) => ({ id: r.id, title: r.title, sub: r.location, url: r.cover_url!, kind: "trip" }));
+      const m: PhotoTile[] = (mems.data ?? []).map((r) => ({ id: r.id, title: r.title, sub: r.location ?? "", url: r.cover_url!, kind: "memory" }));
+      return [...m, ...t];
+    },
   });
 
   const togglePin = useMutation({
@@ -77,7 +78,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     photoNotes: notes.filter((n) => !!n.image_url),
   }), [notes]);
 
-  const nothing = notes.length === 0 && trips.length === 0;
+  const nothing = notes.length === 0 && extras.length === 0;
 
   return (
     <div
@@ -103,7 +104,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         </div>
       )}
 
-      {(photoNotes.length > 0 || trips.length > 0) && (
+      {(photoNotes.length > 0 || extras.length > 0) && (
         <div className="mb-4">
           <div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Photo board</div>
           <div className="flex flex-wrap gap-3">
@@ -124,19 +125,19 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
               </button>
             ))}
 
-            {trips.map((t, i) => (
+            {extras.map((t, i) => (
               <button
-                key={t.id}
-                onClick={() => setLightbox(t.cover_url)}
+                key={`${t.kind}-${t.id}`}
+                onClick={() => setLightbox(t.url)}
                 className="group relative shrink-0"
                 style={{ transform: `rotate(${((i % 3) - 1) * 2}deg)` }}
-                title={`${t.title} · ${t.location}`}
+                title={`${t.title}${t.sub ? " · " + t.sub : ""}`}
               >
                 <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/60 bg-white p-1.5 shadow-[0_10px_24px_-14px_rgba(80,110,160,0.6)]">
-                  <img src={t.cover_url!} alt="" loading="lazy" className="h-full w-full rounded-lg object-cover" />
+                  <img src={t.url} alt="" loading="lazy" className="h-full w-full rounded-lg object-cover" />
                 </div>
                 <span className="absolute -left-1 -top-1 flex items-center gap-0.5 rounded-full bg-white/85 px-1.5 py-0.5 text-[9px] text-foreground/70 shadow">
-                  <MapPin size={9} /> trip
+                  {t.kind === "trip" ? <MapPin size={9} /> : <BookHeart size={9} />} {t.kind}
                 </span>
               </button>
             ))}

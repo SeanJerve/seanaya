@@ -3,21 +3,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { Copy, Users, Sun, Moon, Sunset } from "lucide-react";
-import { useAppStore } from "@/features/app/store";
-import { pinStorage, hashPin, ANNIVERSARY_ISO } from "@/features/pin/pin-utils";
+import { Sun, Moon, Sunset, Bell, BookHeart, Calendar, MapPin, PinIcon, Music2, Heart } from "lucide-react";
+import { pinStorage, hashPin, ANNIVERSARY_ISO, type Slot } from "@/features/pin/pin-utils";
 import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useTheme, type Theme } from "@/lib/theme";
+import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
 
-export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: string; inviteCode: string }) {
+export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { relationshipId: string; inviteCode: string }) {
   const { user } = useUser();
-  const { closeSheet } = useAppStore();
   const qc = useQueryClient();
   const [displayName, setDisplayName] = useState(pinStorage.getName() ?? "");
-  const [joinCode, setJoinCode] = useState("");
   const [newPin, setNewPin] = useState("");
   const [anniversary, setAnniversary] = useState<string>("");
   const [theme, setTheme] = useTheme();
+  const { prefs, set: setPref } = useNotificationPrefs();
+
+  const slot: Slot = pinStorage.getSlot() ?? "a";
 
   const { data: rel } = useQuery({
     queryKey: ["settings-rel", relationshipId],
@@ -31,6 +32,8 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
       const n = displayName.trim();
       if (!n) throw new Error("Name is required");
       pinStorage.setName(n);
+      const nameCol = slot === "a" ? { name_a: n } : { name_b: n };
+      await supabase.from("relationships").update(nameCol).eq("id", relationshipId);
       if (user) await supabase.from("profiles").upsert({ id: user.id, display_name: n });
     },
     onSuccess: () => { toast.success("Name updated"); qc.invalidateQueries(); },
@@ -41,11 +44,11 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
     mutationFn: async () => {
       if (!/^\d{4}$/.test(newPin)) throw new Error("Enter a 4-digit PIN");
       const h = await hashPin(newPin);
-      // Shared PIN: update the relationship so both devices unlock with the new PIN
-      await supabase.from("relationships").update({ pin_hash: h }).eq("id", relationshipId);
-      pinStorage.set(h);
+      const patch = slot === "a" ? { pin_hash_a: h } : { pin_hash_b: h };
+      const { error } = await supabase.from("relationships").update(patch).eq("id", relationshipId);
+      if (error) throw error;
     },
-    onSuccess: () => { setNewPin(""); toast.success("PIN updated on both devices"); },
+    onSuccess: () => { setNewPin(""); toast.success("Your PIN was updated"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
   });
 
@@ -58,21 +61,19 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
     onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
   });
 
-  const join = useMutation({
-    mutationFn: async () => {
-      if (!joinCode || !user) throw new Error("Missing code");
-      const { data: found, error } = await supabase.from("relationships").select("*").eq("invite_code", joinCode.toUpperCase()).maybeSingle();
-      if (error || !found) throw new Error("Invite not found");
-      if (found.user_a_id === user.id) throw new Error("That's your own code");
-      const { error: upErr } = await supabase.from("relationships").update({ user_b_id: user.id }).eq("id", found.id);
-      if (upErr) throw upErr;
-    },
-    onSuccess: () => { toast.success("Linked. Welcome home."); closeSheet(); setTimeout(() => window.location.reload(), 500); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Try again"),
-  });
+  const yourName = slot === "a" ? rel?.name_a : rel?.name_b;
+  const partnerName = slot === "a" ? rel?.name_b : rel?.name_a;
 
   return (
     <div className="space-y-6">
+      <section className="space-y-2">
+        <SectionHead label="Signed in as" />
+        <div className="rounded-2xl bg-white/50 px-4 py-3 text-sm backdrop-blur-xl">
+          <div className="text-foreground">{yourName || "you"} <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-2">Slot {slot.toUpperCase()}</span></div>
+          {partnerName && <div className="mt-0.5 text-[11px] text-muted-foreground">with {partnerName}</div>}
+        </div>
+      </section>
+
       <section className="space-y-3">
         <SectionHead label="Theme" />
         <div className="grid grid-cols-3 gap-2">
@@ -81,15 +82,24 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
             { key: "dusk",  label: "Dusk",  icon: <Sunset size={14} /> },
             { key: "night", label: "Night", icon: <Moon size={14} /> },
           ] as { key: Theme; label: string; icon: React.ReactNode }[]).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTheme(t.key)}
-              className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-xs backdrop-blur-xl transition ${theme === t.key ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40"}`}
-            >
-              <span className="text-foreground/70">{t.icon}</span>
-              {t.label}
+            <button key={t.key} onClick={() => setTheme(t.key)}
+              className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-xs backdrop-blur-xl transition ${theme === t.key ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40"}`}>
+              <span className="text-foreground/70">{t.icon}</span>{t.label}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <SectionHead label="Whispers" icon={<Bell size={11} />} />
+        <p className="text-[11px] text-muted-foreground">Choose which of your partner's moments should notify you.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <PrefRow k="memory" label="Memories"  icon={<BookHeart size={14} />} on={prefs.memory}  onToggle={(v) => setPref({ memory: v })} />
+          <PrefRow k="event"  label="Events"    icon={<Calendar size={14} />}  on={prefs.event}   onToggle={(v) => setPref({ event: v })} />
+          <PrefRow k="trip"   label="Places"    icon={<MapPin size={14} />}    on={prefs.trip}    onToggle={(v) => setPref({ trip: v })} />
+          <PrefRow k="note"   label="Notes"     icon={<PinIcon size={14} />}   on={prefs.note}    onToggle={(v) => setPref({ note: v })} />
+          <PrefRow k="song"   label="Songs"     icon={<Music2 size={14} />}    on={prefs.song}    onToggle={(v) => setPref({ song: v })} />
+          <PrefRow k="hug"    label="Hugs"      icon={<Heart size={14} />}     on={prefs.hug}     onToggle={(v) => setPref({ hug: v })} />
         </div>
       </section>
 
@@ -100,8 +110,8 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
       </section>
 
       <section className="space-y-3">
-        <SectionHead label="Shared PIN" />
-        <p className="text-[11px] text-muted-foreground">Both of you unlock Seanaya with this PIN. Changing it here updates it for both devices.</p>
+        <SectionHead label="Your PIN" />
+        <p className="text-[11px] text-muted-foreground">This changes only your PIN. Your partner's PIN stays the same.</p>
         <FieldWrap label="New 4-digit PIN">
           <Input value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="••••" />
         </FieldWrap>
@@ -115,36 +125,21 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
         </FieldWrap>
         <PrimaryButton onClick={() => saveAnn.mutate()}>Save anniversary</PrimaryButton>
       </section>
-
-      <section className="space-y-3">
-        <SectionHead label="Partner link" />
-        {rel?.user_b_id ? (
-          <div className="flex items-center gap-2 rounded-2xl bg-white/50 px-4 py-3 text-sm">
-            <Users size={14} /> You are linked with your partner.
-          </div>
-        ) : (
-          <>
-            <div className="rounded-2xl bg-white/50 px-4 py-3 text-sm">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Your invite code</div>
-              <button
-                onClick={() => { navigator.clipboard.writeText(inviteCode); toast.success("Copied"); }}
-                className="mt-1 flex items-center gap-2 font-mono tracking-widest"
-              >
-                {inviteCode} <Copy size={12} />
-              </button>
-              <div className="mt-1 text-[10px] text-muted-foreground">Share this with your partner. They enter it, then the shared PIN.</div>
-            </div>
-            <FieldWrap label="Or join with their code">
-              <Input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="ABCDEF" />
-            </FieldWrap>
-            <PrimaryButton onClick={() => join.mutate()}>Link us</PrimaryButton>
-          </>
-        )}
-      </section>
     </div>
   );
 }
 
-function SectionHead({ label }: { label: string }) {
-  return <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>;
+function SectionHead({ label, icon }: { label: string; icon?: React.ReactNode }) {
+  return <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{icon}{label}</div>;
+}
+function PrefRow({ k: _k, label, icon, on, onToggle }: { k: PrefKind; label: string; icon: React.ReactNode; on: boolean; onToggle: (v: boolean) => void }) {
+  return (
+    <button onClick={() => onToggle(!on)}
+      className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5 text-sm backdrop-blur-xl transition ${on ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40 text-foreground/60"}`}>
+      <span className="flex items-center gap-2"><span className="text-foreground/70">{icon}</span>{label}</span>
+      <span className={`h-4 w-7 rounded-full transition ${on ? "bg-primary/80" : "bg-foreground/20"}`}>
+        <span className={`block h-3 w-3 rounded-full bg-white mt-0.5 transition ${on ? "ml-3.5" : "ml-0.5"}`} />
+      </span>
+    </button>
+  );
 }
