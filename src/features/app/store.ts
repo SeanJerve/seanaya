@@ -9,6 +9,7 @@ export type SheetKey =
   | "add-song"
   | "settings"
   | "notifications"
+  | "stickers"
   | null;
 
 export type ConfirmOptions = {

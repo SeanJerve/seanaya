@@ -17,6 +17,7 @@ import { AddTripSheet } from "@/features/sheets/AddTripSheet";
 import { AddSongSheet } from "@/features/sheets/AddSongSheet";
 import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
+import { StickersSheet } from "@/features/sheets/StickersSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { bootTheme } from "@/lib/theme";
@@ -68,6 +69,7 @@ function Inner() {
       <Sheet open={sheet === "add-song"}   title="New song"><AddSongSheet relationshipId={relId} /></Sheet>
       <Sheet open={sheet === "settings"}   title="Settings"><SettingsSheet relationshipId={relId} inviteCode={inviteCode} /></Sheet>
       <Sheet open={sheet === "notifications"} title="Whispers"><NotificationsSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "stickers"} title="Sticker Pad"><StickersSheet relationshipId={relId} /></Sheet>
 
       <HugOverlay relationshipId={relId} />
       <ConfirmDialog />
