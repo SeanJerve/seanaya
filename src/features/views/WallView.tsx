@@ -1,15 +1,15 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Palette, Trash2 } from "lucide-react";
+import { Plus, Palette, Trash2, Eye, X } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/storage";
 import { Lightbox } from "@/lib/Lightbox";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-
+ 
 type Note = {
   id: string;
   body: string;
@@ -24,7 +24,7 @@ type Note = {
   created_at: string;
   author_id: string | null;
 };
-
+ 
 type PhotoTile = {
   id: string;
   title: string;
@@ -33,7 +33,7 @@ type PhotoTile = {
   kind: "trip" | "memory";
   dateStr?: string | null;
 };
-
+ 
 const PASTEL_COLORS = [
   { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
   { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
@@ -42,12 +42,12 @@ const PASTEL_COLORS = [
   { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
   { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
-
+ 
 function getTilt(id: string): number {
   const seed = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
   return ((seed % 24) - 12) * 1.35; // range roughly -16.2 to 16.2 degrees
 }
-
+ 
 function getSeededCoords(id: string) {
   const seedX = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
   const seedY = id.charCodeAt(1) + id.charCodeAt(id.length - 2);
@@ -55,7 +55,7 @@ function getSeededCoords(id: string) {
   const y = ((seedY % 6) * 0.1) + 0.15; // range 15% to 65%
   return { x, y };
 }
-
+ 
 export function WallView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
   const { openSheet, confirm } = useAppStore();
@@ -65,6 +65,8 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
   const boardRef = useRef<HTMLDivElement>(null);
   const [lastViewedNotes, setLastViewedNotes] = useState<string | null>(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [enlargedNote, setEnlargedNote] = useState<Note | null>(null);
 
   useEffect(() => {
     const val = localStorage.getItem("last_viewed_notes");
@@ -258,6 +260,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
               const seeded = getSeededCoords(n.id);
               const px = n.pos_x !== null ? n.pos_x : seeded.x;
               const py = n.pos_y !== null ? n.pos_y : seeded.y;
+              const isSelected = selectedNoteId === n.id;
 
               return (
                 <motion.div
@@ -291,32 +294,64 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   }}
                   whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
                 >
-                  {n.image_url ? (
-                    <PolaroidCard
-                      note={n}
-                      isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
-                      onDelete={() => {
-                        confirm({
-                          title: "Delete photo note?",
-                          message: "Are you sure you want to permanently delete this photo note from the board?",
-                          onConfirm: () => deleteNote.mutate(n),
-                        });
-                      }}
-                      onImageClick={() => setLightbox(n.image_url)}
-                    />
-                  ) : (
-                    <StickyNote
-                      note={n}
-                      isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
-                      onDelete={() => {
-                        confirm({
-                          title: "Delete note?",
-                          message: "Are you sure you want to permanently delete this note from the board?",
-                          onConfirm: () => deleteNote.mutate(n),
-                        });
-                      }}
-                    />
-                  )}
+                  <div 
+                    className="relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedNoteId(isSelected ? null : n.id);
+                    }}
+                  >
+                    {n.image_url ? (
+                      <PolaroidCard
+                        note={n}
+                        isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
+                        onImageClick={() => setSelectedNoteId(n.id)}
+                      />
+                    ) : (
+                      <StickyNote
+                        note={n}
+                        isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
+                      />
+                    )}
+
+                    {/* Popover Action Menu */}
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/80 backdrop-blur-md p-1 shadow-lg z-50 pointer-events-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => {
+                              setEnlargedNote(n);
+                              setSelectedNoteId(null);
+                            }}
+                            className="p-1.5 rounded-full hover:bg-white text-foreground/75 hover:text-foreground transition-all"
+                            title="Enlarge note"
+                          >
+                            <Eye size={12} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              confirm({
+                                title: "Delete note?",
+                                message: "Are you sure you want to permanently delete this note from the board?",
+                                onConfirm: () => deleteNote.mutate(n),
+                              });
+                              setSelectedNoteId(null);
+                            }}
+                            className="p-1.5 rounded-full bg-red-50 border border-red-200/50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                            title="Delete note"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </motion.div>
               );
             })}
@@ -333,17 +368,71 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       </button>
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+
+      {/* Enlarged Note Modal */}
+      <AnimatePresence>
+        {enlargedNote && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/20 backdrop-blur-[4px]"
+            onClick={() => setEnlargedNote(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setEnlargedNote(null)}
+                className="absolute -top-3 -right-3 rounded-full bg-white border border-white/50 p-1 text-foreground/60 shadow-lg hover:text-foreground transition-all z-50"
+              >
+                <X size={14} />
+              </button>
+
+              {enlargedNote.image_url ? (
+                /* Enlarged Polaroid Card */
+                <div className="rounded-md shadow-2xl w-[260px] p-4 bg-white pb-6 flex flex-col justify-between select-text">
+                  <div className="relative overflow-hidden rounded-sm mb-3" style={{ aspectRatio: "1" }}>
+                    <img src={enlargedNote.image_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  {enlargedNote.body && enlargedNote.body !== "(photo)" && (
+                    <div className="text-center px-1">
+                      <p className="text-xs text-foreground/80 leading-relaxed font-[Nunito] break-words whitespace-pre-wrap select-text selection:bg-primary/20">
+                        {enlargedNote.body}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Enlarged Sticky Note */
+                <div 
+                  className="rounded-md shadow-2xl w-[240px] min-h-[220px] p-5 pb-6 flex flex-col justify-between select-text"
+                  style={{ background: enlargedNote.color ?? "oklch(0.95 0.07 90 / 0.85)" }}
+                >
+                  <div>
+                    <div className="text-[9px] uppercase tracking-widest text-foreground/35 mb-2 select-none pointer-events-none">{enlargedNote.kind}</div>
+                    <p className="text-sm leading-relaxed text-foreground/85 font-[Nunito] break-words whitespace-pre-wrap select-text selection:bg-black/10">
+                      {enlargedNote.body}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 // ── Standalone Polaroid Frame Component (Used for Photo Notes) ─────────────────────
 function PolaroidCard({
-  note, isNew, onDelete, onImageClick
+  note, isNew, onImageClick
 }: {
   note: Note;
   isNew: boolean;
-  onDelete: () => void;
   onImageClick?: () => void;
 }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
@@ -357,15 +446,6 @@ function PolaroidCard({
         className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 w-3 h-3 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.25)] border border-white/40"
         style={{ background: bg }}
       />
-
-      {/* Delete button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="absolute top-1.5 right-1.5 text-foreground/35 hover:text-red-500 transition-colors p-0.5 z-20"
-        title="Delete note"
-      >
-        <Trash2 size={10} />
-      </button>
 
       {/* Photo */}
       <button onClick={onImageClick} className="block w-full">
@@ -384,11 +464,10 @@ function PolaroidCard({
 
 // ── Sticky Note Component (Only text, no overlaid polaroid anymore!) ────────────────────────────────
 function StickyNote({
-  note, isNew, onDelete
+  note, isNew
 }: {
   note: Note;
   isNew: boolean;
-  onDelete: () => void;
 }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
 
@@ -411,15 +490,6 @@ function StickyNote({
         className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.25)] border border-white/40 z-10 pointer-events-none"
         style={{ background: bg }}
       />
-
-      {/* Delete button (trash icon at top-right) */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="absolute top-1.5 right-1.5 text-foreground/35 hover:text-red-500 transition-colors p-0.5 z-20"
-        title="Delete note"
-      >
-        <Trash2 size={12} />
-      </button>
 
       <div className="px-3 pt-4.5 pb-2 relative flex-1 flex flex-col justify-between">
         <div>

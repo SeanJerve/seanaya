@@ -87,13 +87,17 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
               className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"><X size={14} /></button>
           </div>
         ) : (
-          <DropZone onFile={(f) => { setFile(f); setPreview(URL.createObjectURL(f)); }}
+          <DropZone onFile={(f) => { 
+            setFile(f); 
+            setPreview(URL.createObjectURL(f)); 
+            setForm((prev) => ({ ...prev, body: prev.body.slice(0, 20) }));
+          }}
             className="flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground">
             <ImagePlus size={16} /><span>Drop a photo or tap to choose</span>
           </DropZone>
         )}
       </FieldWrap>
-
+ 
       {!file && (
         <FieldWrap label="Kind">
           <Select value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as Form["kind"] }))}>
@@ -101,7 +105,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
           </Select>
         </FieldWrap>
       )}
-
+ 
       <FieldWrap label="Choose Pastel Color">
         <div className="flex items-center gap-2 py-1 overflow-x-auto">
           {PASTEL_COLORS.map((c) => (
@@ -124,19 +128,26 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
           ))}
         </div>
       </FieldWrap>
-
+ 
       <FieldWrap label={file ? "Caption (optional)" : "Body"}>
         <div className="relative">
-          <Textarea 
-            rows={4} 
-            value={form.body} 
-            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-            placeholder={file ? "A little caption…" : "Say something soft…"} 
-            maxLength={180}
-          />
-          <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">
-            {180 - form.body.length} characters left
-          </div>
+          {(() => {
+            const limit = file ? 20 : 100;
+            return (
+              <>
+                <Textarea 
+                  rows={4} 
+                  value={form.body} 
+                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value.slice(0, limit) }))}
+                  placeholder={file ? "A little caption…" : "Say something soft…"} 
+                  maxLength={limit}
+                />
+                <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">
+                  {Math.max(0, limit - form.body.length)} characters left
+                </div>
+              </>
+            );
+          })()}
         </div>
       </FieldWrap>
 

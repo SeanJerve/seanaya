@@ -1,17 +1,17 @@
-import { Heart, Bell } from "lucide-react";
+import { Heart, Bell, Settings } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAppStore } from "@/features/app/store";
-
+ 
 export function AppHeader({ title, subtitle, relationshipId }: { title: string; subtitle?: string; relationshipId?: string }) {
   const { user } = useUser();
   const qc = useQueryClient();
   const { openSheet } = useAppStore();
   const { unread } = useNotifications(relationshipId);
-
+ 
   const hug = useMutation({
     mutationFn: async () => {
       if (!relationshipId || !user) throw new Error("Not linked yet");
@@ -21,7 +21,7 @@ export function AppHeader({ title, subtitle, relationshipId }: { title: string; 
     onSuccess: () => { toast.success("A hug on its way"); qc.invalidateQueries({ queryKey: ["stats"] }); },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
-
+ 
   return (
     <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-background/40 border-b border-white/30">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3">
@@ -32,8 +32,15 @@ export function AppHeader({ title, subtitle, relationshipId }: { title: string; 
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => hug.mutate()}
+            className="rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
+            aria-label="Send a hug"
+          >
+            <Heart size={16} className="text-[color:var(--hug)]" />
+          </button>
+          <button
             onClick={() => openSheet("notifications")}
-            className="relative rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl"
+            className="relative rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
             aria-label="Notifications"
           >
             <Bell size={16} className="text-foreground/70" />
@@ -44,11 +51,11 @@ export function AppHeader({ title, subtitle, relationshipId }: { title: string; 
             )}
           </button>
           <button
-            onClick={() => hug.mutate()}
+            onClick={() => openSheet("settings")}
             className="rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
-            aria-label="Send a hug"
+            aria-label="Settings"
           >
-            <Heart size={16} className="text-[color:var(--hug)]" />
+            <Settings size={16} className="text-foreground/70" />
           </button>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { CalendarView } from "@/features/views/CalendarView";
 import { MemoriesView } from "@/features/views/MemoriesView";
 import { WallView } from "@/features/views/WallView";
 import { StickersView } from "@/features/views/StickersView";
-import { MoreView } from "@/features/views/MoreView";
+import { PetView } from "@/features/views/PetView";
 import { Sheet } from "./Sheet";
 import { AddMemorySheet } from "@/features/sheets/AddMemorySheet";
 import { AddEventSheet } from "@/features/sheets/AddEventSheet";
@@ -53,7 +53,7 @@ function Inner() {
     memories: "Memories", 
     wall: "Wall", 
     stickers: "Stickers", 
-    more: "More" 
+    pet: "Pet Room" 
   } as const)[tab];
 
   return (
@@ -66,7 +66,7 @@ function Inner() {
         {tab === "memories" && <MemoriesView relationshipId={relId} />}
         {tab === "wall" && <WallView relationshipId={relId} />}
         {tab === "stickers" && <StickersView relationshipId={relId} />}
-        {tab === "more" && <MoreView relationshipId={relId} />}
+        {tab === "pet" && <PetView relationshipId={relId} />}
       </main>
 
       <BottomNav relationshipId={relId} />

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -6,7 +6,7 @@ import { Plus, X, MapPin, Tag, Calendar as CalIcon, Trash2 } from "lucide-react"
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
-
+ 
 type Memory = {
   id: string;
   title: string;
@@ -15,8 +15,9 @@ type Memory = {
   category: string;
   location: string | null;
   cover_url: string | null;
+  created_at: string;
 };
-
+ 
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const { openSheet, confirm } = useAppStore();
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -45,12 +46,45 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     queryFn: async () =>
       ((await supabase
         .from("memories")
-        .select("id,title,description,memory_date,category,location,cover_url")
+        .select("id,title,description,memory_date,category,location,cover_url,created_at")
         .eq("relationship_id", relationshipId)
         .order("memory_date", { ascending: false })
+        .order("created_at", { ascending: true })
         .limit(100)
       ).data ?? []) as Memory[],
   });
+
+  const groupedMemories = useMemo(() => {
+    const groups: { [dateStr: string]: Memory[] } = {};
+    const noDateMemories: Memory[] = [];
+
+    memories.forEach((m) => {
+      if (m.memory_date) {
+        if (!groups[m.memory_date]) {
+          groups[m.memory_date] = [];
+        }
+        groups[m.memory_date].push(m);
+      } else {
+        noDateMemories.push(m);
+      }
+    });
+
+    const list: { date: string | null; memories: Memory[] }[] = Object.keys(groups)
+      .sort((a, b) => b.localeCompare(a))
+      .map((dateStr) => ({
+        date: dateStr,
+        memories: groups[dateStr],
+      }));
+
+    if (noDateMemories.length > 0) {
+      list.push({
+        date: null,
+        memories: noDateMemories,
+      });
+    }
+
+    return list;
+  }, [memories]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -69,8 +103,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const cx_1 = containerWidth / 2;
   const cx_2 = (containerWidth * 5) / 6;
 
-  // Calculate coordinates for SVG curve
-  const points = memories.map((_, i) => {
+  // Calculate coordinates for SVG curve using date groups
+  const points = groupedMemories.map((_, i) => {
     const rem = i % 4;
     let x = cx_1;
     if (rem === 0) x = cx_0;
@@ -112,7 +146,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           }} 
         />
       </div>
-      {memories.length === 0 ? (
+      {groupedMemories.length === 0 ? (
         <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-8 text-center relative z-10">
           <div className="display text-xl">Nothing kept yet.</div>
           <p className="mt-2 text-sm text-muted-foreground">The first memory is always the sweetest.</p>
@@ -150,65 +184,86 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
           {/* Grid of Bubbles */}
           <div className="relative z-10 grid grid-cols-3" style={{ gridAutoRows: `${rowHeight}px` }}>
-            {memories.map((m, idx) => {
-              const formattedDate = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
+            {groupedMemories.map((group, idx) => {
               const colClass = getColClass(idx);
               const rowStart = idx + 1;
+              const formattedDate = group.date ? new Date(group.date + "T00:00:00") : null;
 
               return (
                 <div
-                  key={m.id}
-                  className={`flex flex-col items-center select-none ${colClass}`}
+                  key={group.date || `special-${idx}`}
+                  className={`flex flex-col items-center select-none justify-center ${colClass}`}
                   style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                 >
-                  {/* Bubble Container */}
-                  <button
-                    onClick={() => setActiveMemory(m)}
-                    className="group relative w-22 h-22 md:w-25 md:h-25 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/25 backdrop-blur-sm shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(80,110,160,0.35)] transition-all hover:scale-105 active:scale-95 animate-in fade-in zoom-in-90 duration-300"
-                  >
-                    {/* Cover Photo Background */}
-                    {m.cover_url && (
-                      <>
-                        <img
-                          src={m.cover_url}
-                          alt=""
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-115"
-                        />
-                        {/* Full bubble overlay with light blur and white background tint */}
-                        <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px] transition-opacity group-hover:opacity-10" />
-                      </>
-                    )}
+                  {/* Clumped bubble row wrapper */}
+                  <div className="flex items-center justify-center -space-x-3.5 md:-space-x-4">
+                    {group.memories.map((m, mIdx) => {
+                      const isMain = mIdx === 0;
+                      const sizeClass = isMain 
+                        ? "w-20 h-20 md:w-22 md:h-22 z-20" 
+                        : "w-13 h-13 md:w-15 md:h-15 z-10 opacity-90 hover:opacity-100 hover:scale-105 hover:z-30";
+                      
+                      const formattedMDate = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
 
-                    {/* Date Display */}
-                    <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}>
-                      {formattedDate ? (
-                        <>
-                          <span className="text-[9px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
-                            {format(formattedDate, "MMM")}
-                          </span>
-                          <span className="display text-2xl font-bold mt-0.5 leading-none">
-                            {format(formattedDate, "d")}
-                          </span>
-                          <span className="text-[8px] text-foreground/70 mt-0.5 leading-none">
-                            {format(formattedDate, "yyyy")}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-[10px] uppercase tracking-wider text-foreground/60 font-semibold">
-                          Special
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                      return (
+                        <div key={m.id} className="flex flex-col items-center relative">
+                          <button
+                            onClick={() => setActiveMemory(m)}
+                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-[inset_0_1px_2px_rgba(255,255,255,0.6),0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 animate-in fade-in zoom-in-90 duration-300 ${sizeClass}`}
+                          >
+                            {/* Cover Photo */}
+                            {m.cover_url && (
+                              <>
+                                <img
+                                  src={m.cover_url}
+                                  alt=""
+                                  loading="lazy"
+                                  className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-115"
+                                />
+                                <div className="absolute inset-0 bg-white/10 backdrop-blur-[0.5px] transition-opacity group-hover:opacity-10" />
+                              </>
+                            )}
 
-                  {/* Glass Nameplate */}
+                            {/* Date or Icon Display */}
+                            {isMain ? (
+                              <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}>
+                                {formattedMDate ? (
+                                  <>
+                                    <span className="text-[8px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
+                                      {format(formattedMDate, "MMM")}
+                                    </span>
+                                    <span className="display text-xl font-bold mt-0.5 leading-none">
+                                      {format(formattedMDate, "d")}
+                                    </span>
+                                    <span className="text-[7px] text-foreground/70 mt-0.5 leading-none">
+                                      {format(formattedMDate, "yyyy")}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-[9px] uppercase tracking-wider text-foreground/60 font-semibold">
+                                    Special
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={`relative z-10 text-foreground/75 ${m.cover_url ? "drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]" : ""}`}>
+                                {m.cover_url ? null : <Tag size={12} />}
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Combined Glass Nameplate listing the titles */}
                   <div
-                    onClick={() => setActiveMemory(m)}
-                    className="mt-3.5 px-3 py-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-[0_4px_12px_-4px_rgba(80,110,160,0.25)] text-[11px] font-semibold text-foreground/90 truncate max-w-[110px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center animate-in fade-in slide-in-from-bottom-2 duration-300"
-                    title={m.title}
+                    onClick={() => setActiveMemory(group.memories[0])}
+                    className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-[0_4px_12px_-4px_rgba(80,110,160,0.25)] text-[10px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    title={group.memories.map(m => m.title).join(", ")}
                   >
-                    {m.title}
+                    {group.memories[0].title}
+                    {group.memories.length > 1 && ` (+${group.memories.length - 1})`}
                   </div>
                 </div>
               );
@@ -240,7 +295,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   onConfirm: () => deleteMemory.mutate(activeMemory.id),
                 });
               }}
-              className="absolute left-4 top-4 z-20 rounded-full bg-white/80 p-1.5 text-foreground/60 hover:text-red-500 hover:bg-white border border-white/50 transition-colors shadow-sm"
+              className="absolute right-14 top-4 z-20 rounded-full bg-red-50/90 border border-red-200/50 p-1.5 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
               title="Delete memory"
               disabled={deleteMemory.isPending}
             >

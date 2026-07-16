@@ -16,7 +16,7 @@ const ICON: Record<NotifKind, React.ReactNode> = {
 };
 
 const TAB_FOR: Partial<Record<NotifKind, TabKey>> = {
-  memory: "memories", event: "calendar", note: "wall", trip: "more", song: "more",
+  memory: "memories", event: "calendar", note: "wall", trip: "pet", song: "pet",
 };
 
 const TITLE: Record<NotifKind, string> = {

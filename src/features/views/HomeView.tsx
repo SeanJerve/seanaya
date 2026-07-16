@@ -131,23 +131,23 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
   const todayDate = new Date().getDate();
   const basePrompts = [
-    "Share a song that made you think of them today. 🎵",
-    "Pin a cute sticky note to surprise them! 📌",
-    "Send a warm virtual hug right now. 🤗",
-    "Every single second spent together is a gift. ❤️",
-    "What is your favorite memory of us in the past month? 🌸",
-    "Hope your partner is having a wonderful day! ✨",
+    "Share a song that made you think of them today.",
+    "Pin a cute sticky note to surprise them!",
+    "Send a warm virtual hug right now.",
+    "Every single second spent together is a gift.",
+    "What is your favorite memory of us in the past month?",
+    "Hope your partner is having a wonderful day!",
     "Daily Prompt: Tell them one thing you appreciate about them today.",
   ];
   
   let promptText = basePrompts[todayDate % basePrompts.length];
   if (stats) {
     if (todayDate % 3 === 0 && stats.memories > 0) {
-      promptText = `We have kept ${stats.memories} memories together! 📖`;
+      promptText = `We have kept ${stats.memories} memories together!`;
     } else if (todayDate % 3 === 1 && stats.trips > 0) {
-      promptText = `We have ${stats.trips} dream places pinned! 🗺️`;
+      promptText = `We have ${stats.trips} dream places pinned!`;
     } else if (todayDate % 3 === 2 && stats.hugs > 0) {
-      promptText = `You have sent each other ${stats.hugs} hugs! 🤗`;
+      promptText = `You have sent each other ${stats.hugs} hugs!`;
     }
   }
 
