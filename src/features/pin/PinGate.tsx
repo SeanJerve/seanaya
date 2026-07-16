@@ -39,6 +39,7 @@ type LilyParticle = {
   scale: number;
   opacity: number;
   img: string;
+  delay: number;
 };
 
 /**
@@ -123,35 +124,37 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const list: LilyParticle[] = [];
     const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
 
-    // Left Popper (20 particles)
-    for (let i = 0; i < 20; i++) {
+    // Left Popper (35 particles)
+    for (let i = 0; i < 35; i++) {
       list.push({
         id: i,
-        x: 5,
-        y: 95,
-        vx: 0.6 + Math.random() * 1.4,
-        vy: -2.8 - Math.random() * 2.2,
+        x: -5 + Math.random() * 12,
+        y: 100,
+        vx: 0.4 + Math.random() * 1.1,
+        vy: -1.8 - Math.random() * 1.5,
         rotation: Math.random() * 360,
-        rotationSpeed: -3 + Math.random() * 6,
-        scale: 0.18 + Math.random() * 0.22,
+        rotationSpeed: -2 + Math.random() * 4,
+        scale: 0.4 + Math.random() * 0.45,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+        delay: Math.random() * 90, // Cascade stagger delay
       });
     }
 
-    // Right Popper (20 particles)
-    for (let i = 0; i < 20; i++) {
+    // Right Popper (35 particles)
+    for (let i = 0; i < 35; i++) {
       list.push({
-        id: i + 20,
-        x: 95,
-        y: 95,
-        vx: -0.6 - Math.random() * 1.4,
-        vy: -2.8 - Math.random() * 2.2,
+        id: i + 35,
+        x: 93 + Math.random() * 12,
+        y: 100,
+        vx: -0.4 - Math.random() * 1.1,
+        vy: -1.8 - Math.random() * 1.5,
         rotation: Math.random() * 360,
-        rotationSpeed: -3 + Math.random() * 6,
-        scale: 0.18 + Math.random() * 0.22,
+        rotationSpeed: -2 + Math.random() * 4,
+        scale: 0.4 + Math.random() * 0.45,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+        delay: Math.random() * 90, // Cascade stagger delay
       });
     }
 
@@ -168,13 +171,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       setParticles((prev) => {
         let allDead = true;
         const next = prev.map((p) => {
+          if (p.delay > 0) {
+            allDead = false;
+            return { ...p, delay: p.delay - dt };
+          }
+
           const nextX = p.x + p.vx * dt;
           const nextY = p.y + p.vy * dt;
-          const nextVy = p.vy + 0.05 * dt;
+          const nextVy = p.vy + 0.025 * dt; // slow gravity
 
           let nextOpacity = p.opacity;
           if (p.vy > 0) {
-            nextOpacity = Math.max(0, p.opacity - 0.012 * dt);
+            nextOpacity = Math.max(0, p.opacity - 0.007 * dt); // slow fade
           }
           if (nextOpacity > 0) {
             allDead = false;
@@ -328,7 +336,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               left: `${p.x}%`,
               top: `${p.y}%`,
               transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
-              opacity: p.opacity,
+              opacity: p.delay > 0 ? 0 : p.opacity,
               width: "100px",
               height: "100px",
             }}
