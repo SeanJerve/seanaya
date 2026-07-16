@@ -121,19 +121,19 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     }
 
     const list: LilyParticle[] = [];
-    const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/main-lily.png"];
+    const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
 
     // Left Popper (20 particles)
     for (let i = 0; i < 20; i++) {
       list.push({
         id: i,
-        x: -5,
+        x: 5,
         y: 95,
-        vx: 3 + Math.random() * 7,
-        vy: -16 - Math.random() * 10,
+        vx: 0.6 + Math.random() * 1.4,
+        vy: -2.8 - Math.random() * 2.2,
         rotation: Math.random() * 360,
-        rotationSpeed: -5 + Math.random() * 10,
-        scale: 0.16 + Math.random() * 0.22,
+        rotationSpeed: -3 + Math.random() * 6,
+        scale: 0.18 + Math.random() * 0.22,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
       });
@@ -143,13 +143,13 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     for (let i = 0; i < 20; i++) {
       list.push({
         id: i + 20,
-        x: 105,
+        x: 95,
         y: 95,
-        vx: -3 - Math.random() * 7,
-        vy: -16 - Math.random() * 10,
+        vx: -0.6 - Math.random() * 1.4,
+        vy: -2.8 - Math.random() * 2.2,
         rotation: Math.random() * 360,
-        rotationSpeed: -5 + Math.random() * 10,
-        scale: 0.16 + Math.random() * 0.22,
+        rotationSpeed: -3 + Math.random() * 6,
+        scale: 0.18 + Math.random() * 0.22,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
       });
@@ -168,13 +168,13 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       setParticles((prev) => {
         let allDead = true;
         const next = prev.map((p) => {
-          const nextX = p.x + p.vx * 0.45 * dt;
-          const nextY = p.y + p.vy * 0.45 * dt;
-          const nextVy = p.vy + 0.45 * dt; // gravity
+          const nextX = p.x + p.vx * dt;
+          const nextY = p.y + p.vy * dt;
+          const nextVy = p.vy + 0.05 * dt;
 
           let nextOpacity = p.opacity;
           if (p.vy > 0) {
-            nextOpacity = Math.max(0, p.opacity - 0.015 * dt);
+            nextOpacity = Math.max(0, p.opacity - 0.012 * dt);
           }
           if (nextOpacity > 0) {
             allDead = false;
