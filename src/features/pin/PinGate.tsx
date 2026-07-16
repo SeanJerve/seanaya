@@ -42,9 +42,27 @@ type LilyParticle = {
   opacity: number;
   img?: string;
   isSparkle?: boolean;
+  isLargeGlitter?: boolean;
   color?: string;
   delay: number;
 };
+
+const COMPLIMENT_WORDS = [
+  "loving",
+  "caring",
+  "gorgeous",
+  "beautiful",
+  "sweet",
+  "precious",
+  "adorable",
+  "charming",
+  "wonderful",
+  "amazing",
+  "perfect",
+  "cutest",
+  "loveliest",
+  "dearly loved"
+];
 
 /**
  * Two-PIN model:
@@ -71,6 +89,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isVmPlaying, setIsVmPlaying] = useState(false);
   const [hasVmPlayed, setHasVmPlayed] = useState(false);
+
+  // Index for cycling compliment words on Page 2
+  const [wordIndex, setWordIndex] = useState(0);
 
   // Audio references
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
@@ -127,6 +148,15 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  // Cycle compliment words on Page 2
+  useEffect(() => {
+    if (stage !== "partner-name-input") return;
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % COMPLIMENT_WORDS.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [stage]);
+
   // Cleanup audios when leaving the page or component unmounts
   useEffect(() => {
     return () => {
@@ -161,8 +191,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const list: LilyParticle[] = [];
     const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
 
-    // Left Popper Lilies (35)
-    for (let i = 0; i < 35; i++) {
+    // Left Popper Lilies (50)
+    for (let i = 0; i < 50; i++) {
       list.push({
         id: i,
         x: -5 + Math.random() * 12,
@@ -174,14 +204,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 90,
+        delay: Math.random() * 100,
       });
     }
 
-    // Left Popper Glitters (30)
-    for (let i = 0; i < 30; i++) {
+    // Left Popper Sparkles (50)
+    for (let i = 0; i < 50; i++) {
       list.push({
-        id: i + 70,
+        id: i + 100,
         x: -5 + Math.random() * 12,
         y: 100,
         vx: 0.5 + Math.random() * 1.6,
@@ -191,15 +221,16 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.4 + Math.random() * 0.6,
         opacity: 1,
         isSparkle: true,
+        isLargeGlitter: Math.random() < 0.45,
         color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
-        delay: Math.random() * 95,
+        delay: Math.random() * 105,
       });
     }
 
-    // Right Popper Lilies (35)
-    for (let i = 0; i < 35; i++) {
+    // Right Popper Lilies (50)
+    for (let i = 0; i < 50; i++) {
       list.push({
-        id: i + 35,
+        id: i + 50,
         x: 93 + Math.random() * 12,
         y: 100,
         vx: -0.4 - Math.random() * 1.1,
@@ -209,14 +240,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 90,
+        delay: Math.random() * 100,
       });
     }
 
-    // Right Popper Glitters (30)
-    for (let i = 0; i < 30; i++) {
+    // Right Popper Sparkles (50)
+    for (let i = 0; i < 50; i++) {
       list.push({
-        id: i + 100,
+        id: i + 150,
         x: 93 + Math.random() * 12,
         y: 100,
         vx: -0.5 - Math.random() * 1.6,
@@ -226,8 +257,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.4 + Math.random() * 0.6,
         opacity: 1,
         isSparkle: true,
+        isLargeGlitter: Math.random() < 0.45,
         color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
-        delay: Math.random() * 95,
+        delay: Math.random() * 105,
       });
     }
 
@@ -462,6 +494,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
         {particles.map((p) => {
           if (p.isSparkle) {
+            const size = p.isLargeGlitter ? "8px" : "4px";
+            const blur = p.isLargeGlitter ? "8px" : "4px";
             return (
               <div
                 key={p.id}
@@ -471,10 +505,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                   top: `${p.y}%`,
                   transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
                   opacity: p.delay > 0 ? 0 : p.opacity,
-                  width: "6px",
-                  height: "6px",
+                  width: size,
+                  height: size,
                   backgroundColor: p.color,
-                  boxShadow: `0 0 6px ${p.color}, 0 0 12px ${p.color}`,
+                  boxShadow: `0 0 ${blur} ${p.color}, 0 0 calc(${blur} * 2) ${p.color}`,
                 }}
               />
             );
@@ -533,7 +567,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "partner-name" && (
           <Screen key="pname">
             <Title
-              kicker="So you must be the girlfriend?"
+              kicker="A Special Message For You"
               title="Happy 1st Monthsary, Aya!"
               sub={
                 !hasInteracted
@@ -544,34 +578,34 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               }
             />
             
-            {/* Center Lily: Floating bouquet with glowing backdrop and twinkling stars */}
+            {/* Center Lily: Larger floating bouquet with glowing backdrop and 5 twinkling stars */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.35, type: "spring", stiffness: 95 }}
-              className="my-7 relative flex justify-center items-center"
+              className="my-9 relative flex justify-center items-center"
             >
               {/* Pulsing glow behind bouquet */}
               <motion.div
                 animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute w-28 h-28 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.2)_65%,transparent_100%)] blur-md rounded-full"
+                className="absolute w-36 h-36 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.2)_65%,transparent_100%)] blur-md rounded-full"
               />
               
               {/* Floating Bouquet wrapper */}
               <motion.img
-                animate={{ y: [0, -7, 0] }}
+                animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 src="/main-lily.png"
                 alt="White Lily Bouquet"
-                className="relative w-36 h-36 object-contain"
+                className="relative w-44 h-44 object-contain"
               />
 
               {/* Twinkling star 1 */}
               <motion.svg
                 animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 0.8 }}
-                className="absolute -top-1 left-3 w-4 h-4 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 0.7 }}
+                className="absolute -top-2 left-2 w-4 h-4 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -581,8 +615,41 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               {/* Twinkling star 2 */}
               <motion.svg
                 animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
-                transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.2, delay: 0.7 }}
-                className="absolute bottom-1 right-3 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.8)]"
+                transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.1, delay: 0.6 }}
+                className="absolute bottom-2 right-2 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.85)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 3 */}
+              <motion.svg
+                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 1.3, delay: 1.2 }}
+                className="absolute top-4 right-1 w-3 h-3 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 4 */}
+              <motion.svg
+                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 2.1, repeat: Infinity, repeatDelay: 0.9, delay: 0.3 }}
+                className="absolute bottom-4 left-1 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.85)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 5 */}
+              <motion.svg
+                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 1.9, repeat: Infinity, repeatDelay: 1.0, delay: 0.9 }}
+                className="absolute -top-1 -right-2 w-3.5 h-3.5 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -646,14 +713,34 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
-        {/* Page 2: Name input onboarding with Monthsary congrats */}
+        {/* Page 2: Name input onboarding with Monthsary congrats and cycling compliments */}
         {stage === "partner-name-input" && (
           <Screen key="pname-input">
-            <Title
-              kicker="Welcome, Love"
-              title="Congratulations on our monthsary!"
-              sub="What should we call you here?"
-            />
+            <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground flex items-center justify-center flex-wrap gap-x-1 min-h-[16px]">
+              <span>You must be the</span>
+              <span className="font-semibold text-primary inline-flex min-w-[70px] justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={wordIndex}
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {COMPLIMENT_WORDS[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <span>girlfriend?</span>
+            </div>
+
+            <h1 className="display mt-3 text-4xl leading-tight text-foreground">
+              Congratulations on our monthsary!
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              What should we call you here?
+            </p>
+
             <NameInput value={name} onChange={setName} />
             <ContinueButton
               disabled={!name.trim()}
