@@ -40,7 +40,10 @@ type LilyParticle = {
   rotationSpeed: number;
   scale: number;
   opacity: number;
-  img: string;
+  img?: string;
+  isSparkle?: boolean;
+  isLargeGlitter?: boolean;
+  color?: string;
   delay: number;
 };
 
@@ -58,7 +61,19 @@ const COMPLIMENT_WORDS = [
   "perfect",
   "cutest",
   "loveliest",
-  "dearly loved"
+  "dearly loved",
+  "stunning",
+  "pretty",
+  "breathtaking",
+  "angelic",
+  "sweetest",
+  "irresistible",
+  "one-and-only",
+  "extraordinary",
+  "magical",
+  "marvelous",
+  "captivating",
+  "magnificent"
 ];
 
 function BackgroundSparkles() {
@@ -554,14 +569,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
-        {/* Page 1: Monthsary Celebration — Large Sparkling Lily Bouquet, Audio, Tap-to-Continue */}
+        {/* Page 1: Custom Monthsary Celebration, Floating Sparkling Lily bouquet, VM Instructions & Audio Player */}
         {stage === "partner-name" && (
           <Screen key="pname">
             <h1 className="display text-4xl leading-tight text-foreground mt-4">
               Happy 1st Monthsary, Aya!
             </h1>
             
-            {/* Center Lily: Large floating bouquet with glowing backdrop and 8 Twinkling stars */}
+            {/* Center Lily: Large floating bouquet with glowing backdrop and 8 twinkling stars directly touching the flower */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -570,9 +585,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             >
               {/* Pulsing glow behind bouquet */}
               <motion.div
-                animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.55, 0.3] }}
+                animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute w-48 h-48 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
+                className="absolute w-52 h-52 bg-[radial-gradient(circle,rgba(255,255,255,0.75)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
               />
               
               {/* Floating Bouquet wrapper */}
@@ -581,7 +596,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 src="/main-lily.png"
                 alt="White Lily Bouquet"
-                className="relative w-56 h-56 object-contain"
+                className="relative w-64 h-64 object-contain"
               />
 
               {/* Twinkling star 1 */}
@@ -612,7 +627,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
                 transition={{ duration: 1.9, repeat: Infinity, repeatDelay: 1.1, delay: 1.2 }}
-                style={{ top: "35%", right: "15%" }}
+                style={{ top: "35%", right: "25%" }}
                 className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -624,7 +639,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
                 transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 0.6, delay: 0.3 }}
-                style={{ bottom: "38%", left: "18%" }}
+                style={{ bottom: "38%", left: "25%" }}
                 className="absolute w-4 h-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -636,7 +651,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
                 transition={{ duration: 2.0, repeat: Infinity, repeatDelay: 0.8, delay: 0.9 }}
-                style={{ top: "22%", right: "12%" }}
+                style={{ top: "22%", right: "15%" }}
                 className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -648,7 +663,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
                 transition={{ duration: 2.3, repeat: Infinity, repeatDelay: 1.2, delay: 1.5 }}
-                style={{ top: "50%", left: "15%" }}
+                style={{ top: "50%", left: "18%" }}
                 className="absolute w-3.5 h-3.5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -660,7 +675,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
                 transition={{ duration: 1.7, repeat: Infinity, repeatDelay: 0.9, delay: 0.5 }}
-                style={{ bottom: "10%", left: "42%" }}
+                style={{ bottom: "10%", left: "45%" }}
                 className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -672,7 +687,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.svg
                 animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
                 transition={{ duration: 2.0, repeat: Infinity, repeatDelay: 0.4, delay: 1.0 }}
-                style={{ top: "10%", left: "48%" }}
+                style={{ top: "10%", left: "50%" }}
                 className="absolute w-4 h-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -713,7 +728,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               </motion.div>
             )}
 
-            {/* Instruction text pinned at the bottom */}
+            {/* Instruction text pinned at the bottom in a small, subtle font */}
             <div className="absolute bottom-10 left-0 right-0 flex justify-center text-center px-6 pointer-events-none">
               <span className="text-[11px] font-medium tracking-wide text-muted-foreground animate-pulse">
                 {!hasInteracted
