@@ -525,13 +525,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <BackgroundSparkles />
 
       {stage === "partner-name" && (
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 3, duration: 0.8 }}
+          className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
+        >
           <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
             {!hasInteracted
               ? "Tap anywhere to listen, volumes up or earphones on, baby!"
               : "Tap anywhere to continue"}
           </span>
-        </div>
+        </motion.div>
       )}
 
       {/* Back Button for multi-stage partner onboarding sheets */}
