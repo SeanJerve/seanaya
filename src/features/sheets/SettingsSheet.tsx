@@ -9,7 +9,7 @@ import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useTheme, type Theme } from "@/lib/theme";
 import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
 
-export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { relationshipId: string; inviteCode: string }) {
+export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: string; inviteCode: string }) {
   const { user } = useUser();
   const qc = useQueryClient();
   const [displayName, setDisplayName] = useState(pinStorage.getName() ?? "");
@@ -116,6 +116,19 @@ export function SettingsSheet({ relationshipId, inviteCode: _inviteCode }: { rel
           <Input value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="••••" />
         </FieldWrap>
         <PrimaryButton onClick={() => savePin.mutate()}>Update PIN</PrimaryButton>
+      </section>
+
+      <section className="space-y-3">
+        <SectionHead label="Invitation Link" />
+        <p className="text-[11px] text-muted-foreground">Share this link with your partner so they can join your space.</p>
+        <PrimaryButton onClick={() => {
+          const code = inviteCode || rel?.invite_code || "";
+          const link = `${window.location.origin}/?invite=${code}`;
+          if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).catch(() => {});
+          }
+          toast.success("Invitation link copied to clipboard!", { duration: 6000 });
+        }}>Copy invitation link</PrimaryButton>
       </section>
 
       <section className="space-y-3">
