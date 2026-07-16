@@ -508,6 +508,16 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <AmbientBlobs />
       <BackgroundSparkles />
 
+      {stage === "partner-name" && (
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20">
+          <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+            {!hasInteracted
+              ? "Tap anywhere to listen, volumes up or headphones on, baby! 🎧"
+              : "Tap anywhere to continue →"}
+          </span>
+        </div>
+      )}
+
       {/* Back Button for multi-stage partner onboarding sheets */}
       {["partner-name-input", "partner-pin", "partner-confirm"].includes(stage) && (
         <button
@@ -728,14 +738,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               </motion.div>
             )}
 
-            {/* Instruction text pinned at the bottom in a small, subtle font */}
-            <div className="absolute bottom-10 left-0 right-0 flex justify-center text-center px-6 pointer-events-none">
-              <span className="text-[11px] font-medium tracking-wide text-muted-foreground animate-pulse">
-                {!hasInteracted
-                  ? "Tap anywhere to listen, volumes up or headphones on, baby! 🎧"
-                  : "Tap anywhere to continue →"}
-              </span>
-            </div>
           </Screen>
         )}
 
