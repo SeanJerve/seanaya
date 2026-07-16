@@ -84,33 +84,63 @@ const letterVariants = {
   },
 };
 
-function EqVisualizer() {
-  const barCount = 21;
+function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const BAR_COUNT = 24;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !analyser) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      rafRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const step = Math.floor(bufferLength / BAR_COUNT);
+      const barW = Math.floor(W / BAR_COUNT) - 2;
+
+      for (let i = 0; i < BAR_COUNT; i++) {
+        // Average a small band of frequency bins per bar
+        let sum = 0;
+        for (let j = 0; j < step; j++) sum += dataArray[i * step + j];
+        const avg = sum / step;
+        const barH = Math.max(3, (avg / 255) * H);
+
+        const x = i * (barW + 2);
+        const y = H - barH;
+
+        // Gradient: bottom primary, top white glow
+        const grad = ctx.createLinearGradient(x, H, x, y);
+        grad.addColorStop(0, "rgba(14,165,233,0.9)");
+        grad.addColorStop(1, "rgba(255,255,255,0.95)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, 2);
+        ctx.fill();
+      }
+    };
+    draw();
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [analyser]);
+
   return (
-    <div className="flex items-end justify-center gap-1 h-14 my-3">
-      {Array.from({ length: barCount }).map((_, i) => {
-        const duration = 0.45 + Math.random() * 0.7;
-        const delay = Math.random() * 0.25;
-        const centerDist = Math.abs(i - Math.floor(barCount / 2));
-        const maxHeight = Math.max(12, 48 - centerDist * 3.8);
-        return (
-          <motion.div
-            key={i}
-            animate={{
-              height: [6, maxHeight, 6],
-            }}
-            transition={{
-              duration,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay,
-            }}
-            style={{ width: "3px" }}
-            className="bg-primary/80 rounded-full"
-          />
-        );
-      })}
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={180}
+      height={56}
+      className="my-3 rounded"
+      style={{ imageRendering: "pixelated" }}
+    />
   );
 }
 
@@ -179,6 +209,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   // Audio references
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const voiceMessageRef = useRef<HTMLAudioElement | null>(null);
+
+  // Web Audio API analyser for real-time EQ
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
 
   const refreshSpace = async (): Promise<SpaceState | null> => {
     const { data } = await supabase.rpc("get_space_state");
@@ -397,10 +431,25 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     };
   }, [stage]);
 
+  // Wire an HTMLAudioElement through Web Audio API and return an AnalyserNode
+  const connectAnalyser = (el: HTMLAudioElement): AnalyserNode => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new AudioContext();
+    }
+    const ctx = audioCtxRef.current;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 128;           // 64 frequency bins — lightweight & smooth
+    analyser.smoothingTimeConstant = 0.82; // nice smoothing between frames
+    const source = ctx.createMediaElementSource(el);
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+    return analyser;
+  };
+
   // Audio Activation & Tap Screen Continue Trigger
   const handleScreenTap = () => {
     if (stage !== "partner-name") return;
-    
+
     if (!hasInteracted) {
       setHasInteracted(true);
       try {
@@ -411,10 +460,15 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         bgMusicRef.current = bg;
         bg.play().catch((err) => console.log("BG Music Autoplay blocked:", err));
 
-        // Play Voice Message
+        // Play Voice Message — routed through Web Audio API for real-time EQ
         const vm = new Audio("/voice-message.mp3");
         vm.volume = 1.0;
+        vm.crossOrigin = "anonymous";
         voiceMessageRef.current = vm;
+
+        const analyser = connectAnalyser(vm);
+        setAnalyserNode(analyser);
+
         setIsVmPlaying(true);
         vm.play().catch((err) => console.log("Voice Message Autoplay blocked:", err));
 
@@ -434,6 +488,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const handleReplayVm = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (voiceMessageRef.current) {
+      // Resume AudioContext if it was suspended (iOS/mobile policy)
+      if (audioCtxRef.current?.state === "suspended") {
+        audioCtxRef.current.resume();
+      }
       voiceMessageRef.current.currentTime = 0;
       setIsVmPlaying(true);
       voiceMessageRef.current.play().catch((err) => console.error(err));
@@ -802,7 +860,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               </motion.svg>
             </motion.div>
 
-            {/* EQ Visualizer — shows while VM is playing */}
+            {/* EQ Visualizer — shows while VM is playing, driven by real audio frequency data */}
             <AnimatePresence>
               {hasInteracted && isVmPlaying && (
                 <motion.div
@@ -811,7 +869,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <EqVisualizer />
+                  <EqVisualizer analyser={analyserNode} />
                 </motion.div>
               )}
             </AnimatePresence>
