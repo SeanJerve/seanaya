@@ -528,8 +528,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         <div className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20">
           <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
             {!hasInteracted
-              ? "Tap anywhere to listen, volumes up or headphones on, baby!"
-              : "Tap anywhere to continue ->"}
+              ? "Tap anywhere to listen, volumes up or earphones on, baby!"
+              : "Tap anywhere to continue"}
           </span>
         </div>
       )}
@@ -768,7 +768,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             </div>
 
             <h1 className="display mt-3 text-4xl leading-tight text-foreground">
-              Congratulations on our monthsary!
+              Congratulations on your monthsary!
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               What should we call you here?
@@ -838,7 +838,7 @@ function NameInput({ value, onChange }: { value: string; onChange: (v: string) =
 function ContinueButton({ disabled, onClick }: { disabled?: boolean; onClick: () => void }) {
   return (
     <button disabled={disabled} onClick={onClick}
-      className="mt-6 rounded-full bg-foreground/90 px-8 py-2.5 text-sm text-background disabled:opacity-40">
+      className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm disabled:opacity-40 disabled:hover:bg-white/40 font-medium">
       Continue
     </button>
   );
