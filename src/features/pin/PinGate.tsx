@@ -28,6 +28,19 @@ type SpaceState = {
   has_b: boolean;
 };
 
+type LilyParticle = {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rotationSpeed: number;
+  scale: number;
+  opacity: number;
+  img: string;
+};
+
 /**
  * Two-PIN model:
  *   - Space (relationship) has pin_hash_a and pin_hash_b + name_a/name_b.
@@ -45,6 +58,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [pinConfirm, setPinConfirm] = useState("");
   const [dateInput, setDateInput] = useState("");
   const [resetSlot, setResetSlot] = useState<Slot>("a");
+
+  // Particles for the lily confetti explosion
+  const [particles, setParticles] = useState<LilyParticle[]>([]);
 
   const refreshSpace = async (): Promise<SpaceState | null> => {
     const { data } = await supabase.rpc("get_space_state");
@@ -96,6 +112,101 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       }
     })();
   }, []);
+
+  // Effect to trigger white lily confetti poppers upon partner-name landing
+  useEffect(() => {
+    if (stage !== "partner-name") {
+      setParticles([]);
+      return;
+    }
+
+    const list: LilyParticle[] = [];
+    const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/main-lily.png"];
+
+    // Left Popper (20 particles)
+    for (let i = 0; i < 20; i++) {
+      list.push({
+        id: i,
+        x: -5,
+        y: 95,
+        vx: 3 + Math.random() * 7,
+        vy: -16 - Math.random() * 10,
+        rotation: Math.random() * 360,
+        rotationSpeed: -5 + Math.random() * 10,
+        scale: 0.16 + Math.random() * 0.22,
+        opacity: 1,
+        img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+      });
+    }
+
+    // Right Popper (20 particles)
+    for (let i = 0; i < 20; i++) {
+      list.push({
+        id: i + 20,
+        x: 105,
+        y: 95,
+        vx: -3 - Math.random() * 7,
+        vy: -16 - Math.random() * 10,
+        rotation: Math.random() * 360,
+        rotationSpeed: -5 + Math.random() * 10,
+        scale: 0.16 + Math.random() * 0.22,
+        opacity: 1,
+        img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+      });
+    }
+
+    setParticles(list);
+
+    let active = true;
+    let lastTime = performance.now();
+
+    const update = (time: number) => {
+      if (!active) return;
+      const dt = (time - lastTime) / 16.666;
+      lastTime = time;
+
+      setParticles((prev) => {
+        let allDead = true;
+        const next = prev.map((p) => {
+          const nextX = p.x + p.vx * 0.45 * dt;
+          const nextY = p.y + p.vy * 0.45 * dt;
+          const nextVy = p.vy + 0.45 * dt; // gravity
+
+          let nextOpacity = p.opacity;
+          if (p.vy > 0) {
+            nextOpacity = Math.max(0, p.opacity - 0.015 * dt);
+          }
+          if (nextOpacity > 0) {
+            allDead = false;
+          }
+
+          return {
+            ...p,
+            x: nextX,
+            y: nextY,
+            vy: nextVy,
+            rotation: p.rotation + p.rotationSpeed * dt,
+            opacity: nextOpacity,
+          };
+        });
+
+        if (allDead) {
+          active = false;
+        }
+        return next;
+      });
+
+      if (active) {
+        requestAnimationFrame(update);
+      }
+    };
+
+    requestAnimationFrame(update);
+
+    return () => {
+      active = false;
+    };
+  }, [stage]);
 
   // -------- Setup slot A (creator) --------
   async function completeSetup(finalPin: string) {
@@ -191,7 +302,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     toast.success("PIN updated. You can now log in.");
     setPin(""); 
     
-    // Clear the URL parameters so refreshing doesn't bring us back to the reset screen
     if (typeof window !== "undefined") {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -205,6 +315,27 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden" style={{ background: "var(--gradient-sky)" }}>
       <AmbientBlobs />
+
+      {/* Render White Lily Confettis overlay */}
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        {particles.map((p) => (
+          <img
+            key={p.id}
+            src={p.img}
+            alt=""
+            className="absolute origin-center"
+            style={{
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
+              opacity: p.opacity,
+              width: "100px",
+              height: "100px",
+            }}
+          />
+        ))}
+      </div>
+
       <AnimatePresence mode="wait">
         {stage === "loading" && (
           <Screen key="loading"><div className="text-sm text-muted-foreground">Warming your space…</div></Screen>
@@ -236,13 +367,31 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
+        {/* Custom Monthsary & White Lily Greeting Landing Page */}
         {stage === "partner-name" && (
           <Screen key="pname">
             <Title
-              kicker="A space is already open"
-              title="Hi you must be the loving, sweet, etc. etc. girlfriend, what should we call you?"
+              kicker="So you must be the girlfriend?"
+              title="Happy 1st Monthsary, Aya!"
               sub="What should we call you here?"
             />
+            
+            {/* Bouncing glowing center white lily */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.35, type: "spring", stiffness: 95 }}
+              className="my-7 relative flex justify-center items-center"
+            >
+              <div className="absolute w-24 h-24 bg-white/40 blur-xl rounded-full" />
+              <img
+                src="/main-lily.png"
+                alt="White Lily"
+                className="relative w-28 h-28 object-contain animate-bounce"
+                style={{ animationDuration: "2.8s" }}
+              />
+            </motion.div>
+
             <NameInput value={name} onChange={setName} />
             <ContinueButton disabled={!name.trim()} onClick={() => { pinStorage.setName(name.trim()); setStage("partner-pin"); }} />
           </Screen>
@@ -275,7 +424,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
-
         {stage === "forgot-newpin" && (
           <Screen key="newpin">
             <Title kicker="Reset PIN" title="Pick a new PIN" sub="Four digits." />
@@ -303,14 +451,6 @@ function ContinueButton({ disabled, onClick }: { disabled?: boolean; onClick: ()
     <button disabled={disabled} onClick={onClick}
       className="mt-6 rounded-full bg-foreground/90 px-8 py-2.5 text-sm text-background disabled:opacity-40">
       Continue
-    </button>
-  );
-}
-function SlotChoice({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick}
-      className="rounded-2xl border border-white/50 bg-white/50 px-6 py-4 text-sm backdrop-blur-xl hover:bg-white/70">
-      {label}
     </button>
   );
 }

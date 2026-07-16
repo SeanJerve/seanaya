@@ -20,15 +20,17 @@ export function Sheet({ open, title, children }: { open: boolean; title: string;
             onClick={(e) => e.stopPropagation()}
             className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-3xl border border-white/40
               bg-white/70 backdrop-blur-2xl shadow-[0_-20px_60px_-20px_rgba(80,110,160,0.4)]
-              max-h-[88vh] overflow-auto"
+              max-h-[88vh] flex flex-col overflow-hidden"
           >
-            <div className="sticky top-0 flex items-center justify-between border-b border-white/30 bg-white/60 backdrop-blur-xl px-5 py-3">
+            {/* Header fixed at the top with solid backdrop shading */}
+            <div className="flex items-center justify-between border-b border-white/30 bg-white/80 backdrop-blur-xl px-5 py-3.5 z-10 shrink-0">
               <h2 className="display text-lg">{title}</h2>
               <button onClick={closeSheet} className="p-1.5 rounded-full hover:bg-black/5 transition">
                 <X size={16} />
               </button>
             </div>
-            <div className="p-5 pb-8">{children}</div>
+            {/* Scrollable contents separated to avoid z-index bleeding */}
+            <div className="p-5 pb-8 overflow-y-auto grow">{children}</div>
           </motion.div>
         </motion.div>
       )}
