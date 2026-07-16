@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Play, Download, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
@@ -10,7 +11,8 @@ type Stage =
   | "setup-name"        // no space yet — first user (creator)
   | "setup-pin"
   | "setup-confirm"
-  | "partner-name"      // space exists, partner slot empty
+  | "partner-name"      // Page 1: Greeting + Voice Message
+  | "partner-name-input"// Page 2: Name Onboarding
   | "partner-pin"
   | "partner-confirm"
   | "unlock"            // both PINs exist → PIN pad
@@ -38,7 +40,9 @@ type LilyParticle = {
   rotationSpeed: number;
   scale: number;
   opacity: number;
-  img: string;
+  img?: string;
+  isSparkle?: boolean;
+  color?: string;
   delay: number;
 };
 
@@ -60,8 +64,17 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [dateInput, setDateInput] = useState("");
   const [resetSlot, setResetSlot] = useState<Slot>("a");
 
-  // Particles for the lily confetti explosion
+  // Particles for the lily & glitter confetti explosion
   const [particles, setParticles] = useState<LilyParticle[]>([]);
+
+  // Audio Playback States
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [isVmPlaying, setIsVmPlaying] = useState(false);
+  const [hasVmPlayed, setHasVmPlayed] = useState(false);
+
+  // Audio references
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const voiceMessageRef = useRef<HTMLAudioElement | null>(null);
 
   const refreshSpace = async (): Promise<SpaceState | null> => {
     const { data } = await supabase.rpc("get_space_state");
@@ -114,7 +127,31 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Effect to trigger white lily confetti poppers upon partner-name landing
+  // Cleanup audios when leaving the page or component unmounts
+  useEffect(() => {
+    return () => {
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+        bgMusicRef.current = null;
+      }
+      if (voiceMessageRef.current) {
+        voiceMessageRef.current.pause();
+        voiceMessageRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (stage !== "partner-name") {
+      if (bgMusicRef.current) bgMusicRef.current.pause();
+      if (voiceMessageRef.current) {
+        voiceMessageRef.current.pause();
+        setIsVmPlaying(false);
+      }
+    }
+  }, [stage]);
+
+  // Effect to trigger white lily & sky-blue glitter poppers upon partner-name landing
   useEffect(() => {
     if (stage !== "partner-name") {
       setParticles([]);
@@ -124,7 +161,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const list: LilyParticle[] = [];
     const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
 
-    // Left Popper (35 particles)
+    // Left Popper Lilies (35)
     for (let i = 0; i < 35; i++) {
       list.push({
         id: i,
@@ -134,14 +171,32 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         vy: -1.8 - Math.random() * 1.5,
         rotation: Math.random() * 360,
         rotationSpeed: -2 + Math.random() * 4,
-        scale: 0.4 + Math.random() * 0.45,
+        scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 90, // Cascade stagger delay
+        delay: Math.random() * 90,
       });
     }
 
-    // Right Popper (35 particles)
+    // Left Popper Glitters (30)
+    for (let i = 0; i < 30; i++) {
+      list.push({
+        id: i + 70,
+        x: -5 + Math.random() * 12,
+        y: 100,
+        vx: 0.5 + Math.random() * 1.6,
+        vy: -3.0 - Math.random() * 2.5,
+        rotation: Math.random() * 360,
+        rotationSpeed: -6 + Math.random() * 12,
+        scale: 0.4 + Math.random() * 0.6,
+        opacity: 1,
+        isSparkle: true,
+        color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
+        delay: Math.random() * 95,
+      });
+    }
+
+    // Right Popper Lilies (35)
     for (let i = 0; i < 35; i++) {
       list.push({
         id: i + 35,
@@ -151,10 +206,28 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         vy: -1.8 - Math.random() * 1.5,
         rotation: Math.random() * 360,
         rotationSpeed: -2 + Math.random() * 4,
-        scale: 0.4 + Math.random() * 0.45,
+        scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 90, // Cascade stagger delay
+        delay: Math.random() * 90,
+      });
+    }
+
+    // Right Popper Glitters (30)
+    for (let i = 0; i < 30; i++) {
+      list.push({
+        id: i + 100,
+        x: 93 + Math.random() * 12,
+        y: 100,
+        vx: -0.5 - Math.random() * 1.6,
+        vy: -3.0 - Math.random() * 2.5,
+        rotation: Math.random() * 360,
+        rotationSpeed: -6 + Math.random() * 12,
+        scale: 0.4 + Math.random() * 0.6,
+        opacity: 1,
+        isSparkle: true,
+        color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
+        delay: Math.random() * 95,
       });
     }
 
@@ -178,11 +251,11 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
           const nextX = p.x + p.vx * dt;
           const nextY = p.y + p.vy * dt;
-          const nextVy = p.vy + 0.025 * dt; // slow gravity
+          const nextVy = p.vy + 0.022 * dt;
 
           let nextOpacity = p.opacity;
           if (p.vy > 0) {
-            nextOpacity = Math.max(0, p.opacity - 0.007 * dt); // slow fade
+            nextOpacity = Math.max(0, p.opacity - 0.007 * dt);
           }
           if (nextOpacity > 0) {
             allDead = false;
@@ -215,6 +288,61 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, [stage]);
+
+  // Audio Activation Tap Trigger
+  const handleScreenTap = () => {
+    if (stage !== "partner-name") return;
+    if (hasInteracted) return;
+
+    setHasInteracted(true);
+
+    try {
+      // Play Romantic Background Entrance Music
+      const bg = new Audio("https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-12.mp3");
+      bg.loop = true;
+      bg.volume = 0.22;
+      bgMusicRef.current = bg;
+      bg.play().catch((err) => console.log("BG Music Autoplay blocked:", err));
+
+      // Play Voice Message
+      const vm = new Audio("/voice-message.mp3");
+      vm.volume = 1.0;
+      voiceMessageRef.current = vm;
+      setIsVmPlaying(true);
+      vm.play().catch((err) => console.log("Voice Message Autoplay blocked:", err));
+
+      vm.onended = () => {
+        setIsVmPlaying(false);
+        setHasVmPlayed(true);
+      };
+    } catch (e) {
+      console.error("Audio initialization error:", e);
+    }
+  };
+
+  const handleReplayVm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (voiceMessageRef.current) {
+      voiceMessageRef.current.currentTime = 0;
+      setIsVmPlaying(true);
+      voiceMessageRef.current.play().catch((err) => console.error(err));
+
+      voiceMessageRef.current.onended = () => {
+        setIsVmPlaying(false);
+        setHasVmPlayed(true);
+      };
+    }
+  };
+
+  const handleDownloadVm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const link = document.createElement("a");
+    link.href = "/voice-message.mp3";
+    link.download = "voice-message.mp3";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // -------- Setup slot A (creator) --------
   async function completeSetup(finalPin: string) {
@@ -320,28 +448,54 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
   if (stage === "unlocked") return <>{children}</>;
 
+  const showTapCursor = stage === "partner-name" && !hasInteracted;
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-hidden" style={{ background: "var(--gradient-sky)" }}>
+    <div
+      onClick={handleScreenTap}
+      className={`fixed inset-0 flex items-center justify-center overflow-hidden select-none ${showTapCursor ? "cursor-pointer" : ""}`}
+      style={{ background: "var(--gradient-sky)" }}
+    >
       <AmbientBlobs />
 
-      {/* Render White Lily Confettis overlay */}
+      {/* Render Lily & Glitter Confettis Overlay */}
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {particles.map((p) => (
-          <img
-            key={p.id}
-            src={p.img}
-            alt=""
-            className="absolute origin-center"
-            style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
-              opacity: p.delay > 0 ? 0 : p.opacity,
-              width: "100px",
-              height: "100px",
-            }}
-          />
-        ))}
+        {particles.map((p) => {
+          if (p.isSparkle) {
+            return (
+              <div
+                key={p.id}
+                className="absolute origin-center rounded-full pointer-events-none"
+                style={{
+                  left: `${p.x}%`,
+                  top: `${p.y}%`,
+                  transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
+                  opacity: p.delay > 0 ? 0 : p.opacity,
+                  width: "6px",
+                  height: "6px",
+                  backgroundColor: p.color,
+                  boxShadow: `0 0 6px ${p.color}, 0 0 12px ${p.color}`,
+                }}
+              />
+            );
+          }
+          return (
+            <img
+              key={p.id}
+              src={p.img}
+              alt=""
+              className="absolute origin-center"
+              style={{
+                left: `${p.x}%`,
+                top: `${p.y}%`,
+                transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
+                opacity: p.delay > 0 ? 0 : p.opacity,
+                width: "100px",
+                height: "100px",
+              }}
+            />
+          );
+        })}
       </div>
 
       <AnimatePresence mode="wait">
@@ -375,35 +529,142 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
-        {/* Custom Monthsary & White Lily Greeting Landing Page */}
+        {/* Page 1: Custom Monthsary Celebration, Floating Sparkling Lily bouquet, VM Instructions & Audio Player */}
         {stage === "partner-name" && (
           <Screen key="pname">
             <Title
               kicker="So you must be the girlfriend?"
               title="Happy 1st Monthsary, Aya!"
-              sub="What should we call you here?"
+              sub={
+                !hasInteracted
+                  ? "Tap anywhere and listen, volumes up or headphones on, baby!"
+                  : isVmPlaying
+                  ? "Playing voice message... 🤍"
+                  : "Listen again, download, or swipe to continue!"
+              }
             />
             
-            {/* Bouncing glowing center white lily */}
+            {/* Center Lily: Floating bouquet with glowing backdrop and twinkling stars */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.35, type: "spring", stiffness: 95 }}
               className="my-7 relative flex justify-center items-center"
             >
-              <div className="absolute w-24 h-24 bg-white/40 blur-xl rounded-full" />
-              <img
-                src="/main-lily.png"
-                alt="White Lily"
-                className="relative w-28 h-28 object-contain animate-bounce"
-                style={{ animationDuration: "2.8s" }}
+              {/* Pulsing glow behind bouquet */}
+              <motion.div
+                animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute w-28 h-28 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.2)_65%,transparent_100%)] blur-md rounded-full"
               />
+              
+              {/* Floating Bouquet wrapper */}
+              <motion.img
+                animate={{ y: [0, -7, 0] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                src="/main-lily.png"
+                alt="White Lily Bouquet"
+                className="relative w-36 h-36 object-contain"
+              />
+
+              {/* Twinkling star 1 */}
+              <motion.svg
+                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 0.8 }}
+                className="absolute -top-1 left-3 w-4 h-4 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 2 */}
+              <motion.svg
+                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.2, delay: 0.7 }}
+                className="absolute bottom-1 right-3 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.8)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
             </motion.div>
 
-            <NameInput value={name} onChange={setName} />
-            <ContinueButton disabled={!name.trim()} onClick={() => { pinStorage.setName(name.trim()); setStage("partner-pin"); }} />
+            {/* Audio Feedback state waves or prompt */}
+            {hasInteracted && isVmPlaying && (
+              <div className="flex items-center gap-1 my-3 text-primary animate-pulse">
+                <Volume2 size={16} />
+                <span className="text-xs uppercase tracking-widest font-mono">Playing VM</span>
+              </div>
+            )}
+
+            {/* Replay, Download & Continue Controls (fades in once audio plays/ends) */}
+            {hasInteracted && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-6 mt-4 w-full"
+              >
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleReplayVm}
+                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-xs font-medium hover:bg-white/60 transition shadow-sm"
+                  >
+                    <Play size={11} fill="currentColor" />
+                    Listen Again
+                  </button>
+                  <button
+                    onClick={handleDownloadVm}
+                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-xs font-medium hover:bg-white/60 transition shadow-sm"
+                  >
+                    <Download size={11} />
+                    Download Voice Msg
+                  </button>
+                </div>
+
+                {/* Sliding iOS-style Drag Slider to Continue */}
+                <div className="relative w-64 h-11 mt-2 bg-white/40 border border-white/50 backdrop-blur-xl rounded-full overflow-hidden flex items-center justify-center shadow-inner">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground select-none pointer-events-none animate-pulse">
+                    Swipe right to continue →
+                  </span>
+                  <motion.div
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 200 }}
+                    dragElastic={0.1}
+                    onDragEnd={(e, info) => {
+                      if (info.offset.x > 150) {
+                        setStage("partner-name-input");
+                      }
+                    }}
+                    className="absolute left-1 w-9 h-9 bg-foreground rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center text-background shadow-md hover:bg-black/80 transition"
+                  >
+                    <span className="text-sm font-bold font-mono">→</span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
           </Screen>
         )}
+
+        {/* Page 2: Name input onboarding with Monthsary congrats */}
+        {stage === "partner-name-input" && (
+          <Screen key="pname-input">
+            <Title
+              kicker="Welcome, Love"
+              title="Congratulations on our monthsary!"
+              sub="What should we call you here?"
+            />
+            <NameInput value={name} onChange={setName} />
+            <ContinueButton
+              disabled={!name.trim()}
+              onClick={() => {
+                pinStorage.setName(name.trim());
+                setStage("partner-pin");
+              }}
+            />
+          </Screen>
+        )}
+
         {stage === "partner-pin" && (
           <Screen key="ppin">
             <Title kicker={name ? `Hi, ${name}` : "Hi"} title="Set your own PIN" sub="Four digits — just yours. Different from your partner's." />
