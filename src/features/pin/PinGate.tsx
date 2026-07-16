@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Play, Download, Volume2 } from "lucide-react";
+import { Play, Download, Volume2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
@@ -40,10 +40,7 @@ type LilyParticle = {
   rotationSpeed: number;
   scale: number;
   opacity: number;
-  img?: string;
-  isSparkle?: boolean;
-  isLargeGlitter?: boolean;
-  color?: string;
+  img: string;
   delay: number;
 };
 
@@ -63,6 +60,39 @@ const COMPLIMENT_WORDS = [
   "loveliest",
   "dearly loved"
 ];
+
+function BackgroundSparkles() {
+  const sparkles = [
+    { top: "12%", left: "15%", delay: 0.5, scale: 0.6 },
+    { top: "25%", left: "80%", delay: 1.2, scale: 0.8 },
+    { top: "15%", left: "60%", delay: 0.2, scale: 0.5 },
+    { top: "45%", left: "10%", delay: 1.8, scale: 0.7 },
+    { top: "60%", left: "85%", delay: 0.9, scale: 0.6 },
+    { top: "75%", left: "20%", delay: 1.4, scale: 0.5 },
+    { top: "80%", left: "70%", delay: 0.3, scale: 0.8 },
+    { top: "35%", left: "90%", delay: 2.1, scale: 0.4 },
+    { top: "50%", left: "40%", delay: 0.7, scale: 0.6 },
+    { top: "90%", left: "30%", delay: 1.5, scale: 0.7 },
+    { top: "70%", left: "5%", delay: 1.1, scale: 0.5 },
+  ];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {sparkles.map((s, idx) => (
+        <motion.svg
+          key={idx}
+          animate={{ opacity: [0.12, 0.45, 0.12], scale: [s.scale * 0.8, s.scale * 1.2, s.scale * 0.8] }}
+          transition={{ duration: 4 + Math.random() * 3, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
+          style={{ top: s.top, left: s.left }}
+          className="absolute w-3 h-3 text-white/40"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+        </motion.svg>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Two-PIN model:
@@ -181,7 +211,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     }
   }, [stage]);
 
-  // Effect to trigger white lily & sky-blue glitter poppers upon partner-name landing
+  // Effect to trigger white lily poppers upon partner-name landing (80 total lilies)
   useEffect(() => {
     if (stage !== "partner-name") {
       setParticles([]);
@@ -191,8 +221,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const list: LilyParticle[] = [];
     const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
 
-    // Left Popper Lilies (50)
-    for (let i = 0; i < 50; i++) {
+    // Left Popper Lilies (40)
+    for (let i = 0; i < 40; i++) {
       list.push({
         id: i,
         x: -5 + Math.random() * 12,
@@ -204,33 +234,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 100,
+        delay: Math.random() * 95,
       });
     }
 
-    // Left Popper Sparkles (50)
-    for (let i = 0; i < 50; i++) {
+    // Right Popper Lilies (40)
+    for (let i = 0; i < 40; i++) {
       list.push({
-        id: i + 100,
-        x: -5 + Math.random() * 12,
-        y: 100,
-        vx: 0.5 + Math.random() * 1.6,
-        vy: -3.0 - Math.random() * 2.5,
-        rotation: Math.random() * 360,
-        rotationSpeed: -6 + Math.random() * 12,
-        scale: 0.4 + Math.random() * 0.6,
-        opacity: 1,
-        isSparkle: true,
-        isLargeGlitter: Math.random() < 0.45,
-        color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
-        delay: Math.random() * 105,
-      });
-    }
-
-    // Right Popper Lilies (50)
-    for (let i = 0; i < 50; i++) {
-      list.push({
-        id: i + 50,
+        id: i + 40,
         x: 93 + Math.random() * 12,
         y: 100,
         vx: -0.4 - Math.random() * 1.1,
@@ -240,26 +251,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
         img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
-        delay: Math.random() * 100,
-      });
-    }
-
-    // Right Popper Sparkles (50)
-    for (let i = 0; i < 50; i++) {
-      list.push({
-        id: i + 150,
-        x: 93 + Math.random() * 12,
-        y: 100,
-        vx: -0.5 - Math.random() * 1.6,
-        vy: -3.0 - Math.random() * 2.5,
-        rotation: Math.random() * 360,
-        rotationSpeed: -6 + Math.random() * 12,
-        scale: 0.4 + Math.random() * 0.6,
-        opacity: 1,
-        isSparkle: true,
-        isLargeGlitter: Math.random() < 0.45,
-        color: Math.random() < 0.55 ? "rgba(255, 255, 255, 0.9)" : "rgba(56, 189, 248, 0.9)",
-        delay: Math.random() * 105,
+        delay: Math.random() * 95,
       });
     }
 
@@ -321,34 +313,37 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     };
   }, [stage]);
 
-  // Audio Activation Tap Trigger
+  // Audio Activation & Tap Screen Continue Trigger
   const handleScreenTap = () => {
     if (stage !== "partner-name") return;
-    if (hasInteracted) return;
+    
+    if (!hasInteracted) {
+      setHasInteracted(true);
+      try {
+        // Play Romantic Background Entrance Music
+        const bg = new Audio("https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-12.mp3");
+        bg.loop = true;
+        bg.volume = 0.22;
+        bgMusicRef.current = bg;
+        bg.play().catch((err) => console.log("BG Music Autoplay blocked:", err));
 
-    setHasInteracted(true);
+        // Play Voice Message
+        const vm = new Audio("/voice-message.mp3");
+        vm.volume = 1.0;
+        voiceMessageRef.current = vm;
+        setIsVmPlaying(true);
+        vm.play().catch((err) => console.log("Voice Message Autoplay blocked:", err));
 
-    try {
-      // Play Romantic Background Entrance Music
-      const bg = new Audio("https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-12.mp3");
-      bg.loop = true;
-      bg.volume = 0.22;
-      bgMusicRef.current = bg;
-      bg.play().catch((err) => console.log("BG Music Autoplay blocked:", err));
-
-      // Play Voice Message
-      const vm = new Audio("/voice-message.mp3");
-      vm.volume = 1.0;
-      voiceMessageRef.current = vm;
-      setIsVmPlaying(true);
-      vm.play().catch((err) => console.log("Voice Message Autoplay blocked:", err));
-
-      vm.onended = () => {
-        setIsVmPlaying(false);
-        setHasVmPlayed(true);
-      };
-    } catch (e) {
-      console.error("Audio initialization error:", e);
+        vm.onended = () => {
+          setIsVmPlaying(false);
+          setHasVmPlayed(true);
+        };
+      } catch (e) {
+        console.error("Audio initialization error:", e);
+      }
+    } else {
+      // If already interacted, tapping anywhere else continues to Page 2!
+      setStage("partner-name-input");
     }
   };
 
@@ -478,9 +473,16 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     refreshSpace();
   }
 
+  const handleBack = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (stage === "partner-name-input") setStage("partner-name");
+    else if (stage === "partner-pin") setStage("partner-name-input");
+    else if (stage === "partner-confirm") setStage("partner-pin");
+  };
+
   if (stage === "unlocked") return <>{children}</>;
 
-  const showTapCursor = stage === "partner-name" && !hasInteracted;
+  const showTapCursor = stage === "partner-name";
 
   return (
     <div
@@ -489,47 +491,36 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       style={{ background: "var(--gradient-sky)" }}
     >
       <AmbientBlobs />
+      <BackgroundSparkles />
 
-      {/* Render Lily & Glitter Confettis Overlay */}
+      {/* Back Button for multi-stage partner onboarding sheets */}
+      {["partner-name-input", "partner-pin", "partner-confirm"].includes(stage) && (
+        <button
+          onClick={handleBack}
+          className="absolute top-5 left-5 z-20 p-2.5 rounded-full border border-white/40 bg-white/20 backdrop-blur-xl hover:bg-white/40 active:scale-95 transition text-foreground"
+        >
+          <ArrowLeft size={16} />
+        </button>
+      )}
+
+      {/* Render Lily Confettis Overlay */}
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {particles.map((p) => {
-          if (p.isSparkle) {
-            const size = p.isLargeGlitter ? "8px" : "4px";
-            const blur = p.isLargeGlitter ? "8px" : "4px";
-            return (
-              <div
-                key={p.id}
-                className="absolute origin-center rounded-full pointer-events-none"
-                style={{
-                  left: `${p.x}%`,
-                  top: `${p.y}%`,
-                  transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
-                  opacity: p.delay > 0 ? 0 : p.opacity,
-                  width: size,
-                  height: size,
-                  backgroundColor: p.color,
-                  boxShadow: `0 0 ${blur} ${p.color}, 0 0 calc(${blur} * 2) ${p.color}`,
-                }}
-              />
-            );
-          }
-          return (
-            <img
-              key={p.id}
-              src={p.img}
-              alt=""
-              className="absolute origin-center"
-              style={{
-                left: `${p.x}%`,
-                top: `${p.y}%`,
-                transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
-                opacity: p.delay > 0 ? 0 : p.opacity,
-                width: "100px",
-                height: "100px",
-              }}
-            />
-          );
-        })}
+        {particles.map((p) => (
+          <img
+            key={p.id}
+            src={p.img}
+            alt=""
+            className="absolute origin-center"
+            style={{
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
+              opacity: p.delay > 0 ? 0 : p.opacity,
+              width: "100px",
+              height: "100px",
+            }}
+          />
+        ))}
       </div>
 
       <AnimatePresence mode="wait">
@@ -563,22 +554,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           </Screen>
         )}
 
-        {/* Page 1: Custom Monthsary Celebration, Floating Sparkling Lily bouquet, VM Instructions & Audio Player */}
+        {/* Page 1: Monthsary Celebration — Large Sparkling Lily Bouquet, Audio, Tap-to-Continue */}
         {stage === "partner-name" && (
           <Screen key="pname">
-            <Title
-              kicker="A Special Message For You"
-              title="Happy 1st Monthsary, Aya!"
-              sub={
-                !hasInteracted
-                  ? "Tap anywhere and listen, volumes up or headphones on, baby!"
-                  : isVmPlaying
-                  ? "Playing voice message... 🤍"
-                  : "Listen again, download, or swipe to continue!"
-              }
-            />
+            <h1 className="display text-4xl leading-tight text-foreground mt-4">
+              Happy 1st Monthsary, Aya!
+            </h1>
             
-            {/* Center Lily: Larger floating bouquet with glowing backdrop and 5 twinkling stars */}
+            {/* Center Lily: Large floating bouquet with glowing backdrop and 8 Twinkling stars */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -587,9 +570,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             >
               {/* Pulsing glow behind bouquet */}
               <motion.div
-                animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
+                animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.55, 0.3] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute w-36 h-36 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.2)_65%,transparent_100%)] blur-md rounded-full"
+                className="absolute w-48 h-48 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
               />
               
               {/* Floating Bouquet wrapper */}
@@ -598,14 +581,15 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 src="/main-lily.png"
                 alt="White Lily Bouquet"
-                className="relative w-44 h-44 object-contain"
+                className="relative w-56 h-56 object-contain"
               />
 
               {/* Twinkling star 1 */}
               <motion.svg
-                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 0.7 }}
-                className="absolute -top-2 left-2 w-4 h-4 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
+                animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 2.1, repeat: Infinity, repeatDelay: 0.5 }}
+                style={{ top: "15%", left: "20%" }}
+                className="absolute w-4 h-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -614,9 +598,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
               {/* Twinkling star 2 */}
               <motion.svg
-                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
-                transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.1, delay: 0.6 }}
-                className="absolute bottom-2 right-2 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.85)]"
+                animate={{ scale: [0, 1.1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.7, delay: 0.6 }}
+                style={{ bottom: "18%", right: "22%" }}
+                className="absolute w-3.5 h-3.5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -625,9 +610,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
               {/* Twinkling star 3 */}
               <motion.svg
-                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
-                transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 1.3, delay: 1.2 }}
-                className="absolute top-4 right-1 w-3 h-3 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
+                animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 1.9, repeat: Infinity, repeatDelay: 1.1, delay: 1.2 }}
+                style={{ top: "35%", right: "15%" }}
+                className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -636,9 +622,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
               {/* Twinkling star 4 */}
               <motion.svg
-                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
-                transition={{ duration: 2.1, repeat: Infinity, repeatDelay: 0.9, delay: 0.3 }}
-                className="absolute bottom-4 left-1 w-3.5 h-3.5 text-sky-200 drop-shadow-[0_0_4px_rgba(56,189,248,0.85)]"
+                animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 0.6, delay: 0.3 }}
+                style={{ bottom: "38%", left: "18%" }}
+                className="absolute w-4 h-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -647,9 +634,46 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
               {/* Twinkling star 5 */}
               <motion.svg
-                animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
-                transition={{ duration: 1.9, repeat: Infinity, repeatDelay: 1.0, delay: 0.9 }}
-                className="absolute -top-1 -right-2 w-3.5 h-3.5 text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.85)]"
+                animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 2.0, repeat: Infinity, repeatDelay: 0.8, delay: 0.9 }}
+                style={{ top: "22%", right: "12%" }}
+                className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 6 */}
+              <motion.svg
+                animate={{ scale: [0, 1.1, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 2.3, repeat: Infinity, repeatDelay: 1.2, delay: 1.5 }}
+                style={{ top: "50%", left: "15%" }}
+                className="absolute w-3.5 h-3.5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 7 */}
+              <motion.svg
+                animate={{ scale: [0, 1.0, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ duration: 1.7, repeat: Infinity, repeatDelay: 0.9, delay: 0.5 }}
+                style={{ bottom: "10%", left: "42%" }}
+                className="absolute w-3 h-3 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
+              </motion.svg>
+
+              {/* Twinkling star 8 */}
+              <motion.svg
+                animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, -90] }}
+                transition={{ duration: 2.0, repeat: Infinity, repeatDelay: 0.4, delay: 1.0 }}
+                style={{ top: "10%", left: "48%" }}
+                className="absolute w-4 h-4 text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] drop-shadow-[0_0_16px_rgba(255,255,255,0.9)]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -657,59 +681,46 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               </motion.svg>
             </motion.div>
 
-            {/* Audio Feedback state waves or prompt */}
+            {/* Audio Feedback status waves */}
             {hasInteracted && isVmPlaying && (
               <div className="flex items-center gap-1 my-3 text-primary animate-pulse">
-                <Volume2 size={16} />
-                <span className="text-xs uppercase tracking-widest font-mono">Playing VM</span>
+                <Volume2 size={15} />
+                <span className="text-[10px] uppercase tracking-widest font-mono">Playing VM</span>
               </div>
             )}
 
-            {/* Replay, Download & Continue Controls (fades in once audio plays/ends) */}
+            {/* Replay & Download Controls */}
             {hasInteracted && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-6 mt-4 w-full"
+                className="flex items-center gap-4 mt-2 z-20"
               >
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleReplayVm}
-                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-xs font-medium hover:bg-white/60 transition shadow-sm"
-                  >
-                    <Play size={11} fill="currentColor" />
-                    Listen Again
-                  </button>
-                  <button
-                    onClick={handleDownloadVm}
-                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-xs font-medium hover:bg-white/60 transition shadow-sm"
-                  >
-                    <Download size={11} />
-                    Download Voice Msg
-                  </button>
-                </div>
-
-                {/* Sliding iOS-style Drag Slider to Continue */}
-                <div className="relative w-64 h-11 mt-2 bg-white/40 border border-white/50 backdrop-blur-xl rounded-full overflow-hidden flex items-center justify-center shadow-inner">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground select-none pointer-events-none animate-pulse">
-                    Swipe right to continue →
-                  </span>
-                  <motion.div
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 200 }}
-                    dragElastic={0.1}
-                    onDragEnd={(e, info) => {
-                      if (info.offset.x > 150) {
-                        setStage("partner-name-input");
-                      }
-                    }}
-                    className="absolute left-1 w-9 h-9 bg-foreground rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center text-background shadow-md hover:bg-black/80 transition"
-                  >
-                    <span className="text-sm font-bold font-mono">→</span>
-                  </motion.div>
-                </div>
+                <button
+                  onClick={handleReplayVm}
+                  className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                >
+                  <Play size={10} fill="currentColor" />
+                  Listen Again
+                </button>
+                <button
+                  onClick={handleDownloadVm}
+                  className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                >
+                  <Download size={10} />
+                  Download Msg
+                </button>
               </motion.div>
             )}
+
+            {/* Instruction text pinned at the bottom */}
+            <div className="absolute bottom-10 left-0 right-0 flex justify-center text-center px-6 pointer-events-none">
+              <span className="text-[11px] font-medium tracking-wide text-muted-foreground animate-pulse">
+                {!hasInteracted
+                  ? "Tap anywhere to listen, volumes up or headphones on, baby! 🎧"
+                  : "Tap anywhere to continue →"}
+              </span>
+            </div>
           </Screen>
         )}
 
