@@ -99,7 +99,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           setStage("unlock");
         } else if (s.has_a && !s.has_b) {
           if (urlInvite) {
-            setStage(pinStorage.getName() ? "partner-pin" : "partner-name");
+            setStage("partner-name");
           } else {
             setStage("unlock");
           }
