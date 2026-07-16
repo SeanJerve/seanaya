@@ -9,6 +9,8 @@ import { uploadImage } from "@/lib/storage";
 import { Lightbox } from "@/lib/Lightbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
  
 type Note = {
   id: string;
@@ -67,6 +69,11 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   const [lastViewedNotes, setLastViewedNotes] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [enlargedNote, setEnlargedNote] = useState<Note | null>(null);
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => openSheet("add-note")
+  });
 
   useEffect(() => {
     const val = localStorage.getItem("last_viewed_notes");
@@ -81,6 +88,15 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     return () => {
       localStorage.setItem("last_viewed_notes", new Date().toISOString());
     };
+  }, []);
+
+  useEffect(() => {
+    const key = "intro-dismissed-wall";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
   }, []);
 
   const { data: notes = [] } = useQuery({
@@ -361,11 +377,18 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
       {/* FAB */}
       <button
-        onClick={() => openSheet("add-note")}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)]"
+        {...longPressProps}
+        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
       >
         <Plus size={16} /> New note
       </button>
+
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="New Note / Polaroid"
+        description="Tap to pin a new message or polaroid photo on our board. You can write a message, pick a pastel theme color, or upload a photo that will stay glowing on your partner's board until they check it."
+      />
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
 
@@ -439,7 +462,7 @@ function PolaroidCard({
   return (
     <div
       className={`relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[115px] md:w-[130px] p-2 bg-white pb-3 flex flex-col justify-between transition-all duration-500
-        ${isNew ? "ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.85)] scale-[1.03] animate-pulse" : ""}`}
+        ${isNew ? "ring-2 ring-pink-400 dark:ring-pink-500 shadow-[0_0_15px_rgba(244,143,177,0.8)] scale-[1.025] animate-pulse" : ""}`}
     >
       {/* Push pin */}
       <div
@@ -474,7 +497,7 @@ function StickyNote({
   return (
     <div
       className={`relative rounded-sm shadow-[0_6px_20px_-8px_rgba(0,0,0,0.3),0_2px_6px_rgba(0,0,0,0.1)] w-[140px] md:w-[155px] min-h-[145px] pb-4 flex flex-col justify-between transition-all duration-500
-        ${isNew ? "ring-2 ring-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.85)] scale-[1.03] animate-pulse" : ""}`}
+        ${isNew ? "ring-2 ring-pink-400 dark:ring-pink-500 shadow-[0_0_15px_rgba(244,143,177,0.8)] scale-[1.025] animate-pulse" : ""}`}
       style={{ background: bg }}
     >
       {/* Folded corner effect */}

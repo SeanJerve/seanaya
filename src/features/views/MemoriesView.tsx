@@ -6,6 +6,8 @@ import { Plus, X, MapPin, Tag, Calendar as CalIcon, Trash2 } from "lucide-react"
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
  
 type Memory = {
   id: string;
@@ -22,6 +24,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const { openSheet, confirm } = useAppStore();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => openSheet("add-memory")
+  });
+
+  useEffect(() => {
+    const key = "intro-dismissed-memories";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
+  }, []);
+
   const qc = useQueryClient();
 
   const deleteMemory = useMutation({
@@ -274,11 +291,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
       {/* Floating Add Memory Button */}
       <button
-        onClick={() => openSheet("add-memory")}
+        {...longPressProps}
         className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
       >
         <Plus size={16} /> New memory
       </button>
+
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="New Memory"
+        description="Tap to capture a special memory on our love timeline. You can add a title, describe the memory, pick the date, upload a cover photo, and specify where it happened."
+      />
 
       {/* Full Story/Details Dialog Overlay */}
       {activeMemory && (

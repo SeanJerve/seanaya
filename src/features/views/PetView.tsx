@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -6,6 +6,8 @@ import { Plus, Trash2, Eye, EyeOff, Camera, X, Cat } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { differenceInDays } from "date-fns";
 import { uploadImage } from "@/lib/storage";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
 
 type Pet = {
   id: string;
@@ -23,6 +25,20 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [petName, setPetName] = useState("");
   const [birthday, setBirthday] = useState("");
   const [isAddingPet, setIsAddingPet] = useState(false);
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => setIsAddingPet(true)
+  });
+
+  useEffect(() => {
+    const key = "intro-dismissed-pet";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
+  }, []);
 
   // Mandatory file upload states for creation dialog
   const [faceFile, setFaceFile] = useState<File | null>(null);
@@ -302,7 +318,6 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           <Cat size={28} />
         </div>
         <div>
-          <h2 className="display text-lg text-foreground/80 font-semibold">Cat Sanctuary</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Welcome your cats. Upload their face and pattern coat photos to have them roam!</p>
         </div>
       </section>
@@ -435,11 +450,18 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
       {/* ── Welcome Cat FAB bottom right ── */}
       <button
-        onClick={() => setIsAddingPet(true)}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-xs font-semibold shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+        {...longPressProps}
+        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
       >
-        <Plus size={14} className="text-primary" /> Welcome Cat
+        <Plus size={16} /> Welcome Cat
       </button>
+
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="Welcome Cat"
+        description="Tap to welcome a new cat to our space. You'll be able to name them, set their birthday, upload their face photo, and add a pattern photo to customize their coat. Once welcomed, they'll wander around our home."
+      />
 
       {/* ── Add New Cat Bottom Sheet Modal ── */}
       {isAddingPet && (

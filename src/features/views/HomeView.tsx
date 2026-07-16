@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,12 +9,119 @@ import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
 import { Plus, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, BookHeart, MapPin, Heart } from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
+import { useUser } from "@/hooks/useUser";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
 
 export function HomeView({ relationshipId, anniversary }: { relationshipId: string; anniversary: string | null }) {
   const name = pinStorage.getName() ?? "you";
   const { openSheet, setTab } = useAppStore();
+  const { user } = useUser();
+
+  const { data: recentAction } = useQuery({
+    queryKey: ["recent-partner-action", relationshipId, user?.id],
+    enabled: !!user && !!relationshipId,
+    queryFn: async () => {
+      // 1. Get relationship details to determine partner ID
+      const { data: rel } = await supabase.from("relationships").select("*").eq("id", relationshipId).single();
+      if (!rel) return null;
+      const partnerId = rel.user_a_id === user!.id ? rel.user_b_id : rel.user_a_id;
+      if (!partnerId) return null;
+
+      // 2. Fetch partner profile
+      const { data: partnerProfile } = await supabase.from("profiles").select("*").eq("id", partnerId).maybeSingle();
+      const partnerName = rel.user_a_id === user!.id ? rel.name_b : rel.name_a;
+
+      // 3. Fetch latest notification for current user
+      const { data: latestNotif } = await supabase.from("notifications")
+        .select("*")
+        .eq("relationship_id", relationshipId)
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!latestNotif) {
+        // Fallback: If no notifications yet, let's fetch the latest note created by partner
+        const { data: latestNote } = await supabase.from("notes")
+          .select("*")
+          .eq("relationship_id", relationshipId)
+          .eq("author_id", partnerId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (latestNote) {
+          return {
+            partnerName: partnerName || "Partner",
+            partnerAvatar: partnerProfile?.avatar_url,
+            kind: "note",
+            createdAt: latestNote.created_at,
+            item: latestNote,
+            text: "pinned a note"
+          };
+        }
+        return null;
+      }
+
+      if (!latestNotif.ref_id) return null;
+
+      // Fetch the actual item details based on latestNotif.kind and ref_id
+      let item: any = null;
+      let text = "shared something";
+      if (latestNotif.kind === "note") {
+        const { data } = await supabase.from("notes").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = data?.kind === "photo" ? "shared a polaroid" : "pinned a note";
+      } else if (latestNotif.kind === "memory") {
+        const { data } = await supabase.from("memories").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = "captured a memory";
+      } else if (latestNotif.kind === "trip") {
+        const { data } = await supabase.from("trips").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = "pinned a dream place";
+      } else if (latestNotif.kind === "event") {
+        const { data } = await supabase.from("events").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = "created a moment";
+      } else if (latestNotif.kind === "song") {
+        const { data } = await supabase.from("songs").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = "shared a song";
+      } else if (latestNotif.kind === "hug") {
+        const { data } = await supabase.from("hugs").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        item = data;
+        text = "sent you a hug";
+      }
+
+      return {
+        partnerName: partnerName || "Partner",
+        partnerAvatar: partnerProfile?.avatar_url,
+        kind: latestNotif.kind,
+        createdAt: latestNotif.created_at,
+        item,
+        text
+      };
+    }
+  });
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [cursor, setCursor] = useState(new Date());
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+
+  useEffect(() => {
+    const key = "intro-dismissed-home";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
+  }, []);
+
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => {}
+  });
 
   const { data: monthEvents = [] } = useQuery({
     queryKey: ["events", relationshipId, cursor.getFullYear(), cursor.getMonth()],
@@ -153,12 +260,15 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
-
       {/* ── Greeting strip with wall preview ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] overflow-hidden">
         <div className="grid grid-cols-2 items-stretch divide-x divide-white/40 gap-0">
           {/* Left: greeting text */}
-          <div className="px-5 py-4 min-w-0 flex flex-col justify-between">
+          <div
+            {...longPressProps}
+            className="px-5 py-4 min-w-0 flex flex-col justify-between cursor-pointer hover:bg-white/10 transition-colors"
+            title="Hold to see space guide"
+          >
             <div>
               <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
               <p className="text-[10px] text-muted-foreground/80 mt-1 leading-normal italic font-medium max-w-full overflow-hidden text-ellipsis line-clamp-2">
@@ -173,37 +283,85 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             )}
           </div>
 
-          {/* Right: latest wall item preview */}
+          {/* Right: Recently activity feed */}
           <div
-            className="cursor-pointer relative overflow-hidden min-h-[96px]"
-            onClick={() => setTab("wall")}
-            title="Latest from your wall"
+            className="cursor-pointer relative overflow-hidden min-h-[110px] flex flex-col justify-between p-3 bg-white/10 hover:bg-white/15 transition-colors"
+            onClick={() => {
+              if (!recentAction) return;
+              if (recentAction.kind === "wall" || recentAction.kind === "note") {
+                setTab("wall");
+              } else if (recentAction.kind === "memory") {
+                setTab("memories");
+              } else if (recentAction.kind === "event") {
+                setTab("calendar");
+              }
+            }}
+            title={recentAction ? "Recently active" : "No recent activity"}
           >
-            {latestNote?.image_url ? (
-              <>
-                <img src={latestNote.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px]" />
-                <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent">
-                  <div className="text-[9px] text-white/95 uppercase tracking-wider font-semibold">Latest pin</div>
+            {recentAction ? (
+              <div className="flex flex-col h-full justify-between gap-1.5">
+                {/* Partner User row */}
+                <div className="flex items-center gap-1.5">
+                  <div className="relative w-5 h-5 rounded-full bg-white/60 dark:bg-black/30 border border-white/40 overflow-hidden flex items-center justify-center shrink-0">
+                    {recentAction.partnerAvatar ? (
+                      <img src={recentAction.partnerAvatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] font-bold text-foreground/60">{recentAction.partnerName.slice(0, 1).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] text-foreground/80 font-bold truncate leading-none">{recentAction.partnerName}</div>
+                    <div className="text-[8px] text-muted-foreground/90 truncate mt-0.5 leading-none">{recentAction.text}</div>
+                  </div>
                 </div>
-              </>
-            ) : latestNote ? (
-              <div
-                className="absolute inset-0 flex flex-col justify-between p-3.5"
-                style={{ background: latestNote.color ?? "oklch(0.95 0.03 85 / 0.6)" }}
-              >
-                <div className="text-[9px] uppercase tracking-wider text-foreground/50">Latest pin</div>
-                <p className="text-xs text-foreground/80 line-clamp-3 leading-snug font-[Nunito]">{latestNote.body}</p>
+
+                {/* Content Preview */}
+                <div className="flex-1 min-h-0 flex items-center justify-center">
+                  {recentAction.kind === "note" && recentAction.item?.image_url ? (
+                    <div className="relative w-full h-full rounded-lg overflow-hidden border border-white/30 shadow-sm">
+                      <img src={recentAction.item.image_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ) : recentAction.kind === "note" && recentAction.item ? (
+                    <div
+                      className="w-full h-full rounded-lg p-2 flex flex-col justify-between overflow-hidden shadow-inner border border-white/20"
+                      style={{ background: recentAction.item.color ?? "oklch(0.95 0.03 85 / 0.6)" }}
+                    >
+                      <p className="text-[10px] text-foreground/80 line-clamp-3 leading-tight font-[Nunito] break-words whitespace-pre-wrap">
+                        {recentAction.item.body}
+                      </p>
+                    </div>
+                  ) : recentAction.kind === "memory" && recentAction.item ? (
+                    <div className="relative w-full h-full rounded-lg overflow-hidden border border-white/30 shadow-sm bg-black/5">
+                      {recentAction.item.cover_url ? (
+                        <img src={recentAction.item.cover_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold p-1 text-center line-clamp-2">{recentAction.item.title}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full text-center text-[11px] font-semibold text-foreground/80 truncate">
+                      {recentAction.item?.title || recentAction.item?.body || "Something sweet"}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute bottom-1 right-2 text-[7px] font-bold tracking-widest text-foreground/30 uppercase pointer-events-none">Recently</div>
               </div>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-foreground/30 p-4">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
-                <span className="text-[8px] uppercase tracking-wider text-center leading-tight">Pin something</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-foreground/30 p-4">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                <span className="text-[9px] uppercase tracking-wider text-center font-semibold text-foreground/45">No activity yet</span>
               </div>
             )}
           </div>
         </div>
       </section>
+
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="Cozy Space"
+        description="Welcome home, love. This is our little shared space in the digital world. Here, you can see how many days we've cherished together, check what we're looking forward to, and view a glimpse of our latest moments. Tap around and let's build our world together."
+      />
 
       {/* ── What matters today (now FIRST) ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 space-y-4">

@@ -8,6 +8,7 @@ import { pinStorage, hashPin, ANNIVERSARY_ISO, type Slot } from "@/features/pin/
 import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useTheme, type Theme } from "@/lib/theme";
 import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
+import { uploadImage } from "@/lib/storage";
 
 export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: string; inviteCode: string }) {
   const { user } = useUser();
@@ -19,6 +20,46 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
   const { prefs, set: setPref } = useNotificationPrefs();
 
   const slot: Slot = pinStorage.getSlot() ?? "a";
+
+  const { data: myProfile, refetch: refetchProfile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle();
+      return data;
+    }
+  });
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    try {
+      setUploadingAvatar(true);
+      const { url } = await uploadImage("wall", relationshipId, file, `avatars/${user.id}`);
+      await supabase.from("profiles").upsert({ id: user.id, avatar_url: url });
+      toast.success("Profile picture updated!");
+      refetchProfile();
+      qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user) return;
+    try {
+      await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+      toast.success("Profile picture removed!");
+      refetchProfile();
+      qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove avatar");
+    }
+  };
 
   const { data: rel } = useQuery({
     queryKey: ["settings-rel", relationshipId],
@@ -69,21 +110,60 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
       <section className="space-y-2">
         <SectionHead label="Signed in as" />
         <div className="rounded-2xl bg-white/50 px-4 py-3 text-sm backdrop-blur-xl">
-          <div className="text-foreground">{yourName || "you"} <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-2">Slot {slot.toUpperCase()}</span></div>
+          <div className="text-foreground">{yourName || "you"}</div>
           {partnerName && <div className="mt-0.5 text-[11px] text-muted-foreground">with {partnerName}</div>}
         </div>
       </section>
 
       <section className="space-y-3">
+        <SectionHead label="Profile Picture" />
+        <div className="flex items-center gap-4 rounded-2xl bg-white/50 px-4 py-3 backdrop-blur-xl">
+          <div className="relative w-16 h-16 rounded-full bg-white/60 dark:bg-black/30 border border-white/50 dark:border-neutral-800 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+            {myProfile?.avatar_url ? (
+              <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xl font-bold text-foreground/45">{displayName.slice(0, 1).toUpperCase() || "?"}</span>
+            )}
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              id="profile-pic-upload"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploadingAvatar}
+            />
+            <div className="flex gap-2">
+              <label
+                htmlFor="profile-pic-upload"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-white/50 bg-white/70 hover:bg-white/80 active:scale-95 transition-all cursor-pointer shadow-sm text-foreground/80 dark:bg-neutral-800 dark:border-neutral-700 dark:hover:bg-neutral-750 dark:text-foreground"
+              >
+                {uploadingAvatar ? "Uploading..." : "Choose Photo"}
+              </label>
+              {myProfile?.avatar_url && (
+                <button
+                  onClick={handleRemoveAvatar}
+                  className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-red-200/50 bg-red-50/70 hover:bg-red-50/80 active:scale-95 transition-all cursor-pointer shadow-sm text-red-500"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground">Upload a profile picture to show next to your activity.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <SectionHead label="Theme" />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {([
             { key: "light", label: "Light", icon: <Sun size={14} /> },
-            { key: "dusk",  label: "Dusk",  icon: <Sunset size={14} /> },
-            { key: "night", label: "Night", icon: <Moon size={14} /> },
+            { key: "dark",  label: "Dark",  icon: <Moon size={14} /> },
           ] as { key: Theme; label: string; icon: React.ReactNode }[]).map((t) => (
             <button key={t.key} onClick={() => setTheme(t.key)}
-              className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-xs backdrop-blur-xl transition ${theme === t.key ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40"}`}>
+              className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-xs backdrop-blur-xl transition cursor-pointer ${theme === t.key ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40"}`}>
               <span className="text-foreground/70">{t.icon}</span>{t.label}
             </button>
           ))}
@@ -118,18 +198,20 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
         <PrimaryButton onClick={() => savePin.mutate()}>Update PIN</PrimaryButton>
       </section>
 
-      <section className="space-y-3">
-        <SectionHead label="Invitation Link" />
-        <p className="text-[11px] text-muted-foreground">Share this link with your partner so they can join your space.</p>
-        <PrimaryButton onClick={() => {
-          const code = inviteCode || rel?.invite_code || "";
-          const link = `${window.location.origin}/?invite=${code}`;
-          if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(link).catch(() => {});
-          }
-          toast.success("Invitation link copied to clipboard!", { duration: 6000 });
-        }}>Copy invitation link</PrimaryButton>
-      </section>
+      {!rel?.user_b_id && (
+        <section className="space-y-3">
+          <SectionHead label="Invitation Link" />
+          <p className="text-[11px] text-muted-foreground">Share this link with your partner so they can join your space.</p>
+          <PrimaryButton onClick={() => {
+            const code = inviteCode || rel?.invite_code || "";
+            const link = `${window.location.origin}/?invite=${code}`;
+            if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(link).catch(() => {});
+            }
+            toast.success("Invitation link copied to clipboard!", { duration: 6000 });
+          }}>Copy invitation link</PrimaryButton>
+        </section>
+      )}
 
       <section className="space-y-3">
         <SectionHead label="Partner's PIN" />
@@ -143,14 +225,6 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
           }
           toast.success("Reset link copied! Send it to your partner.", { duration: 6000 });
         }}>Copy Reset Link</PrimaryButton>
-      </section>
-
-      <section className="space-y-3">
-        <SectionHead label="Anniversary" />
-        <FieldWrap label="The day it became official">
-          <Input type="date" value={anniversary || rel?.anniversary || ANNIVERSARY_ISO} onChange={(e) => setAnniversary(e.target.value)} />
-        </FieldWrap>
-        <PrimaryButton onClick={() => saveAnn.mutate()}>Save anniversary</PrimaryButton>
       </section>
     </div>
   );

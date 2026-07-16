@@ -4,14 +4,31 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, addMonths, subMonths, isSameMonth, getDay,
 } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
 
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [cursor, setCursor] = useState(new Date());
   const { openSheet, confirm } = useAppStore();
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => openSheet("add-event")
+  });
+
+  useEffect(() => {
+    const key = "intro-dismissed-calendar";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
+  }, []);
+
   const qc = useQueryClient();
 
   const deleteEvent = useMutation({
@@ -195,11 +212,18 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       <button
-        onClick={() => openSheet("add-event")}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/60 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)]"
+        {...longPressProps}
+        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
       >
         <Plus size={16} /> Add event
       </button>
+
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="Add Event"
+        description="Tap to schedule a date or moment to look forward to. You can set the title, choose the date and time, categorize the event, and start a countdown."
+      />
     </div>
   );
 }

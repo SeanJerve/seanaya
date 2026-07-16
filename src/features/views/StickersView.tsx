@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, LayoutGrid, Eye, PlusCircle, Trash } from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
+import { useLongPress } from "@/hooks/useLongPress";
+import { LongPressModal } from "@/components/ui/LongPressModal";
 
 type StickerPage = {
   id: string;
@@ -62,6 +64,20 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [newPageOpen, setNewPageOpen] = useState(false);
   const [newPageName, setNewPageName] = useState("");
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const longPressProps = useLongPress({
+    onLongPress: () => setShowLongPressInfo(true),
+    onClick: () => openSheet("add-sticker")
+  });
+
+  useEffect(() => {
+    const key = "intro-dismissed-stickers";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
+  }, []);
 
   // Fetch sticker book pages
   const { data: pages = [], refetch: refetchPages, isFetched } = useQuery({
@@ -403,12 +419,21 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
       {/* ── Floating Add Sticker Button ── */}
       {activePage && (
-        <button
-          onClick={() => openSheet("add-sticker")}
-          className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
-        >
-          <Plus size={16} /> Add sticker
-        </button>
+        <>
+          <button
+            {...longPressProps}
+            className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> Add sticker
+          </button>
+
+          <LongPressModal
+            isOpen={showLongPressInfo}
+            onClose={() => setShowLongPressInfo(false)}
+            title="Add Sticker"
+            description="Tap to open our sticker drawer. You can select from dozens of cute emoji-like stickers and place them on your current sticker pad to decorate it."
+          />
+        </>
       )}
 
       {/* ── Add Page Modal (Glassmorphic) ── */}

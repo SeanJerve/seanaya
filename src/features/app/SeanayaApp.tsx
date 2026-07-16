@@ -4,6 +4,8 @@ import { useRelationship } from "@/hooks/useRelationship";
 import { useAppStore } from "./store";
 import { AppHeader } from "@/features/nav/AppHeader";
 import { BottomNav } from "@/features/nav/BottomNav";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { HomeView } from "@/features/views/HomeView";
 import { CalendarView } from "@/features/views/CalendarView";
 import { MemoriesView } from "@/features/views/MemoriesView";
@@ -35,6 +37,64 @@ export function SeanayaApp() {
 function Inner() {
   const { data: rel, isLoading } = useRelationship();
   const { tab, sheet } = useAppStore();
+  const qc = useQueryClient();
+
+  const currentRelId = rel?.id;
+
+  useEffect(() => {
+    if (!currentRelId) return;
+    const channelId = `realtime-sync-${currentRelId}-${Math.random().toString(36).slice(2, 10)}`;
+    const ch = supabase.channel(channelId);
+
+    ch
+      .on("postgres_changes", { event: "*", schema: "public", table: "notes", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["notes"] });
+        qc.invalidateQueries({ queryKey: ["latest-note"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "stickers", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["stickers"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "sticker_pages", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["sticker-pages"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pets", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["pets"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "relationships", filter: `id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["settings-rel"] });
+        qc.invalidateQueries({ queryKey: ["relationship"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "memories", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["memories"] });
+        qc.invalidateQueries({ queryKey: ["stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "events", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["events"] });
+        qc.invalidateQueries({ queryKey: ["stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "trips", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["trips"] });
+        qc.invalidateQueries({ queryKey: ["stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "songs", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["songs"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "hugs", filter: `relationship_id=eq.${currentRelId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["hugs"] });
+        qc.invalidateQueries({ queryKey: ["stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [currentRelId, qc]);
 
   if (isLoading || !rel) {
     return (
@@ -45,7 +105,7 @@ function Inner() {
   }
 
   const relId = rel.id;
-  const inviteCode = rel.invite_code ?? "";
+  const inviteCode = rel?.invite_code ?? "";
 
   const headerTitle = ({ 
     home: "Home", 
