@@ -30,22 +30,7 @@ type SpaceState = {
   has_b: boolean;
 };
 
-type LilyParticle = {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  rotation: number;
-  rotationSpeed: number;
-  scale: number;
-  opacity: number;
-  img?: string;
-  isSparkle?: boolean;
-  isLargeGlitter?: boolean;
-  color?: string;
-  delay: number;
-};
+
 
 const COMPLIMENT_WORDS = [
   "loving",
@@ -127,8 +112,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [dateInput, setDateInput] = useState("");
   const [resetSlot, setResetSlot] = useState<Slot>("a");
 
-  // Particles for the lily & glitter confetti explosion
-  const [particles, setParticles] = useState<LilyParticle[]>([]);
+  // Ref for the lily confetti canvas overlay
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Audio Playback States
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -226,20 +211,49 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     }
   }, [stage]);
 
-  // Effect to trigger white lily poppers upon partner-name landing (80 total lilies)
+  // Effect to trigger white lily poppers upon partner-name landing (80 total lilies, Canvas animated for extreme smoothness)
   useEffect(() => {
-    if (stage !== "partner-name") {
-      setParticles([]);
-      return;
-    }
+    if (stage !== "partner-name") return;
 
-    const list: LilyParticle[] = [];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Handle canvas sizing
+    const handleResize = () => {
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
     const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
+    const loadedImages = lilyImages.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+
+    const list: {
+      x: number; // percentage
+      y: number; // percentage
+      vx: number;
+      vy: number;
+      rotation: number;
+      rotationSpeed: number;
+      scale: number;
+      opacity: number;
+      imgIdx: number;
+      delay: number;
+    }[] = [];
 
     // Left Popper Lilies (40)
     for (let i = 0; i < 40; i++) {
       list.push({
-        id: i,
         x: -5 + Math.random() * 12,
         y: 100,
         vx: 0.4 + Math.random() * 1.1,
@@ -248,7 +262,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         rotationSpeed: -2 + Math.random() * 4,
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
-        img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+        imgIdx: Math.floor(Math.random() * loadedImages.length),
         delay: Math.random() * 95,
       });
     }
@@ -256,7 +270,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     // Right Popper Lilies (40)
     for (let i = 0; i < 40; i++) {
       list.push({
-        id: i + 40,
         x: 93 + Math.random() * 12,
         y: 100,
         vx: -0.4 - Math.random() * 1.1,
@@ -265,58 +278,60 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         rotationSpeed: -2 + Math.random() * 4,
         scale: 0.45 + Math.random() * 0.4,
         opacity: 1,
-        img: lilyImages[Math.floor(Math.random() * lilyImages.length)],
+        imgIdx: Math.floor(Math.random() * loadedImages.length),
         delay: Math.random() * 95,
       });
     }
-
-    setParticles(list);
 
     let active = true;
     let lastTime = performance.now();
 
     const update = (time: number) => {
-      if (!active) return;
+      if (!active || !canvas || !ctx) return;
       const dt = (time - lastTime) / 16.666;
       lastTime = time;
 
-      setParticles((prev) => {
-        let allDead = true;
-        const next = prev.map((p) => {
-          if (p.delay > 0) {
-            allDead = false;
-            return { ...p, delay: p.delay - dt };
-          }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-          const nextX = p.x + p.vx * dt;
-          const nextY = p.y + p.vy * dt;
-          const nextVy = p.vy + 0.022 * dt;
+      let allDead = true;
 
-          let nextOpacity = p.opacity;
-          if (p.vy > 0) {
-            nextOpacity = Math.max(0, p.opacity - 0.007 * dt);
-          }
-          if (nextOpacity > 0) {
-            allDead = false;
-          }
-
-          return {
-            ...p,
-            x: nextX,
-            y: nextY,
-            vy: nextVy,
-            rotation: p.rotation + p.rotationSpeed * dt,
-            opacity: nextOpacity,
-          };
-        });
-
-        if (allDead) {
-          active = false;
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        if (p.delay > 0) {
+          p.delay -= dt;
+          allDead = false;
+          continue;
         }
-        return next;
-      });
 
-      if (active) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.022 * dt;
+
+        if (p.vy > 0) {
+          p.opacity = Math.max(0, p.opacity - 0.007 * dt);
+        }
+        if (p.opacity > 0) {
+          allDead = false;
+        }
+
+        p.rotation += p.rotationSpeed * dt;
+
+        // Draw particle
+        const xPx = (p.x / 100) * canvas.width;
+        const yPx = (p.y / 100) * canvas.height;
+        const size = 100 * p.scale;
+
+        ctx.save();
+        ctx.translate(xPx, yPx);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.globalAlpha = p.opacity;
+        ctx.drawImage(loadedImages[p.imgIdx], -size / 2, -size / 2, size, size);
+        ctx.restore();
+      }
+
+      if (allDead) {
+        active = false;
+      } else {
         requestAnimationFrame(update);
       }
     };
@@ -325,6 +340,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
     return () => {
       active = false;
+      window.removeEventListener("resize", handleResize);
     };
   }, [stage]);
 
@@ -512,8 +528,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         <div className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20">
           <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
             {!hasInteracted
-              ? "Tap anywhere to listen, volumes up or headphones on, baby! 🎧"
-              : "Tap anywhere to continue →"}
+              ? "Tap anywhere to listen, volumes up or headphones on, baby!"
+              : "Tap anywhere to continue ->"}
           </span>
         </div>
       )}
@@ -528,29 +544,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         </button>
       )}
 
-      {/* Render Lily Confettis Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {particles.map((p) => (
-          <img
-            key={p.id}
-            src={p.img}
-            alt=""
-            className="absolute origin-center"
-            style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              transform: `translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotation}deg)`,
-              opacity: p.delay > 0 ? 0 : p.opacity,
-              width: "100px",
-              height: "100px",
-            }}
-          />
-        ))}
-      </div>
+      {/* Render Lily Confettis Canvas Overlay */}
+      {stage === "partner-name" && (
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 pointer-events-none z-30"
+          style={{ width: "100%", height: "100%" }}
+        />
+      )}
 
       <AnimatePresence mode="wait">
         {stage === "loading" && (
-          <Screen key="loading"><div className="text-sm text-muted-foreground">Warming your space…</div></Screen>
+          <Screen key="loading"><div className="text-sm text-muted-foreground">Warming your space...</div></Screen>
         )}
 
         {stage === "setup-name" && (

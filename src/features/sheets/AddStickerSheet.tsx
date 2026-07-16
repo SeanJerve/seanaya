@@ -96,7 +96,7 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Sticker saved to pad! ✨");
+      toast.success("Sticker saved to pad!");
       qc.invalidateQueries({ queryKey: ["stickers", relationshipId] });
       setFile(null);
       closeSheet();
