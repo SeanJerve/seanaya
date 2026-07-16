@@ -61,6 +61,29 @@ const COMPLIMENT_WORDS = [
   "magnificent"
 ];
 
+const sentenceVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const letterVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      damping: 12,
+      stiffness: 150,
+    },
+  },
+};
+
 function BackgroundSparkles() {
   const sparkles = [
     { top: "12%", left: "15%", delay: 0.5, scale: 0.6 },
@@ -592,9 +615,26 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {/* Page 1: Custom Monthsary Celebration, Floating Sparkling Lily bouquet, VM Instructions & Audio Player */}
         {stage === "partner-name" && (
           <Screen key="pname">
-            <h1 className="display text-4xl leading-tight text-foreground mt-4">
-              Happy 1st Monthsary, Aya!
-            </h1>
+            <motion.h1
+              variants={sentenceVariants}
+              initial="hidden"
+              animate="visible"
+              className="display text-4xl leading-tight text-foreground mt-4 flex flex-wrap justify-center"
+            >
+              {"Happy 1st Monthsary, Aya!".split(" ").map((word, wordIdx) => (
+                <span key={wordIdx} className="inline-block whitespace-nowrap mr-2">
+                  {Array.from(word).map((char, charIdx) => (
+                    <motion.span
+                      key={charIdx}
+                      variants={letterVariants}
+                      className="inline-block"
+                    >
+                      {char}
+                    </motion.span>
+                  ))}
+                </span>
+              ))}
+            </motion.h1>
             
             {/* Center Lily: Large floating bouquet with glowing backdrop and 8 twinkling stars directly touching the flower */}
             <motion.div
