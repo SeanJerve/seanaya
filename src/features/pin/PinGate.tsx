@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Play, Download, Volume2, ArrowLeft } from "lucide-react";
+import { Play, Download, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
@@ -83,6 +83,36 @@ const letterVariants = {
     },
   },
 };
+
+function EqVisualizer() {
+  const barCount = 21;
+  return (
+    <div className="flex items-end justify-center gap-1 h-14 my-3">
+      {Array.from({ length: barCount }).map((_, i) => {
+        const duration = 0.45 + Math.random() * 0.7;
+        const delay = Math.random() * 0.25;
+        const centerDist = Math.abs(i - Math.floor(barCount / 2));
+        const maxHeight = Math.max(12, 48 - centerDist * 3.8);
+        return (
+          <motion.div
+            key={i}
+            animate={{
+              height: [6, maxHeight, 6],
+            }}
+            transition={{
+              duration,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay,
+            }}
+            style={{ width: "3px" }}
+            className="bg-primary/80 rounded-full"
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 function BackgroundSparkles() {
   const sparkles = [
@@ -548,18 +578,34 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <BackgroundSparkles />
 
       {stage === "partner-name" && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 3, duration: 0.8 }}
-          className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
-        >
-          <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
-            {!hasInteracted
-              ? "Tap anywhere to listen, volumes up or earphones on, baby!"
-              : "Tap anywhere to continue"}
-          </span>
-        </motion.div>
+        <AnimatePresence>
+          {!hasInteracted && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 3, duration: 0.8 }}
+              className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
+            >
+              <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+                Tap anywhere to listen, volumes up or earphones on, baby!
+              </span>
+            </motion.div>
+          )}
+          {hasInteracted && !isVmPlaying && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
+            >
+              <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+                Tap anywhere to continue
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Back Button for multi-stage partner onboarding sheets */}
@@ -756,37 +802,47 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               </motion.svg>
             </motion.div>
 
-            {/* Audio Feedback status waves */}
-            {hasInteracted && isVmPlaying && (
-              <div className="flex items-center gap-1 my-3 text-primary animate-pulse">
-                <Volume2 size={15} />
-                <span className="text-[10px] uppercase tracking-widest font-mono">Playing VM</span>
-              </div>
-            )}
+            {/* EQ Visualizer — shows while VM is playing */}
+            <AnimatePresence>
+              {hasInteracted && isVmPlaying && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <EqVisualizer />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Replay & Download Controls */}
-            {hasInteracted && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-4 mt-2 z-20"
-              >
-                <button
-                  onClick={handleReplayVm}
-                  className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+            {/* Replay & Download Controls — only shown after VM finishes */}
+            <AnimatePresence>
+              {hasInteracted && !isVmPlaying && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex items-center gap-4 mt-2 z-20"
                 >
-                  <Play size={10} fill="currentColor" />
-                  Listen Again
-                </button>
-                <button
-                  onClick={handleDownloadVm}
-                  className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
-                >
-                  <Download size={10} />
-                  Download Msg
-                </button>
-              </motion.div>
-            )}
+                  <button
+                    onClick={handleReplayVm}
+                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                  >
+                    <Play size={10} fill="currentColor" />
+                    Listen Again
+                  </button>
+                  <button
+                    onClick={handleDownloadVm}
+                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                  >
+                    <Download size={10} />
+                    Download VM
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
           </Screen>
         )}
