@@ -36,7 +36,7 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
       if (!user || !form.title.trim()) throw new Error("Title is required");
       const { error } = await supabase.from("events").insert({
         relationship_id: relationshipId, created_by: user.id, title: form.title,
-        starts_at: new Date(form.when).toISOString(), category: form.cat,
+        starts_at: new Date(form.when).toISOString(), category: "relationship",
         countdown: form.countdown, recurrence: form.recurring ? "MONTHLY:19" : null,
       });
       if (error) throw error;
@@ -61,11 +61,6 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
 
       <FieldWrap label="Title"><Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="What is it?" /></FieldWrap>
       <FieldWrap label="When"><Input type="datetime-local" value={form.when} onChange={(e) => set("when", e.target.value)} /></FieldWrap>
-      <FieldWrap label="Category">
-        <Select value={form.cat} onChange={(e) => set("cat", e.target.value as Form["cat"])}>
-          {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
-        </Select>
-      </FieldWrap>
       <label className="flex items-center gap-2 text-sm text-foreground/80">
         <input type="checkbox" checked={form.countdown} onChange={(e) => set("countdown", e.target.checked)} className="accent-foreground" />
         Show countdown on Home

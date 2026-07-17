@@ -389,7 +389,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       {/* FAB */}
       <button
         {...longPressProps}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+        className="fixed bottom-24 right-5 z-40 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
       >
         <Plus size={16} /> New note
       </button>

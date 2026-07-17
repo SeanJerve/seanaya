@@ -55,9 +55,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
-  // Custom Photo preview states
+  // Custom Photo preview & crop states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewOffsetX, setPreviewOffsetX] = useState(0);
+  const [previewOffsetY, setPreviewOffsetY] = useState(0);
+  const [previewScale, setPreviewScale] = useState(1.2);
+  const [isDraggingPreview, setIsDraggingPreview] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const pageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +183,51 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       setSelectedFile(f);
       const url = URL.createObjectURL(f);
       setPreviewUrl(url);
+      setPreviewOffsetX(0);
+      setPreviewOffsetY(0);
+      setPreviewScale(1.2);
     }
+  };
+
+  // Preview interactive drag handlers
+  const handlePreviewDragStart = (clientX: number, clientY: number) => {
+    setIsDraggingPreview(true);
+    dragStartRef.current = { x: clientX - previewOffsetX, y: clientY - previewOffsetY };
+  };
+
+  const handlePreviewDragMove = (clientX: number, clientY: number) => {
+    if (!isDraggingPreview) return;
+    setPreviewOffsetX(clientX - dragStartRef.current.x);
+    setPreviewOffsetY(clientY - dragStartRef.current.y);
+  };
+
+  const handlePreviewDragEnd = () => {
+    setIsDraggingPreview(false);
+  };
+
+  // Canvas shapes helpers for baking photo crop
+  const drawHeart = (ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number) => {
+    ctx.moveTo(ox + w * 0.5, oy + h * 0.9);
+    ctx.bezierCurveTo(ox + w * 0.05, oy + h * 0.6, ox, oy + h * 0.45, ox, oy + h * 0.3);
+    ctx.bezierCurveTo(ox, oy + h * 0.15, ox + w * 0.1, oy, ox + w * 0.25, oy);
+    ctx.bezierCurveTo(ox + w * 0.35, oy, ox + w * 0.45, oy + h * 0.1, ox + w * 0.5, oy + h * 0.2);
+    ctx.bezierCurveTo(ox + w * 0.55, oy + h * 0.1, ox + w * 0.65, oy, ox + w * 0.75, oy);
+    ctx.bezierCurveTo(ox + w * 0.9, oy, ox + w * 1.0, oy + h * 0.15, ox + w * 1.0, oy + h * 0.3);
+    ctx.bezierCurveTo(ox + w * 1.0, oy + h * 0.45, ox + w * 0.95, oy + h * 0.6, ox + w * 0.5, oy + h * 0.9);
+  };
+
+  const drawStar = (ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number) => {
+    ctx.moveTo(ox + w * 0.5, oy);
+    ctx.lineTo(ox + w * 0.65, oy + h * 0.35);
+    ctx.lineTo(ox + w, oy + h * 0.35);
+    ctx.lineTo(ox + w * 0.7, oy + h * 0.6);
+    ctx.lineTo(ox + w * 0.85, oy + h);
+    ctx.lineTo(ox + w * 0.5, oy + h * 0.75);
+    ctx.lineTo(ox + w * 0.15, oy + h);
+    ctx.lineTo(ox + w * 0.3, oy + h * 0.6);
+    ctx.lineTo(ox, oy + h * 0.35);
+    ctx.lineTo(ox + w * 0.35, oy + h * 0.35);
+    ctx.closePath();
   };
 
   // Mutations
@@ -275,32 +324,95 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     }
   });
 
-  const uploadPhoto = useMutation({
-    mutationFn: async ({ file, shape, outline }: { file: File; shape: "rect" | "square" | "circle" | "heart" | "star"; outline: string }) => {
-      const itemId = crypto.randomUUID();
-      const { url } = await uploadImage("wall", relationshipId, file, `album/${itemId}`);
+  // Upload and bake canvas crop
+  const uploadBakedPhoto = useMutation({
+    mutationFn: async ({ file, shape, outline, scale, offsetX, offsetY }: { 
+      file: File; 
+      shape: "rect" | "square" | "circle" | "heart" | "star"; 
+      outline: string;
+      scale: number;
+      offsetX: number;
+      offsetY: number;
+    }) => {
       const activePage = pages[currentPageIdx];
       if (!activePage) return;
+
+      // 1. Create a helper image element
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((resolve) => { img.onload = resolve; });
+
+      // 2. Setup canvas dimensions
+      const canvas = document.createElement("canvas");
+      const isRect = shape === "rect";
+      const w = 400;
+      const h = isRect ? 560 : 400;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas support failed");
+
+      // 3. Clear canvas & trace path
+      ctx.beginPath();
+      if (shape === "circle") {
+        ctx.arc(w / 2, h / 2, w / 2 - 8, 0, Math.PI * 2);
+      } else if (shape === "heart") {
+        drawHeart(ctx, w - 16, h - 16, 8, 8);
+      } else if (shape === "star") {
+        drawStar(ctx, w - 16, h - 16, 8, 8);
+      } else {
+        (ctx as any).roundRect(8, 8, w - 16, h - 16, 32);
+      }
+      ctx.closePath();
+
+      // 4. Save and clip image drawing
+      ctx.save();
+      ctx.clip();
+
+      const naturalAspect = img.naturalHeight / img.naturalWidth;
+      const factor = w / 140; // Scale factor from 140px preview to 400px canvas coordinates
+      const drawWidth = w * scale;
+      const drawHeight = drawWidth * naturalAspect;
+      const drawX = w / 2 + offsetX * factor - drawWidth / 2;
+      const drawY = h / 2 + offsetY * factor - drawHeight / 2;
+
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+      ctx.restore();
+
+      // 5. Draw border outline
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = outline;
+      ctx.stroke();
+
+      // 6. Convert to blob and upload
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Crop render failed");
+
+      const itemId = crypto.randomUUID();
+      const croppedFile = new File([blob], `album_cropped_${itemId}.png`, { type: "image/png" });
+      const { url } = await uploadImage("wall", relationshipId, croppedFile, `album/${itemId}`);
 
       await addItem.mutateAsync({
         page_id: activePage.id,
         item_type: "picture",
         content: null,
         image_url: url,
-        color: `${shape}:${outline}`,
-        pos_x: 35,
-        pos_y: 35,
+        color: `${shape}:${outline}`, // Store shape:outline for future edits if needed
+        pos_x: 30,
+        pos_y: 30,
         scale: 1,
         rotation: 0
       });
+
+      URL.revokeObjectURL(img.src);
     },
     onSuccess: () => {
-      toast.success("Photo added to page!");
+      toast.success("Picture added!");
       setSelectedFile(null);
       setPreviewUrl(null);
       setActiveTab(null);
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to upload photo")
+    onError: (e: any) => toast.error(e?.message || "Failed to add picture")
   });
 
   const activePage = pages[currentPageIdx];
@@ -309,7 +421,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return items.filter(it => it.page_id === activePage.id);
   }, [items, activePage]);
 
-  // Render Closed Book Cover (Unscrollable, matches exact aspect of opened page w-[340px] h-[476px])
+  // Render Closed Book Cover (Takes w-full, stretches to match customize panel, aspect 1/1.4)
   const renderClosedBook = () => (
     <div className="w-full h-[calc(100vh-140px)] overflow-hidden flex items-center justify-center p-4 bg-transparent relative z-10">
       {/* watercolor dream backdrops */}
@@ -322,7 +434,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-full max-w-[340px] h-[476px] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="w-full aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
@@ -340,24 +452,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     </div>
   );
 
-  // Helper classes for picture item shapes
-  const getPictureShapeStyles = (shape: string | null) => {
-    if (shape === "heart") {
-      return { clipPath: "url(#heart-mask)" };
-    }
-    if (shape === "star") {
-      return { clipPath: "url(#star-mask)" };
-    }
-    return {};
-  };
-
-  const getBorderRadiusClass = (shape: string | null) => {
-    if (shape === "circle") return "rounded-full";
-    if (shape === "square" || shape === "rect") return "rounded-2xl";
-    return "";
-  };
-
-  // Render Open Book Layout (Scrollable container, pages size max-w-[340px] aspect-[1/1.4] matching cover)
+  // Render Open Book Layout
   const renderOpenBook = () => {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
@@ -427,7 +522,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </div>
         </div>
 
-        {/* Dynamic Paper Page layout (Full width w-[340px] aspect-[1/1.4] matching cover page dimensions exactly) */}
+        {/* Paper Page layout (Stretches to w-full, matching customize panel, aspect 1/1.4) */}
         <div className="relative w-full flex flex-col items-center p-1">
           <AnimatePresence mode="wait">
             <motion.div
@@ -437,7 +532,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
               transition={{ type: "spring", damping: 20, stiffness: 130 }}
-              className="relative w-full max-w-[340px] aspect-[1/1.4] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
+              className="relative w-full aspect-[1/1.4] rounded-[32px] border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
               onClick={() => setSelectedItemId(null)}
             >
               {/* Grid notebook texture */}
@@ -452,7 +547,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               ) : (
                 activePageItems.map((it) => {
                   const isSelected = selectedItemId === it.id;
-                  const [shape, outlineColor] = (it.color || "rect:#ffffff").split(":");
                   
                   return (
                     <motion.div
@@ -487,10 +581,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       style={{
                         left: `${it.pos_x}%`,
                         top: `${it.pos_y}%`,
-                        rotate: it.rotation,
                         zIndex: isSelected ? 50 : 10
                       }}
                     >
+                      {/* DIV holding rotate transformation ONLY on the inner item content */}
                       <div
                         className="relative p-2 cursor-grab active:cursor-grabbing"
                         onClick={(e) => {
@@ -500,7 +594,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       >
                         {/* 1. Stickers / User custom stickers */}
                         {it.item_type === "sticker" && (
-                          <div className="select-none pointer-events-none drop-shadow-md">
+                          <div 
+                            className="select-none pointer-events-none drop-shadow-md"
+                            style={{ transform: `rotate(${it.rotation}deg)` }}
+                          >
                             {it.image_url ? (
                               <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
                             ) : (
@@ -509,33 +606,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           </div>
                         )}
 
-                        {/* 2. Plain Picture (cropped shapes support + thin outlines) */}
+                        {/* 2. Plain Baked Cropped Picture */}
                         {it.item_type === "picture" && it.image_url && (
                           <div
-                            className={`flex items-center justify-center overflow-hidden border border-black/5 shadow-md select-none pointer-events-none ${getBorderRadiusClass(shape)}`}
-                            style={{
-                              width: shape === "rect" ? "114px" : "100px",
-                              height: "100px",
-                              ...getPictureShapeStyles(shape),
-                              background: outlineColor || "#ffffff"
-                            }}
+                            className="select-none pointer-events-none drop-shadow-md"
+                            style={{ transform: `rotate(${it.rotation}deg)` }}
                           >
-                            <div
-                              className={`overflow-hidden ${getBorderRadiusClass(shape)}`}
-                              style={{
-                                width: shape === "rect" ? "110px" : "96px",
-                                height: "96px",
-                                ...getPictureShapeStyles(shape),
-                              }}
-                            >
-                              <img src={it.image_url} alt="" className="w-full h-full object-cover" />
-                            </div>
+                            <img src={it.image_url} alt="" className="w-28 object-contain" />
                           </div>
                         )}
 
                         {/* 3. Polaroid Frame */}
                         {it.item_type === "polaroid" && it.image_url && (
-                          <div className="w-24 p-1.5 pb-5 rounded bg-white shadow-lg border border-black/5 flex flex-col items-center select-none pointer-events-none">
+                          <div 
+                            className="w-24 p-1.5 pb-5 rounded bg-white shadow-lg border border-black/5 flex flex-col items-center select-none pointer-events-none"
+                            style={{ transform: `rotate(${it.rotation}deg)` }}
+                          >
                             <div className="w-full aspect-square overflow-hidden bg-slate-50">
                               <img src={it.image_url} alt="" className="w-full h-full object-cover" />
                             </div>
@@ -546,7 +632,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         {it.item_type === "text" && (
                           <div
                             className="max-w-[130px] p-2.5 rounded-lg shadow-md border border-white/20 select-none pointer-events-none text-left"
-                            style={{ background: it.color || PASTEL_COLORS[0] }}
+                            style={{ 
+                              background: it.color || PASTEL_COLORS[0],
+                              transform: `rotate(${it.rotation}deg)`
+                            }}
                           >
                             <p className="text-[10px] text-foreground/80 font-medium leading-tight whitespace-pre-wrap break-words">
                               {it.content}
@@ -554,7 +643,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           </div>
                         )}
 
-                        {/* Selection actions panel (Eye, Rotate, Trash) - COUNTER ROTATED TO REMAIN UPRIGHT */}
+                        {/* Selection actions panel (Eye, Rotate, Trash) - STAYS PERFECTLY UPRIGHT AND STRAIGHT */}
                         <AnimatePresence>
                           {isSelected && (
                             <motion.div
@@ -562,7 +651,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.8 }}
                               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 bg-white/95 border border-white/40 rounded-full shadow-lg p-1 z-50 pointer-events-auto"
-                              style={{ rotate: -it.rotation }}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {(it.item_type === "polaroid" || it.item_type === "picture" || (it.item_type === "sticker" && it.image_url)) && it.image_url && (
@@ -609,7 +697,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </AnimatePresence>
         </div>
 
-        {/* Customize Toolbar Area */}
+        {/* Customize Toolbar Area (Takes exactly w-full) */}
         {activePage && (
           <div className="w-full flex flex-col gap-3 rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-xl mt-4">
             <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
@@ -693,8 +781,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 content: null,
                                 image_url: st.image_url,
                                 color: null,
-                                pos_x: 35,
-                                pos_y: 35,
+                                pos_x: 30,
+                                pos_y: 30,
                                 scale: 1,
                                 rotation: 0
                               });
@@ -733,8 +821,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 content: null,
                                 image_url: st.image_url,
                                 color: null,
-                                pos_x: 35,
-                                pos_y: 35,
+                                pos_x: 30,
+                                pos_y: 30,
                                 scale: 1,
                                 rotation: 0
                               });
@@ -751,7 +839,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 </motion.div>
               )}
 
-              {/* PHOTO options + shape selector + recent polaroids drawer + preview system */}
+              {/* PHOTO options + shape selector + recent polaroids drawer + drag cropping preview system */}
               {activeTab === "photos" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -774,8 +862,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 content: null,
                                 image_url: p.image_url,
                                 color: null,
-                                pos_x: 35,
-                                pos_y: 35,
+                                pos_x: 30,
+                                pos_y: 30,
                                 scale: 1,
                                 rotation: (Math.random() - 0.5) * 8
                               });
@@ -791,52 +879,93 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   )}
 
-                  {/* Custom Photo Preview & Confirmation frame */}
+                  {/* LIVE Interactive Drag & Crop Preview */}
                   {previewUrl && (
-                    <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Outline & Frame Preview:</div>
+                    <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200 w-full">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Preview (Drag inside to position):</div>
                       
-                      {/* Live outline frame preview container */}
+                      {/* Live Crop and drag container */}
                       <div
-                        className={`flex items-center justify-center overflow-hidden border border-black/5 shadow-md ${getBorderRadiusClass(photoShape)}`}
+                        className="relative overflow-hidden cursor-move select-none flex items-center justify-center border border-black/5 shadow-md"
                         style={{
-                          width: photoShape === "rect" ? "114px" : "100px",
-                          height: "100px",
-                          ...getPictureShapeStyles(photoShape),
-                          background: photoOutline
+                          width: photoShape === "rect" ? "140px" : "140px",
+                          height: photoShape === "rect" ? "196px" : "140px",
+                          borderRadius: photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "24px" : "0px",
+                          clipPath: photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                          background: photoOutline,
+                          padding: "6px" // thickness of outline in preview
                         }}
+                        onMouseDown={(e) => handlePreviewDragStart(e.clientX, e.clientY)}
+                        onMouseMove={(e) => handlePreviewDragMove(e.clientX, e.clientY)}
+                        onMouseUp={handlePreviewDragEnd}
+                        onMouseLeave={handlePreviewDragEnd}
+                        onTouchStart={(e) => e.touches[0] && handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+                        onTouchMove={(e) => e.touches[0] && handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)}
+                        onTouchEnd={handlePreviewDragEnd}
                       >
                         <div
-                          className={`overflow-hidden ${getBorderRadiusClass(photoShape)}`}
+                          className="w-full h-full overflow-hidden pointer-events-none"
                           style={{
-                            width: photoShape === "rect" ? "110px" : "96px",
-                            height: "96px",
-                            ...getPictureShapeStyles(photoShape),
+                            borderRadius: photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "18px" : "0px",
+                            clipPath: photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined
                           }}
                         >
-                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <img
+                            id="preview-img-target"
+                            src={previewUrl}
+                            alt=""
+                            className="max-w-none origin-center"
+                            style={{
+                              width: photoShape === "rect" ? "140px" : "140px",
+                              transform: `translate(${previewOffsetX}px, ${previewOffsetY}px) scale(${previewScale})`
+                            }}
+                          />
                         </div>
                       </div>
 
-                      {/* Confirm / Cancel actions */}
-                      <div className="flex gap-2 w-full max-w-[200px] font-bold text-xs">
+                      {/* Zoom Slider */}
+                      <div className="w-full space-y-1 px-2">
+                        <div className="flex justify-between text-[9px] text-muted-foreground font-semibold">
+                          <span>Zoom scale:</span>
+                          <span>{previewScale.toFixed(1)}x</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.8"
+                          max="4"
+                          step="0.05"
+                          value={previewScale}
+                          onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
+                          className="w-full h-1 bg-foreground/15 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                      </div>
+
+                      {/* Add/Cancel buttons */}
+                      <div className="flex gap-2 w-full font-bold text-xs pt-1">
                         <button
                           onClick={() => {
                             if (selectedFile) {
-                              uploadPhoto.mutate({ file: selectedFile, shape: photoShape, outline: photoOutline });
+                              uploadBakedPhoto.mutate({ 
+                                file: selectedFile, 
+                                shape: photoShape, 
+                                outline: photoOutline,
+                                scale: previewScale,
+                                offsetX: previewOffsetX,
+                                offsetY: previewOffsetY
+                              });
                             }
                           }}
-                          disabled={uploadPhoto.isPending}
-                          className="flex-1 py-1.5 rounded-full bg-primary text-white hover:bg-primary/95 text-center active:scale-95 transition-all shadow"
+                          disabled={uploadBakedPhoto.isPending}
+                          className="flex-1 py-2 rounded-full bg-primary text-white hover:bg-primary/95 text-center active:scale-95 transition-all shadow"
                         >
-                          {uploadPhoto.isPending ? "Adding..." : "Add Picture"}
+                          {uploadBakedPhoto.isPending ? "Adding..." : "Add Picture"}
                         </button>
                         <button
                           onClick={() => {
                             setSelectedFile(null);
                             setPreviewUrl(null);
                           }}
-                          className="flex-1 py-1.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/80 text-center active:scale-95 transition-all"
+                          className="flex-1 py-2 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/80 text-center active:scale-95 transition-all"
                         >
                           Cancel
                         </button>
@@ -844,64 +973,61 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   )}
 
-                  {/* Frame & Outline selection widgets */}
-                  {!previewUrl && (
-                    <>
-                      {/* Frame Selector */}
-                      <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
-                        <div className="flex gap-1 flex-wrap">
-                          {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
-                            <button
-                              key={s}
-                              onClick={() => setPhotoShape(s)}
-                              className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
-                                photoShape === s
-                                  ? "bg-primary border-primary text-white"
-                                  : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
-                              }`}
-                            >
-                              {s.toUpperCase()}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Frame Border Color Selector */}
-                      <div className="space-y-1.5">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
-                        <div className="flex gap-1.5">
-                          {OUTLINE_COLORS.map((oc) => (
-                            <button
-                              key={oc.value}
-                              onClick={() => setPhotoOutline(oc.value)}
-                              className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
-                                photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
-                              }`}
-                              style={{ background: oc.value }}
-                              title={oc.label}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Choose File Widget */}
-                      <div className="space-y-2">
+                  {/* Frame & Outline color picking widgets (Always active for live switching preview) */}
+                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
+                    <div className="flex gap-1 flex-wrap">
+                      {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
                         <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm"
+                          key={s}
+                          onClick={() => setPhotoShape(s)}
+                          className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
+                            photoShape === s
+                              ? "bg-primary border-primary text-white"
+                              : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
+                          }`}
                         >
-                          Select Image File
+                          {s.toUpperCase()}
                         </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleFileChange}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Frame Border Color Selector */}
+                  <div className="space-y-1.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
+                    <div className="flex gap-1.5">
+                      {OUTLINE_COLORS.map((oc) => (
+                        <button
+                          key={oc.value}
+                          onClick={() => setPhotoOutline(oc.value)}
+                          className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
+                            photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                          }`}
+                          style={{ background: oc.value }}
+                          title={oc.label}
                         />
-                      </div>
-                    </>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Choose File Widget */}
+                  {!previewUrl && (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm"
+                      >
+                        Select Image File
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
                   )}
                 </motion.div>
               )}
@@ -929,8 +1055,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 content: t.body,
                                 image_url: null,
                                 color: t.color || PASTEL_COLORS[0],
-                                pos_x: 35,
-                                pos_y: 35,
+                                pos_x: 30,
+                                pos_y: 30,
                                 scale: 1,
                                 rotation: 0
                               });
@@ -981,8 +1107,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           content: noteText.trim(),
                           image_url: null,
                           color: noteColor,
-                          pos_x: 35,
-                          pos_y: 35,
+                          pos_x: 30,
+                          pos_y: 30,
                           scale: 1,
                           rotation: 0
                         });

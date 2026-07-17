@@ -5,7 +5,7 @@ import {
   isSameDay, addMonths, subMonths, isSameMonth, getDay,
 } from "date-fns";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, MapPin, Tag, X, Maximize2, Minimize2, CalendarDays, BookHeart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, MapPin, Tag, X, Maximize2, Minimize2, CalendarDays, BookHeart, Eye, EyeOff } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -553,9 +553,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
             </button>
             <button
               onClick={() => setIsTimelineOpen(!isTimelineOpen)}
-              className="p-1 rounded-full hover:bg-black/5 text-foreground/60 transition-colors text-xs font-semibold uppercase tracking-wider text-[9px]"
+              className="p-1 rounded-full hover:bg-black/5 text-foreground/60 transition-colors"
+              title={isTimelineOpen ? "Hide Timeline" : "Show Timeline"}
             >
-              {isTimelineOpen ? "Hide" : "Show"}
+              {isTimelineOpen ? <Eye size={14} /> : <EyeOff size={14} className="opacity-50" />}
             </button>
           </div>
         </div>
@@ -563,19 +564,19 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         {isTimelineOpen && renderTimeline()}
       </section>
 
-      {/* Draggable Double Floating Buttons at bottom */}
-      <div className="fixed bottom-24 right-5 left-5 z-20 flex gap-2.5 max-w-md mx-auto justify-end pointer-events-none">
+      {/* Consistent Stacked Floating Action Buttons at bottom right */}
+      <div className="fixed bottom-24 right-5 z-40 flex flex-col gap-2.5 items-end justify-end pointer-events-none">
         <button
           onClick={() => openSheet("add-event")}
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-4 py-2.5 text-xs shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
+          className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
         >
-          <CalendarDays size={13} /> Add Moment
+          <Plus size={16} /> Add Moment
         </button>
         <button
           onClick={() => openSheet("add-memory")}
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-4 py-2.5 text-xs shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
+          className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
         >
-          <BookHeart size={13} /> Add Memory
+          <Plus size={16} /> Add Memory
         </button>
       </div>
 
