@@ -463,7 +463,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-full max-w-md aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="w-full max-w-md aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
@@ -486,7 +486,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
         {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
-        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-3">
+        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 mb-3">
           <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
             {/* Arrow icon only back button */}
             <button
@@ -582,7 +582,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
               transition={{ type: "spring", damping: 20, stiffness: 130 }}
-              className="relative w-full aspect-[1/1.4] rounded-[32px] border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
+              className="relative w-full aspect-[1/1.4] rounded-[32px] border border-white/50 bg-[#fafafa] overflow-hidden"
               onClick={() => setSelectedItemId(null)}
             >
               {/* Grid notebook texture */}

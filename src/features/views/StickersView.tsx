@@ -234,7 +234,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
     <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none mx-auto max-w-md px-4 pt-6">
       
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
-      <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20">
+      <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20">
         {/* Row 1: Tabs List */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
@@ -319,7 +319,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, rotate: 2, y: -15 }}
             transition={{ type: "spring", damping: 20, stiffness: 130 }}
-            className={`relative w-full aspect-[1/1.4] rounded-[32px] border border-white/60 shadow-2xl overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
+            className={`relative w-full aspect-[1/1.4] rounded-[32px] border border-white/60 overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
             onClick={() => setSelectedStickerId(null)}
           >
             {pageStickers.length === 0 ? (
