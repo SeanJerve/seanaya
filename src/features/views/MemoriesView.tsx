@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 type AlbumPage = {
   id: string;
   page_index: number;
+  name: string | null;
 };
 
 type AlbumItem = {
@@ -37,11 +38,12 @@ const PASTEL_COLORS = [
 
 const OUTLINE_COLORS = [
   { label: "White",    value: "#ffffff" },
-  { label: "Rose",     value: "oklch(0.68 0.15 15)" },
-  { label: "Gold",     value: "oklch(0.78 0.15 85)" },
-  { label: "Mint",     value: "oklch(0.78 0.14 165)" },
-  { label: "Lavender", value: "oklch(0.72 0.13 295)" },
-  { label: "Dark",     value: "oklch(0.2 0.02 20)" }
+  { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
+  { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
+  { label: "Mint",     value: "oklch(0.94 0.06 160 / 0.85)" },
+  { label: "Lavender", value: "oklch(0.93 0.06 290 / 0.85)" },
+  { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
+  { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" }
 ];
 
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
@@ -234,9 +236,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const addPage = useMutation({
     mutationFn: async () => {
       const maxIdx = pages.reduce((max, p) => p.page_index > max ? p.page_index : max, -1);
+      const name = prompt("Enter sheet name (optional):");
       const { error } = await (supabase as any).from("album_pages").insert({
         relationship_id: relationshipId,
-        page_index: maxIdx + 1
+        page_index: maxIdx + 1,
+        name: name ? name.trim() : null
       });
       if (error) throw error;
     },
@@ -255,6 +259,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       refetchPages();
       setCurrentPageIdx(prev => Math.max(0, prev - 1));
       toast.success("Page deleted");
+    }
+  });
+
+  const renamePage = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await (supabase as any)
+        .from("album_pages")
+        .update({ name })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchPages();
+      toast.success("Page renamed!");
     }
   });
 
@@ -456,8 +474,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const renderOpenBook = () => {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
-        {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE tabs middle slot */}
-        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-5">
+        {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
+        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-3">
           <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
             <button
               onClick={() => setIsOpen(false)}
@@ -466,9 +484,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               <ArrowLeft size={13} /> Close
             </button>
 
-            {/* center horizontally scrollable page list tabs (safe from overlapping buttons) */}
-            <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 min-w-0 py-0.5">
-              <div className="flex items-center gap-1">
+            {/* center Page: 1 2 3 selector (Compact layout) */}
+            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
+              <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
                 {pages.map((p, idx) => {
                   const active = currentPageIdx === idx;
                   return (
@@ -478,13 +497,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         setCurrentPageIdx(idx);
                         setSelectedItemId(null);
                       }}
-                      className={`px-3 py-1 text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                      className={`h-6 w-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
                         active
                           ? "bg-white text-primary border-primary/20 shadow-sm"
                           : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
                       }`}
                     >
-                      Page {idx + 1}
+                      {idx + 1}
                     </button>
                   );
                 })}
@@ -522,8 +541,31 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </div>
         </div>
 
-        {/* Paper Page layout (Stretches to w-full, matching customize panel, aspect 1/1.4) */}
-        <div className="relative w-full flex flex-col items-center p-1">
+        {/* Page renaming row under pages bar */}
+        {activePage && (
+          <div className="w-full flex items-center justify-between px-2 mb-4 shrink-0">
+            <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full border border-white/25">
+              <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
+                {activePage.name || `Page ${currentPageIdx + 1}`}
+              </span>
+              <button
+                onClick={() => {
+                  const newName = prompt("Rename page:", activePage.name || `Page ${currentPageIdx + 1}`);
+                  if (newName !== null) {
+                    renamePage.mutate({ id: activePage.id, name: newName.trim() });
+                  }
+                }}
+                className="p-0.5 text-foreground/45 hover:text-foreground hover:bg-black/5 rounded transition-all"
+                title="Rename page"
+              >
+                <Pencil size={10} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paper Page layout (Stretches to w-full, matching customize panel exactly, aspect 1/1.4) */}
+        <div className="relative w-full flex flex-col items-center py-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPageIdx}
@@ -993,7 +1035,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   </div>
 
-                  {/* Frame Border Color Selector */}
+                  {/* Frame Border Color Selector - pastel choices matching choose background */}
                   <div className="space-y-1.5">
                     <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
                     <div className="flex gap-1.5">

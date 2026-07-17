@@ -310,7 +310,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       </div>
 
       {/* ── Center Sticker Sheet Container ── */}
-      <div className="relative flex-1 w-full flex items-center justify-center p-4 bg-transparent select-none min-h-[500px]">
+      <div className="relative flex-1 w-full flex items-center justify-center py-4 bg-transparent select-none min-h-[500px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={activePage?.id || "empty"}
