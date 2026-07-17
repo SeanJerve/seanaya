@@ -31,6 +31,8 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [isFullscreenTimeline, setIsFullscreenTimeline] = useState(false);
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(360);
@@ -226,6 +228,43 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     }
     return d;
   }, [points]);
+
+  const matchingDateGroups = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    
+    return groupedMemories.filter((group) => {
+      if (group.date) {
+        const formatted = format(new Date(group.date + "T00:00:00"), "MMM d, yyyy").toLowerCase();
+        if (formatted.includes(query) || group.date.toLowerCase().includes(query)) return true;
+      }
+      return group.memories.some((m) => {
+        const title = (m.title || "").toLowerCase();
+        const desc = (m.description || "").toLowerCase();
+        const cat = (m.category || "").toLowerCase();
+        const loc = (m.location || "").toLowerCase();
+        return title.includes(query) || desc.includes(query) || cat.includes(query) || loc.includes(query);
+      });
+    });
+  }, [groupedMemories, searchQuery]);
+
+  useEffect(() => {
+    if (matchingDateGroups.length === 0) return;
+    const activeMatch = matchingDateGroups[activeSearchIndex];
+    if (activeMatch) {
+      const prefix = isFullscreenTimeline ? "fullscreen-bubble-" : "bubble-";
+      const elId = `${prefix}${activeMatch.date || ""}`;
+      const el = document.getElementById(elId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-4", "ring-primary", "ring-offset-2", "scale-105", "transition-all", "duration-500");
+        const timer = setTimeout(() => {
+          el.classList.remove("ring-4", "ring-primary", "ring-offset-2", "scale-105");
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeSearchIndex, searchQuery, isFullscreenTimeline, matchingDateGroups]);
 
   const getColClass = (idx: number) => {
     const rem = idx % 4;
@@ -470,28 +509,39 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookHeart size={16} className="text-primary" />
-            <h2 className="display text-[16px] font-semibold text-foreground/80">Love Timeline</h2>
+            <h2 className="display text-[16px] font-semibold text-foreground/80">Timeline</h2>
           </div>
           <div className="flex items-center gap-2">
-            {isTimelineOpen && availableDates.length > 0 && (
-              <select
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val) {
-                    const el = document.getElementById(`bubble-${val}`);
-                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }
-                }}
-                className="rounded-full border border-white/50 bg-white/60 backdrop-blur-md px-3 py-1 text-[10px] font-semibold text-foreground/75 outline-none cursor-pointer focus:ring-1 focus:ring-primary/30"
-              >
-                <option value="">Skip to date...</option>
-                {availableDates.map((d) => (
-                  <option key={d} value={d}>
-                    {format(new Date(d + "T00:00:00"), "MMM d, yyyy")}
-                  </option>
-                ))}
-              </select>
+            {isTimelineOpen && (
+              <div className="flex items-center gap-1 border border-white/50 bg-white/60 backdrop-blur-md rounded-full px-2 py-0.5 shadow-sm max-w-[140px] md:max-w-[180px]">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setActiveSearchIndex(0);
+                  }}
+                  className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                />
+                {matchingDateGroups.length > 0 && (
+                  <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
+                    <span>{activeSearchIndex + 1}/{matchingDateGroups.length}</span>
+                    <button
+                      onClick={() => setActiveSearchIndex(i => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length)}
+                      className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                    >
+                      <ChevronLeft size={9} />
+                    </button>
+                    <button
+                      onClick={() => setActiveSearchIndex(i => (i + 1) % matchingDateGroups.length)}
+                      className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                    >
+                      <ChevronRight size={9} />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             
             <button
@@ -542,29 +592,38 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
             <div className="flex items-center justify-between border-b border-white/20 pb-3 mb-6">
               <div className="flex items-center gap-2">
-                <BookHeart size={20} className="text-primary" />
-                <h2 className="display text-xl font-bold text-foreground">Timeline full screen</h2>
+                <h2 className="display text-xl font-bold text-foreground">Timeline</h2>
               </div>
               <div className="flex items-center gap-3">
-                {availableDates.length > 0 && (
-                  <select
+                <div className="flex items-center gap-1 border border-white/50 bg-white/60 backdrop-blur-md rounded-full px-2 py-0.5 shadow-sm max-w-[140px] md:max-w-[180px]">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val) {
-                        const el = document.getElementById(`fullscreen-bubble-${val}`);
-                        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }
+                      setSearchQuery(e.target.value);
+                      setActiveSearchIndex(0);
                     }}
-                    className="rounded-full border border-white/50 bg-white/60 backdrop-blur-md px-3 py-1 text-[10px] font-semibold text-foreground/75 outline-none cursor-pointer focus:ring-1 focus:ring-primary/30"
-                  >
-                    <option value="">Skip to date...</option>
-                    {availableDates.map((d) => (
-                      <option key={d} value={d}>
-                        {format(new Date(d + "T00:00:00"), "MMM d, yyyy")}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                    className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                  />
+                  {matchingDateGroups.length > 0 && (
+                    <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
+                      <span>{activeSearchIndex + 1}/{matchingDateGroups.length}</span>
+                      <button
+                        onClick={() => setActiveSearchIndex(i => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length)}
+                        className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                      >
+                        <ChevronLeft size={9} />
+                      </button>
+                      <button
+                        onClick={() => setActiveSearchIndex(i => (i + 1) % matchingDateGroups.length)}
+                        className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                      >
+                        <ChevronRight size={9} />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsFullscreenTimeline(false)}
                   className="p-1.5 rounded-full bg-white/60 border border-white/50 text-foreground/60 hover:text-foreground transition-all shadow-sm"

@@ -338,32 +338,34 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
                 return (
                   <motion.div
-                    key={`${s.id}-${px.toFixed(2)}-${py.toFixed(2)}`}
+                    key={`${s.id}-${px.toFixed(3)}-${py.toFixed(3)}`}
                     drag
                     dragConstraints={sheetRef}
                     dragMomentum={false}
                     dragElastic={0}
-                    onDragEnd={(e, info) => {
-                      const rect = sheetRef.current?.getBoundingClientRect();
-                      if (!rect) return;
-                      
-                      let x = ((info.point.x - rect.left) / rect.width) * 100;
-                      let y = ((info.point.y - rect.top) / rect.height) * 100;
-                      
-                      x = Math.max(5, Math.min(95, x));
-                      y = Math.max(5, Math.min(95, y));
-                      
-                      updatePosition.mutate({ id: s.id, pos_x: x, pos_y: y });
+                    onDragEnd={(event) => {
+                      if (!sheetRef.current) return;
+                      const sheet = sheetRef.current.getBoundingClientRect();
+                      const el = event.target as HTMLElement;
+                      const card = el.closest(".sticker-drag-target") as HTMLElement;
+                      if (card) {
+                        const rect = card.getBoundingClientRect();
+                        let xPct = ((rect.left - sheet.left) / sheet.width) * 100;
+                        let yPct = ((rect.top - sheet.top) / sheet.height) * 100;
+                        
+                        xPct = Math.max(0, Math.min(70, xPct));
+                        yPct = Math.max(0, Math.min(80, yPct));
+                        
+                        updatePosition.mutate({ id: s.id, pos_x: xPct, pos_y: yPct });
+                      }
                     }}
                     onDragStart={() => setSelectedStickerId(null)}
                     whileHover={{ scale: 1.03 }}
                     whileDrag={{ scale: 1.03, zIndex: 100 }}
-                    className="absolute touch-none select-none"
+                    className="sticker-drag-target absolute touch-none select-none"
                     style={{
                       left: `${px}%`,
                       top: `${py}%`,
-                      x: "-50%",
-                      y: "-50%",
                       rotate: rot,
                       zIndex: isSelected ? 50 : 10,
                     }}

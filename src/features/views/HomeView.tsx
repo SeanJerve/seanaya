@@ -387,7 +387,6 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                     </div>
                   )}
                 </div>
-                <div className="absolute top-2 right-2 text-[7px] font-bold tracking-widest text-foreground/30 uppercase pointer-events-none">Recently</div>
               </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-foreground/30 p-4">

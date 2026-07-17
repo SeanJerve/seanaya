@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Sparkles, StickyNote, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -19,16 +19,12 @@ type AlbumItem = {
   item_type: string; // 'sticker' | 'polaroid' | 'picture' | 'text'
   content: string | null;
   image_url: string | null;
-  color: string | null;
+  color: string | null; // used as shape ('rect' | 'square' | 'circle' | 'heart' | 'star') for pictures, background color for text notes
   pos_x: number;
   pos_y: number;
   scale: number;
   rotation: number;
 };
-
-const STICKER_PRESETS = [
-  "💝", "💖", "💕", "🌸", "🌷", "🐱", "🐾", "✨", "🧸", "🎈", "🍫", "🍩", "💌", "🏡", "⭐", "🎉"
-];
 
 const PASTEL_COLORS = [
   "oklch(0.95 0.07 90 / 0.85)",  // Butter
@@ -45,6 +41,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [activeTab, setActiveTab] = useState<"stickers" | "photos" | "note" | "recent" | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteColor, setNoteColor] = useState(PASTEL_COLORS[0]);
+  const [photoShape, setPhotoShape] = useState<"rect" | "square" | "circle" | "heart" | "star">("rect");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
@@ -78,6 +75,19 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     }
   });
 
+  // Fetch user created stickers from stickers board
+  const { data: userStickers = [] } = useQuery({
+    queryKey: ["album-user-stickers", relationshipId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stickers")
+        .select("id,image_url")
+        .eq("relationship_id", relationshipId)
+        .order("created_at", { ascending: false });
+      return data || [];
+    }
+  });
+
   // Fetch recent bulletin board notes/photos for import
   const { data: recentNotes = [] } = useQuery({
     queryKey: ["recent-notes", relationshipId],
@@ -87,24 +97,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .select("*")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(15);
       return data || [];
     }
   });
 
-  // Fetch recent stickers for import
-  const { data: recentStickers = [] } = useQuery({
-    queryKey: ["recent-stickers", relationshipId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("stickers")
-        .select("*")
-        .eq("relationship_id", relationshipId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data || [];
-    }
-  });
+  // Filter recent polaroids from Love Wall notes list
+  const recentPolaroids = useMemo(() => {
+    return recentNotes.filter((n: any) => n.kind === "photo" && n.image_url);
+  }, [recentNotes]);
 
   // Create a default page if none exist
   useEffect(() => {
@@ -208,7 +209,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   });
 
   const uploadPhoto = useMutation({
-    mutationFn: async ({ file, isPolaroid }: { file: File; isPolaroid: boolean }) => {
+    mutationFn: async ({ file, shape }: { file: File; shape: "rect" | "square" | "circle" | "heart" | "star" }) => {
       const itemId = crypto.randomUUID();
       const { url } = await uploadImage("wall", relationshipId, file, `album/${itemId}`);
       const activePage = pages[currentPageIdx];
@@ -216,12 +217,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
       await addItem.mutateAsync({
         page_id: activePage.id,
-        item_type: isPolaroid ? "polaroid" : "picture",
+        item_type: "picture",
         content: null,
         image_url: url,
-        color: null,
-        pos_x: 50,
-        pos_y: 45,
+        color: shape, // Save shape code in color field
+        pos_x: 35,
+        pos_y: 35,
         scale: 1,
         rotation: (Math.random() - 0.5) * 8
       });
@@ -239,56 +240,110 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return items.filter(it => it.page_id === activePage.id);
   }, [items, activePage]);
 
-  // Render Closed Book Cover
+  // Render Closed Book Cover (Bigger aspect, centered vertical name stacked, no icon or header text)
   const renderClosedBook = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-6 relative min-h-[calc(100vh-140px)]">
-      {/* Dreamy watercolor blobs */}
+      {/* watercolor dream backdrops */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[10%] -left-20 w-80 h-80 rounded-full bg-pink-200/10 blur-[80px]" />
         <div className="absolute bottom-[20%] -right-20 w-96 h-96 rounded-full bg-blue-200/15 blur-[100px]" />
       </div>
 
       <motion.div
-        whileHover={{ scale: 1.02, rotate: 1 }}
+        whileHover={{ scale: 1.02, rotate: 0.5 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => setIsOpen(true)}
-        className="w-[260px] h-[340px] rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-sky border-4 border-white/60 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.5),inset_0_2px_4px_rgba(255,255,255,0.8)] flex flex-col justify-between p-8 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="w-[300px] h-[480px] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10 animate-in fade-in zoom-in-95 duration-300"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
-        <div className="absolute left-2.5 top-0 bottom-0 w-[5px] bg-black/10 rounded-full" />
+        <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
         
-        <div className="mt-8 flex flex-col items-center">
-          <BookHeart size={44} className="text-white drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)]" />
-          <h2 className="display text-3xl text-white font-bold tracking-tight mt-5 drop-shadow-sm">Our Album</h2>
-          <div className="mt-2 h-px w-24 bg-white/40" />
+        <div className="flex-1 flex flex-col items-center justify-center gap-1 mt-8">
+          <h2 className="display text-[38px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
+          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
+          <h2 className="display text-[38px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
         </div>
         
         <div className="mb-4">
-          <p className="text-xs uppercase tracking-[0.25em] text-white/90 font-bold drop-shadow-sm">Sean & Aya</p>
-          <span className="text-[10px] text-white/50 block mt-4 animate-pulse">Tap to Open</span>
+          <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-bold block animate-pulse">Tap to Open</span>
         </div>
       </motion.div>
     </div>
   );
 
+  // Helper classes for picture item shapes
+  const getPictureShapeClasses = (shape: string | null) => {
+    switch (shape) {
+      case "square":
+        return "w-24 aspect-square rounded-2xl";
+      case "circle":
+        return "w-24 aspect-square rounded-full";
+      case "heart":
+        return "w-24 aspect-square";
+      case "star":
+        return "w-24 aspect-square";
+      case "rect":
+      default:
+        return "w-28 aspect-[4/3] rounded-2xl";
+    }
+  };
+
+  const getPictureShapeStyles = (shape: string | null) => {
+    if (shape === "heart") {
+      return { clipPath: "url(#heart-mask)" };
+    }
+    if (shape === "star") {
+      return { clipPath: "url(#star-mask)" };
+    }
+    return {};
+  };
+
   // Render Open Book Layout
   const renderOpenBook = () => {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32">
-        {/* Book Header Toolbar */}
-        <div className="w-full flex items-center justify-between mb-4 px-1 text-xs">
+        {/* Book Header Toolbar with top pages switcher + icons beside each other */}
+        <div className="w-full flex items-center justify-between mb-4 px-1 text-xs gap-3">
           <button
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-1 text-foreground/60 hover:text-foreground font-semibold"
+            className="flex items-center gap-1 text-foreground/60 hover:text-foreground font-semibold shrink-0"
           >
-            <ArrowLeft size={14} /> Close Album
+            <ArrowLeft size={14} /> Close
           </button>
-          
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-muted-foreground">
-              Page {pages.length === 0 ? 0 : currentPageIdx + 1} of {pages.length}
-            </span>
-            
+
+          {/* horizontal page selection list */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 flex-1 max-w-[200px]">
+            {pages.map((p, idx) => {
+              const active = currentPageIdx === idx;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setCurrentPageIdx(idx);
+                    setSelectedItemId(null);
+                  }}
+                  className={`px-3.5 py-1 text-[10px] font-bold rounded-full border transition-all shrink-0 active:scale-95 ${
+                    active
+                      ? "bg-white text-primary border-primary/20 shadow-sm font-extrabold"
+                      : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
+                  }`}
+                >
+                  Page {idx + 1}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Plus and Trash controls side-by-side */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => addPage.mutate()}
+              className="p-1.5 rounded-full hover:bg-white/65 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
+              title="Add Page"
+            >
+              <Plus size={14} />
+            </button>
+
             {pages.length > 1 && (
               <button
                 onClick={() => {
@@ -300,10 +355,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     }
                   });
                 }}
-                className="p-1 rounded-full text-red-500 hover:bg-red-50"
-                title="Delete current page"
+                className="p-1.5 rounded-full hover:bg-red-50 text-red-500 active:scale-95 transition-all"
+                title="Delete Page"
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
               </button>
             )}
           </div>
@@ -315,9 +370,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             <motion.div
               key={currentPageIdx}
               ref={pageRef}
-              initial={{ opacity: 0, scale: 0.94, rotate: -2, y: 15 }}
+              initial={{ opacity: 0, scale: 0.94, rotate: -1.5, y: 15 }}
               animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 2, y: -15 }}
+              exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
               transition={{ type: "spring", damping: 20, stiffness: 130 }}
               className="relative w-full max-w-[320px] aspect-[1/1.3] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
               onClick={() => setSelectedItemId(null)}
@@ -329,7 +384,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
                   <BookHeart size={32} className="text-foreground/20 mb-2" />
                   <div className="text-xs font-semibold text-foreground/50">This page is empty</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Use the tools below to start decorating our space!</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Use Customize tools below to start decorating our space!</p>
                 </div>
               ) : (
                 activePageItems.map((it) => {
@@ -337,51 +392,65 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   
                   return (
                     <motion.div
-                      key={it.id}
+                      key={`${it.id}-${it.pos_x.toFixed(3)}-${it.pos_y.toFixed(3)}`}
                       drag
                       dragConstraints={pageRef}
                       dragMomentum={false}
-                      dragElastic={0.05}
-                      onDragEnd={(e, info) => {
-                        const rect = pageRef.current?.getBoundingClientRect();
-                        if (!rect) return;
-                        const x = ((info.point.x - rect.left) / rect.width) * 100;
-                        const y = ((info.point.y - rect.top) / rect.height) * 100;
-                        updateItemPosition.mutate({
-                          id: it.id,
-                          pos_x: Math.max(5, Math.min(95, x)),
-                          pos_y: Math.max(5, Math.min(95, y))
-                        });
+                      dragElastic={0}
+                      onDragEnd={(event) => {
+                        if (!pageRef.current) return;
+                        const page = pageRef.current.getBoundingClientRect();
+                        const el = event.target as HTMLElement;
+                        const card = el.closest(".album-item-drag-target") as HTMLElement;
+                        if (card) {
+                          const rect = card.getBoundingClientRect();
+                          let xPct = ((rect.left - page.left) / page.width) * 100;
+                          let yPct = ((rect.top - page.top) / page.height) * 100;
+                          
+                          // constrain bounds so items stay within book sheet
+                          xPct = Math.max(0, Math.min(68, xPct));
+                          yPct = Math.max(0, Math.min(80, yPct));
+                          updateItemPosition.mutate({
+                            id: it.id,
+                            pos_x: xPct,
+                            pos_y: yPct
+                          });
+                        }
                       }}
                       onDragStart={() => setSelectedItemId(null)}
                       whileDrag={{ scale: 1.05, zIndex: 100 }}
-                      className="absolute touch-none select-none cursor-grab active:cursor-grabbing"
+                      className="album-item-drag-target absolute touch-none select-none"
                       style={{
                         left: `${it.pos_x}%`,
                         top: `${it.pos_y}%`,
-                        x: "-50%",
-                        y: "-50%",
                         rotate: it.rotation,
                         zIndex: isSelected ? 50 : 10
                       }}
                     >
                       <div
-                        className="relative p-2"
+                        className="relative p-2 cursor-grab active:cursor-grabbing"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedItemId(isSelected ? null : it.id);
                         }}
                       >
-                        {/* 1. Emojis / Sticker Presets */}
+                        {/* 1. Stickers / Preset & User custom stickers */}
                         {it.item_type === "sticker" && (
-                          <div className="text-5xl drop-shadow-md select-none pointer-events-none">
-                            {it.content}
+                          <div className="select-none pointer-events-none drop-shadow-md">
+                            {it.image_url ? (
+                              <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
+                            ) : (
+                              <div className="text-5xl">{it.content}</div>
+                            )}
                           </div>
                         )}
 
-                        {/* 2. Plain Picture */}
+                        {/* 2. Plain Picture (cropped shapes support) */}
                         {it.item_type === "picture" && it.image_url && (
-                          <div className="w-24 h-24 rounded-lg overflow-hidden border border-white/80 shadow-md bg-white select-none pointer-events-none">
+                          <div
+                            className={`overflow-hidden border border-white/80 shadow-md bg-white select-none pointer-events-none ${getPictureShapeClasses(it.color)}`}
+                            style={getPictureShapeStyles(it.color)}
+                          >
                             <img src={it.image_url} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
@@ -417,7 +486,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1 bg-white/95 border border-white/40 rounded-full shadow-lg p-0.5 z-50 pointer-events-auto"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {(it.item_type === "polaroid" || it.item_type === "picture") && it.image_url && (
+                              {(it.item_type === "polaroid" || it.item_type === "picture" || (it.item_type === "sticker" && it.image_url)) && it.image_url && (
                                 <button
                                   onClick={() => {
                                     setLightbox(it.image_url);
@@ -446,43 +515,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </AnimatePresence>
         </div>
 
-        {/* Book Navigation controls */}
-        <div className="w-full flex items-center justify-center gap-4 mt-2 mb-6">
-          <button
-            onClick={() => {
-              setCurrentPageIdx(p => Math.max(0, p - 1));
-              setSelectedItemId(null);
-            }}
-            disabled={currentPageIdx === 0}
-            className="p-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-md shadow-sm disabled:opacity-30"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          
-          <button
-            onClick={() => addPage.mutate()}
-            className="flex items-center gap-1 rounded-full border border-white/50 bg-white/45 backdrop-blur-md px-3.5 py-1.5 text-[10px] font-semibold text-foreground/80 shadow-sm"
-          >
-            <Plus size={12} /> Add Page
-          </button>
-
-          <button
-            onClick={() => {
-              setCurrentPageIdx(p => Math.min(pages.length - 1, p + 1));
-              setSelectedItemId(null);
-            }}
-            disabled={currentPageIdx >= pages.length - 1}
-            className="p-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-md shadow-sm disabled:opacity-30"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-
-        {/* Decoration Tools Action Bar */}
+        {/* Customize Toolbar Area */}
         {activePage && (
           <div className="w-full flex flex-col gap-3 rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-xl">
             <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
-              <span>Decorating Tools</span>
+              <span>Customize</span>
               {activeTab && (
                 <button onClick={() => setActiveTab(null)} className="text-primary hover:underline lowercase font-normal">
                   close panel
@@ -490,7 +527,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               )}
             </div>
 
-            {/* Icons list */}
+            {/* Icons list (Star for decorate, Add Text note changes) */}
             <div className="flex items-center justify-between gap-1 mt-1">
               <button
                 onClick={() => setActiveTab(activeTab === "stickers" ? null : "stickers")}
@@ -498,7 +535,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   activeTab === "stickers" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
                 }`}
               >
-                <Sparkles size={14} />
+                <Star size={14} />
                 Decorate
               </button>
               <button
@@ -517,7 +554,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 }`}
               >
                 <StickyNote size={14} />
-                Add Note
+                Add Text
               </button>
               <button
                 onClick={() => setActiveTab(activeTab === "recent" ? null : "recent")}
@@ -532,7 +569,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
             {/* Dynamic tool panels */}
             <AnimatePresence mode="wait">
-              {/* STICKERS Preset panel */}
+              {/* STICKERS custom user sticker presets */}
               {activeTab === "stickers" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -540,70 +577,117 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2"
                 >
-                  <div className="grid grid-cols-8 gap-2.5 p-1 max-h-24 overflow-y-auto">
-                    {STICKER_PRESETS.map((st) => (
-                      <button
-                        key={st}
-                        onClick={() => {
-                          addItem.mutate({
-                            page_id: activePage.id,
-                            item_type: "sticker",
-                            content: st,
-                            image_url: null,
-                            color: null,
-                            pos_x: 50,
-                            pos_y: 45,
-                            scale: 1,
-                            rotation: 0
-                          });
-                        }}
-                        className="text-2xl hover:scale-110 active:scale-95 transition-transform"
-                      >
-                        {st}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-4 gap-3 p-1 max-h-40 overflow-y-auto">
+                    {userStickers.length === 0 ? (
+                      <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
+                        No stickers created on the Stickers page yet. Go create some!
+                      </div>
+                    ) : (
+                      userStickers.map((st: any) => (
+                        <button
+                          key={st.id}
+                          onClick={() => {
+                            addItem.mutate({
+                              page_id: activePage.id,
+                              item_type: "sticker",
+                              content: null,
+                              image_url: st.image_url,
+                              color: null,
+                              pos_x: 35,
+                              pos_y: 35,
+                              scale: 1,
+                              rotation: 0
+                            });
+                            toast.success("Sticker added to page!");
+                          }}
+                          className="aspect-square p-1.5 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/60 active:scale-95 transition-all overflow-hidden flex items-center justify-center shadow-sm"
+                        >
+                          <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none select-none" />
+                        </button>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}
 
-              {/* PHOTO upload options */}
+              {/* PHOTO crop options + shape selector + recent polaroids drawer */}
               {activeTab === "photos" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-3"
+                  className="pt-2 space-y-4"
                 >
-                  <div className="flex gap-2 font-semibold">
-                    <label className="flex-1 py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] cursor-pointer active:scale-95 transition-all">
+                  {/* Shape Selector */}
+                  <div className="space-y-1.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Shape:</div>
+                    <div className="flex gap-1 flex-wrap">
+                      {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setPhotoShape(s)}
+                          className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
+                            photoShape === s
+                              ? "bg-primary border-primary text-white"
+                              : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
+                          }`}
+                        >
+                          {s.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Upload Actions */}
+                  <div className="space-y-2">
+                    <label className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm">
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) uploadPhoto.mutate({ file: f, isPolaroid: false });
+                          if (f) uploadPhoto.mutate({ file: f, shape: photoShape });
                         }}
                       />
-                      Add Plain Picture
-                    </label>
-                    <label className="flex-1 py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] cursor-pointer active:scale-95 transition-all">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadPhoto.mutate({ file: f, isPolaroid: true });
-                        }}
-                      />
-                      Add Polaroid Photo
+                      Upload & Add Picture
                     </label>
                   </div>
+
+                  {/* Recent Polaroids selector */}
+                  {recentPolaroids.length > 0 && (
+                    <div className="space-y-1.5 border-t border-white/10 pt-3">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Import Polaroid from Wall:</div>
+                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                        {recentPolaroids.map((p: any) => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              addItem.mutate({
+                                page_id: activePage.id,
+                                item_type: "polaroid",
+                                content: null,
+                                image_url: p.image_url,
+                                color: null,
+                                pos_x: 35,
+                                pos_y: 35,
+                                scale: 1,
+                                rotation: (Math.random() - 0.5) * 8
+                              });
+                              toast.success("Polaroid imported!");
+                            }}
+                            className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden"
+                          >
+                            <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 
-              {/* NOTE composer panel */}
+              {/* TEXT Composer Panel */}
               {activeTab === "note" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -628,7 +712,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     <input
                       type="text"
                       maxLength={100}
-                      placeholder="Write message... (max 100 words)"
+                      placeholder="Write text note... (max 100 words)"
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
                       className="flex-1 rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all"
@@ -642,8 +726,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           content: noteText.trim(),
                           image_url: null,
                           color: noteColor,
-                          pos_x: 50,
-                          pos_y: 45,
+                          pos_x: 35,
+                          pos_y: 35,
                           scale: 1,
                           rotation: 0
                         });
@@ -652,7 +736,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       }}
                       className="rounded-2xl bg-primary text-white px-4 py-2 text-xs font-bold active:scale-95 transition-all"
                     >
-                      Pin Note
+                      Pin Text
                     </button>
                   </div>
                 </motion.div>
@@ -668,8 +752,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 >
                   <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recent Activities</div>
                   
-                  {/* Notes / Photos */}
-                  {recentNotes.length === 0 && recentStickers.length === 0 && (
+                  {recentNotes.length === 0 && (
                     <div className="text-[10px] text-muted-foreground italic p-2 text-center">No recent entries to import yet.</div>
                   )}
 
@@ -683,8 +766,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           content: note.kind === "photo" ? null : note.body,
                           image_url: note.image_url,
                           color: note.color,
-                          pos_x: 50,
-                          pos_y: 45,
+                          pos_x: 35,
+                          pos_y: 35,
                           scale: 1,
                           rotation: note.rotation || 0
                         });
@@ -695,35 +778,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       <div className="min-w-0 flex-1 truncate font-medium text-foreground/75">
                         {note.kind === "photo" ? "Polaroid photo note" : note.body}
                       </div>
-                      <span className="shrink-0 text-[8px] bg-sky/50 px-2 py-0.5 rounded-full text-foreground/60 font-semibold uppercase">Import</span>
-                    </button>
-                  ))}
-
-                  {/* Sticker board uploads */}
-                  {recentStickers.map((st: any) => (
-                    <button
-                      key={st.id}
-                      onClick={() => {
-                        addItem.mutate({
-                          page_id: activePage.id,
-                          item_type: "picture",
-                          content: null,
-                          image_url: st.image_url,
-                          color: null,
-                          pos_x: 50,
-                          pos_y: 45,
-                          scale: 1,
-                          rotation: st.rotation || 0
-                        });
-                        toast.success("Imported stickers upload!");
-                      }}
-                      className="w-full flex items-center justify-between gap-3 p-2 bg-white/40 hover:bg-white/60 border border-white/10 rounded-xl text-left text-xs transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <img src={st.image_url} alt="" className="h-6 w-6 object-contain rounded" />
-                        <span className="truncate font-medium text-foreground/75">Stickers board upload</span>
-                      </div>
-                      <span className="shrink-0 text-[8px] bg-sky/50 px-2 py-0.5 rounded-full text-foreground/60 font-semibold uppercase">Import</span>
+                      <span className="shrink-0 text-[8px] bg-sky/50 px-2 py-0.5 rounded-full text-foreground/60 font-semibold uppercase font-extrabold">Import</span>
                     </button>
                   ))}
                 </motion.div>
@@ -739,6 +794,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     <div className="min-h-screen pb-32 relative select-none overflow-x-hidden">
       {!isOpen ? renderClosedBook() : renderOpenBook()}
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+
+      {/* SVG Masks for heart/star crop picture masks */}
+      <svg className="absolute w-0 h-0 pointer-events-none">
+        <defs>
+          <clipPath id="heart-mask" clipPathUnits="objectBoundingBox">
+            <path d="M 0.5 0.9 C 0.05 0.6, 0 0.45, 0 0.3 C 0 0.15, 0.1 0, 0.25 0 C 0.35 0, 0.45 0.1, 0.5 0.2 C 0.55 0.1, 0.65 0, 0.75 0 C 0.9 0, 1 0.15, 1 0.3 C 1 0.45, 0.95 0.6, 0.5 0.9 Z" />
+          </clipPath>
+          <clipPath id="star-mask" clipPathUnits="objectBoundingBox">
+            <path d="M 0.5 0 L 0.65 0.35 L 1 0.35 L 0.7 0.6 L 0.85 1 L 0.5 0.75 L 0.15 1 L 0.3 0.6 L 0 0.35 L 0.35 0.35 Z" />
+          </clipPath>
+        </defs>
+      </svg>
     </div>
   );
 }
