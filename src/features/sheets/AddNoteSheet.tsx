@@ -89,7 +89,9 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
         ) : (
           <DropZone onFile={(f) => { 
             setFile(f); 
-            setPreview(URL.createObjectURL(f)); 
+            const reader = new FileReader();
+            reader.onload = () => setPreview(reader.result as string);
+            reader.readAsDataURL(f);
             setForm((prev) => ({ ...prev, body: prev.body.slice(0, 20) }));
           }}
             className="flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground">

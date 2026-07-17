@@ -13,8 +13,12 @@ export function DropZone({ onFile, accept = "image/*", className = "", children,
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div
-      onClick={() => !disabled && inputRef.current?.click()}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        if (!disabled) inputRef.current?.click();
+      }}
       onDragOver={(e) => { e.preventDefault(); if (!disabled) setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
@@ -23,8 +27,7 @@ export function DropZone({ onFile, accept = "image/*", className = "", children,
         const f = e.dataTransfer.files?.[0];
         if (f) onFile(f);
       }}
-      className={`${className} ${over ? "ring-2 ring-primary/50" : ""} transition cursor-pointer`}
-      role="button"
+      className={`${className} ${over ? "ring-2 ring-primary/50" : ""} transition cursor-pointer w-full text-left block`}
       aria-label="Drop or choose an image"
     >
       <input
@@ -35,6 +38,6 @@ export function DropZone({ onFile, accept = "image/*", className = "", children,
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ""; }}
       />
       {children}
-    </div>
+    </button>
   );
 }

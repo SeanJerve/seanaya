@@ -365,9 +365,9 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                       <span className="text-[9px] font-bold text-foreground/60">{recentAction.partnerName.slice(0, 1).toUpperCase()}</span>
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[9px] text-foreground/80 font-bold truncate leading-none">{recentAction.partnerName}</div>
-                    <div className="text-[8px] text-muted-foreground/90 truncate mt-0.5 leading-none">{recentAction.text}</div>
+                  <div className="min-w-0 flex-1 truncate text-[9px] leading-tight">
+                    <span className="text-foreground/80 font-bold mr-1">{recentAction.partnerName}</span>
+                    <span className="text-muted-foreground/90 text-[8px]">{recentAction.text}</span>
                   </div>
                 </div>
 
@@ -451,7 +451,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               <BookHeart size={11} /> Recent memories
             </div>
-            <button onClick={() => setTab("memories")} className="text-[11px] text-primary">See all</button>
+            <button onClick={() => setTab("calendar")} className="text-[11px] text-primary">See all</button>
           </div>
           {stats?.recent.length ? (
             <ul className="mt-2 space-y-1.5">
