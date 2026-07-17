@@ -87,7 +87,7 @@ const letterVariants = {
 function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const BAR_COUNT = 24;
+  const BAR_COUNT = 15;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,7 +106,9 @@ function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
       const H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      const step = Math.floor(bufferLength / BAR_COUNT);
+      // Focus only on the voice-frequency bands (lower 40% of the spectrum) to keep all bars alive
+      const activeBins = Math.floor(bufferLength * 0.4);
+      const step = Math.max(1, Math.floor(activeBins / BAR_COUNT));
       const barW = 4; // Spotify-style round pill width
       const spacing = 3;
       const totalWidth = BAR_COUNT * (barW + spacing) - spacing;
