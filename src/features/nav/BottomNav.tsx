@@ -8,8 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
   { key: "home",     icon: <Home size={22} strokeWidth={1.6} /> },
-  { key: "calendar", icon: <Calendar size={22} strokeWidth={1.6} />, dotKinds: ["event"] },
-  { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["memory"] },
+  { key: "calendar", icon: <Calendar size={22} strokeWidth={1.6} />, dotKinds: ["event", "memory"] },
+  { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["album_item"] },
   { key: "wall",     icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
   { key: "stickers", icon: <Star size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
   { key: "pet",      icon: <Cat size={22} strokeWidth={1.6} />, dotKinds: ["pet"] },
@@ -22,23 +22,23 @@ const SPEECH_MESSAGES: Record<string, string[]> = {
     "Mrow! You two are so sweet together!",
   ],
   calendar: [
-    "Any sweet dates coming up?",
-    "Let's look at what we're doing next!",
-    "Special moments ahead!",
+    "Let's look at our memories calendar & timeline!",
+    "All our happy milestones and moments together!",
+    "Our love timeline is so beautiful!",
   ],
   memories: [
-    "Look at all our happy memories together!",
-    "Our love timeline is so beautiful!",
-    "Let's keep more memories forever!",
+    "Let's flip through our photo album!",
+    "Decorate our pages with stickers and polaroids!",
+    "Our love album is a book of us!",
   ],
   wall: [
-    "Leave a sweet note on the board!",
+    "Leave a sweet note on our Love Wall!",
     "Cute polaroids make me purr.",
     "I love reading your soft words.",
   ],
   stickers: [
-    "Your sticker book is so cute!",
-    "Let's make more custom stickers!",
+    "Your sticker sheet is so cute!",
+    "Let's add more custom stickers!",
     "Mocha loves these outlines!",
   ],
   pet: [

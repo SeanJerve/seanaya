@@ -58,6 +58,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
   const { openSheet, confirm, setActiveStickerPageId, activeStickerPageId } = useAppStore();
   const boardRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
@@ -308,113 +309,122 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         )}
       </div>
 
-      {/* ── Draggable Board Pad Area ── */}
-      <div
-        ref={boardRef}
-        onClick={() => setSelectedStickerId(null)}
-        className={`flex-1 relative w-full overflow-hidden select-none cursor-default transition-colors duration-500 min-h-[480px] pb-32 ${activeBg.bgClass}`}
-        onDragOver={(e) => e.preventDefault()}
-      >
-        {pageStickers.length === 0 ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
-            <div className="text-sm font-medium text-foreground/60">This page is empty.</div>
-            <p className="mt-1 text-xs text-muted-foreground max-w-xs">
-              Click the float button below to create and place a sticker!
-            </p>
-          </div>
-        ) : (
-          pageStickers.map((s) => {
-            const px = s.pos_x ?? 50;
-            const py = s.pos_y ?? 40;
-            const rot = s.rotation ?? 0;
-            const isSelected = selectedStickerId === s.id;
+      {/* ── Center Sticker Sheet Container ── */}
+      <div className="relative flex-1 w-full flex items-center justify-center p-4 bg-transparent select-none min-h-[500px] pb-32">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePage?.id || "empty"}
+            ref={sheetRef}
+            initial={{ opacity: 0, scale: 0.94, rotate: -2, y: 15 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, rotate: 2, y: -15 }}
+            transition={{ type: "spring", damping: 20, stiffness: 130 }}
+            className={`relative w-full max-w-[320px] aspect-[3/4.2] rounded-3xl border border-white/60 shadow-2xl overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
+            onClick={() => setSelectedStickerId(null)}
+          >
+            {pageStickers.length === 0 ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none">
+                <div className="text-sm font-medium text-foreground/60">This page is empty.</div>
+                <p className="mt-1 text-xs text-muted-foreground max-w-xs">
+                  Click the float button below to create and place a sticker!
+                </p>
+              </div>
+            ) : (
+              pageStickers.map((s) => {
+                const px = s.pos_x ?? 50;
+                const py = s.pos_y ?? 40;
+                const rot = s.rotation ?? 0;
+                const isSelected = selectedStickerId === s.id;
 
-            return (
-              <motion.div
-                key={`${s.id}-${px.toFixed(2)}-${py.toFixed(2)}`}
-                drag
-                dragMomentum={false}
-                dragElastic={0}
-                onDragEnd={(e, info) => {
-                  const rect = boardRef.current?.getBoundingClientRect();
-                  if (!rect) return;
-                  
-                  let x = ((info.point.x - rect.left) / rect.width) * 100;
-                  let y = ((info.point.y - rect.top) / rect.height) * 100;
-                  
-                  x = Math.max(5, Math.min(95, x));
-                  y = Math.max(5, Math.min(85, y));
-                  
-                  updatePosition.mutate({ id: s.id, pos_x: x, pos_y: y });
-                }}
-                onDragStart={() => setSelectedStickerId(null)}
-                whileHover={{ scale: 1.03 }}
-                whileDrag={{ scale: 1.03, zIndex: 100 }}
-                className="absolute touch-none select-none"
-                style={{
-                  left: `${px}%`,
-                  top: `${py}%`,
-                  x: "-50%",
-                  y: "-50%",
-                  rotate: rot,
-                  zIndex: isSelected ? 50 : 10,
-                }}
-              >
-                <div 
-                  className="relative p-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedStickerId(isSelected ? null : s.id);
-                  }}
-                >
-                  {/* Sticker drawing */}
-                  <img
-                    src={s.image_url}
-                    alt="Sticker"
-                    className="h-24 w-24 object-contain drop-shadow-[0_5px_8px_rgba(0,0,0,0.18)] select-none pointer-events-none"
-                  />
+                return (
+                  <motion.div
+                    key={`${s.id}-${px.toFixed(2)}-${py.toFixed(2)}`}
+                    drag
+                    dragConstraints={sheetRef}
+                    dragMomentum={false}
+                    dragElastic={0}
+                    onDragEnd={(e, info) => {
+                      const rect = sheetRef.current?.getBoundingClientRect();
+                      if (!rect) return;
+                      
+                      let x = ((info.point.x - rect.left) / rect.width) * 100;
+                      let y = ((info.point.y - rect.top) / rect.height) * 100;
+                      
+                      x = Math.max(5, Math.min(95, x));
+                      y = Math.max(5, Math.min(95, y));
+                      
+                      updatePosition.mutate({ id: s.id, pos_x: x, pos_y: y });
+                    }}
+                    onDragStart={() => setSelectedStickerId(null)}
+                    whileHover={{ scale: 1.03 }}
+                    whileDrag={{ scale: 1.03, zIndex: 100 }}
+                    className="absolute touch-none select-none"
+                    style={{
+                      left: `${px}%`,
+                      top: `${py}%`,
+                      x: "-50%",
+                      y: "-50%",
+                      rotate: rot,
+                      zIndex: isSelected ? 50 : 10,
+                    }}
+                  >
+                    <div 
+                      className="relative p-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedStickerId(isSelected ? null : s.id);
+                      }}
+                    >
+                      {/* Sticker drawing */}
+                      <img
+                        src={s.image_url}
+                        alt="Sticker"
+                        className="h-24 w-24 object-contain drop-shadow-[0_5px_8px_rgba(0,0,0,0.18)] select-none pointer-events-none"
+                      />
 
-                  {/* ── Selection Quick Actions Overlay (Tap Menu) ── */}
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/80 backdrop-blur-md p-1 shadow-lg z-50 pointer-events-auto"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => {
-                            setLightbox(s.image_url);
-                            setSelectedStickerId(null);
-                          }}
-                          className="p-1.5 rounded-full hover:bg-white text-foreground/75 hover:text-foreground transition-all"
-                          title="View large"
-                        >
-                          <Eye size={12} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            confirm({
-                              title: "Delete sticker?",
-                              message: "Are you sure you want to permanently remove this sticker from your pad?",
-                              onConfirm: () => deleteSticker.mutate(s),
-                            });
-                          }}
-                          className="p-1.5 rounded-full hover:bg-red-500 hover:text-white text-foreground/75 transition-all"
-                          title="Delete sticker"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            );
-          })
-        )}
+                      {/* ── Selection Quick Actions Overlay (Tap Menu) ── */}
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/80 backdrop-blur-md p-1 shadow-lg z-50 pointer-events-auto"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                setLightbox(s.image_url);
+                                setSelectedStickerId(null);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-white text-foreground/75 hover:text-foreground transition-all"
+                              title="View large"
+                            >
+                              <Eye size={12} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                confirm({
+                                  title: "Delete sticker?",
+                                  message: "Are you sure you want to permanently remove this sticker from your pad?",
+                                  onConfirm: () => deleteSticker.mutate(s),
+                                });
+                              }}
+                              className="p-1.5 rounded-full hover:bg-red-500 hover:text-white text-foreground/75 transition-all"
+                              title="Delete sticker"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* ── Floating Add Sticker Button ── */}

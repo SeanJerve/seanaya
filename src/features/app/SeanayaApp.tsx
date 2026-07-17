@@ -109,9 +109,9 @@ function Inner() {
 
   const headerTitle = ({ 
     home: "Home", 
-    calendar: "Calendar", 
-    memories: "Memories", 
-    wall: "Wall", 
+    calendar: "Memories", 
+    memories: "Album", 
+    wall: "Love Wall", 
     stickers: "Stickers", 
     pet: "Pet Room" 
   } as const)[tab];

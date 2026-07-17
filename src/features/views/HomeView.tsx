@@ -229,9 +229,48 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     },
   });
 
-  const start = anniversary ? new Date(anniversary) : null;
-  const days = start ? differenceInDays(new Date(), start) : null;
+  const start = anniversary ? new Date(anniversary + "T00:00:00") : null;
   const months = start ? (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) : null;
+
+  const [timeTogether, setTimeTogether] = useState<{
+    years: number;
+    days: number;
+    hours: number;
+    mins: number;
+    secs: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!start) return;
+    
+    const update = () => {
+      const now = new Date();
+      let years = now.getFullYear() - start.getFullYear();
+      let m = now.getMonth() - start.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < start.getDate())) {
+        years--;
+      }
+      
+      const lastAnniv = new Date(start);
+      lastAnniv.setFullYear(start.getFullYear() + years);
+      
+      const diffMs = now.getTime() - lastAnniv.getTime();
+      const diffSecs = Math.floor(diffMs / 1000);
+      const diffMins = Math.floor(diffSecs / 60);
+      const diffHours = Math.floor(diffMins / 60);
+      
+      const days = Math.floor(diffHours / 24);
+      const hours = diffHours % 24;
+      const mins = diffMins % 60;
+      const secs = diffSecs % 60;
+      
+      setTimeTogether({ years, days, hours, mins, secs });
+    };
+    
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [anniversary]);
 
   const gridDays = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
   const leading = getDay(startOfMonth(cursor));
@@ -270,17 +309,21 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             title="Hold to see space guide"
           >
             <div>
-              <div className="display truncate text-2xl leading-tight">Hi, {name}.</div>
+              <div className="display truncate text-2xl leading-tight font-semibold">Hi, {name}.</div>
               <p className="text-[10px] text-muted-foreground/80 mt-1 leading-normal italic font-medium max-w-full overflow-hidden text-ellipsis line-clamp-2">
                 {promptText}
               </p>
+              
+              {timeTogether && (
+                <div className="mt-3.5 space-y-0.5">
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">We have been together for:</div>
+                  <div className="display text-[15px] font-bold text-primary leading-tight">
+                    {timeTogether.years > 0 ? `${timeTogether.years}y ` : ""}
+                    {`${timeTogether.days}d ${timeTogether.hours}h ${timeTogether.mins}m ${timeTogether.secs}s`}
+                  </div>
+                </div>
+              )}
             </div>
-            {days !== null && (
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="display text-3xl leading-none font-bold">{days}</span>
-                <span className="text-[9px] uppercase tracking-wider text-muted-foreground">days together</span>
-              </div>
-            )}
           </div>
 
           {/* Right: Recently activity feed */}
@@ -344,7 +387,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                     </div>
                   )}
                 </div>
-                <div className="absolute bottom-1 right-2 text-[7px] font-bold tracking-widest text-foreground/30 uppercase pointer-events-none">Recently</div>
+                <div className="absolute top-2 right-2 text-[7px] font-bold tracking-widest text-foreground/30 uppercase pointer-events-none">Recently</div>
               </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-foreground/30 p-4">
@@ -420,13 +463,6 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
               <Plus size={12} /> Capture your first memory
             </button>
           )}
-        </div>
-
-        {/* Quiet counters */}
-        <div className="grid grid-cols-3 gap-2 pt-1">
-          <MiniStat icon={<BookHeart size={11} />} label="Memories" value={stats?.memories ?? 0} />
-          <MiniStat icon={<MapPin size={11} />}    label="Trips"    value={stats?.trips ?? 0} />
-          <MiniStat icon={<Heart size={11} />}     label="Hugs"     value={stats?.hugs ?? 0} />
         </div>
       </section>
 

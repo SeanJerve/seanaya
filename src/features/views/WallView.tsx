@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Palette, Trash2, Eye, X } from "lucide-react";
+import { Plus, Palette, Trash2, Eye, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
@@ -196,7 +196,6 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   return (
     <div
       className="min-h-screen pb-32 relative overflow-x-hidden select-none"
-      style={{ background: "oklch(0.88 0.04 70 / 0.3)" }}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
@@ -223,35 +222,47 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       )}
 
       <div className="relative mx-auto max-w-md px-4 pt-6 flex flex-col">
-        {/* Board header */}
-        <div className="mb-4 flex items-center justify-between px-1">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-foreground/50">Bulletin Board</div>
-            <div className="display text-xl text-foreground/80">Our little wall</div>
-          </div>
-          <div className="text-[11px] text-muted-foreground">{filteredNotes.length} items</div>
-        </div>
+        {/* Board header with Chevron Month Switcher */}
+        {(() => {
+          const idx = availableMonths.indexOf(selectedMonth);
+          const canPrev = idx < availableMonths.length - 1;
+          const canNext = idx > 0;
+          const date = new Date(selectedMonth + "-02T00:00:00");
+          const monthLabel = format(date, "MMMM yyyy");
 
-        {/* Board Month Selector */}
-        <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none px-1">
-          {availableMonths.map((m) => {
-            const date = new Date(m + "-02T00:00:00");
-            const label = format(date, "MMM yyyy");
-            const active = selectedMonth === m;
-            return (
-              <button
-                key={m}
-                onClick={() => setSelectedMonth(m)}
-                className={`shrink-0 rounded-full px-3.5 py-1 text-xs transition-all border
-                  ${active 
-                    ? "bg-foreground/15 border-foreground/30 font-semibold text-foreground shadow-sm" 
-                    : "bg-white/40 border-white/20 text-muted-foreground hover:bg-white/60"}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <div className="mb-6 flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={!canPrev}
+                  onClick={() => setSelectedMonth(availableMonths[idx + 1])}
+                  className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
+                    canPrev ? "text-foreground hover:bg-white/60 cursor-pointer" : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
+                  }`}
+                  title="Previous month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <h1 className="display text-3xl font-semibold text-foreground/90 capitalize leading-none pt-1">
+                  {monthLabel}
+                </h1>
+                <button
+                  type="button"
+                  disabled={!canNext}
+                  onClick={() => setSelectedMonth(availableMonths[idx - 1])}
+                  className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
+                    canNext ? "text-foreground hover:bg-white/60 cursor-pointer" : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
+                  }`}
+                  title="Next month"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              <div className="text-[11px] font-semibold text-muted-foreground">{filteredNotes.length} items</div>
+            </div>
+          );
+        })()}
 
         {nothing ? (
           <div
