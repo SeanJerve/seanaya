@@ -107,25 +107,33 @@ function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
       ctx.clearRect(0, 0, W, H);
 
       const step = Math.floor(bufferLength / BAR_COUNT);
-      const barW = Math.floor(W / BAR_COUNT) - 2;
+      const barW = 4; // Spotify-style round pill width
+      const spacing = 3;
+      const totalWidth = BAR_COUNT * (barW + spacing) - spacing;
+      const startX = (W - totalWidth) / 2; // Center the waveform horizontally
+      const centerY = H / 2;
 
       for (let i = 0; i < BAR_COUNT; i++) {
         // Average a small band of frequency bins per bar
         let sum = 0;
         for (let j = 0; j < step; j++) sum += dataArray[i * step + j];
         const avg = sum / step;
-        const barH = Math.max(3, (avg / 255) * H);
 
-        const x = i * (barW + 2);
-        const y = H - barH;
+        // Symmetrical audio capsule height (min 4px so it outlines nicely when silent)
+        const barH = Math.max(4, (avg / 255) * H * 0.85);
 
-        // Gradient: bottom primary, top white glow
-        const grad = ctx.createLinearGradient(x, H, x, y);
-        grad.addColorStop(0, "rgba(14,165,233,0.9)");
-        grad.addColorStop(1, "rgba(255,255,255,0.95)");
+        const x = startX + i * (barW + spacing);
+        const y = centerY - barH / 2;
+
+        // Gradient: bottom primary blue, top white glow
+        const grad = ctx.createLinearGradient(x, y + barH, x, y);
+        grad.addColorStop(0, "rgba(14,165,233,0.95)"); // Primary blue
+        grad.addColorStop(1, "rgba(255,255,255,0.95)"); // White glow
+
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(x, y, barW, barH, 2);
+        // Symmetrical rounded caps (capsule shape)
+        ctx.roundRect(x, y, barW, barH, barW / 2);
         ctx.fill();
       }
     };
@@ -483,8 +491,16 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         console.error("Audio initialization error:", e);
       }
     } else {
-      // If already interacted, tapping anywhere else continues to Page 2!
-      setStage("partner-name-input");
+      // If already interacted:
+      // If voice message is playing, tap to pause/stop it and show controls (Listen Again & Download VM)
+      if (isVmPlaying && voiceMessageRef.current) {
+        voiceMessageRef.current.pause();
+        setIsVmPlaying(false);
+        setHasVmPlayed(true);
+      } else {
+        // If voice message is finished or already paused, tapping anywhere continues to the name input page
+        setStage("partner-name-input");
+      }
     }
   };
 
