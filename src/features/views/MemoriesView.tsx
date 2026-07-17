@@ -19,7 +19,7 @@ type AlbumItem = {
   item_type: string; // 'sticker' | 'polaroid' | 'picture' | 'text'
   content: string | null;
   image_url: string | null;
-  color: string | null; // used as "shape:outlineColor" for pictures, background color for text notes
+  color: string | null; // used as "shape:outlineColor" for pictures, background color for text text
   pos_x: number;
   pos_y: number;
   scale: number;
@@ -54,8 +54,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [photoOutline, setPhotoOutline] = useState("#ffffff");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  
+  // Custom Photo preview states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const pageRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const { confirm } = useAppStore();
 
@@ -91,7 +96,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("stickers")
-        .select("id,image_url")
+        .select("id,image_url,created_at")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false });
       return data || [];
@@ -107,19 +112,29 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .select("*")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(30);
       return data || [];
     }
   });
 
-  // Filter recent polaroids and recent texts from Love Wall notes list
+  // Filter 24-hours threshold helper
+  const oneDayAgo = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000), []);
+
   const recentPolaroids = useMemo(() => {
-    return recentNotes.filter((n: any) => n.kind === "photo" && n.image_url);
-  }, [recentNotes]);
+    return recentNotes.filter((n: any) => n.kind === "photo" && n.image_url && new Date(n.created_at) > oneDayAgo);
+  }, [recentNotes, oneDayAgo]);
 
   const recentTexts = useMemo(() => {
-    return recentNotes.filter((n: any) => n.kind === "note" && n.body && n.body !== "(photo)");
-  }, [recentNotes]);
+    return recentNotes.filter((n: any) => n.kind === "note" && n.body && n.body !== "(photo)" && new Date(n.created_at) > oneDayAgo);
+  }, [recentNotes, oneDayAgo]);
+
+  const recentStickers = useMemo(() => {
+    return userStickers.filter((st: any) => new Date(st.created_at) > oneDayAgo);
+  }, [userStickers, oneDayAgo]);
+
+  const olderStickers = useMemo(() => {
+    return userStickers.filter((st: any) => new Date(st.created_at) <= oneDayAgo);
+  }, [userStickers, oneDayAgo]);
 
   // Create a default page if none exist
   useEffect(() => {
@@ -149,6 +164,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Clean preview URLs
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setSelectedFile(f);
+      const url = URL.createObjectURL(f);
+      setPreviewUrl(url);
+    }
+  };
 
   // Mutations
   const addPage = useMutation({
@@ -256,7 +287,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         item_type: "picture",
         content: null,
         image_url: url,
-        color: `${shape}:${outline}`, // Save shape and outline color separated by colon
+        color: `${shape}:${outline}`,
         pos_x: 35,
         pos_y: 35,
         scale: 1,
@@ -265,6 +296,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     },
     onSuccess: () => {
       toast.success("Photo added to page!");
+      setSelectedFile(null);
+      setPreviewUrl(null);
       setActiveTab(null);
     },
     onError: (e: any) => toast.error(e?.message || "Failed to upload photo")
@@ -276,9 +309,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return items.filter(it => it.page_id === activePage.id);
   }, [items, activePage]);
 
-  // Render Closed Book Cover (Bigger aspect, fits full width of navbar, no scroll, stacked name letters)
+  // Render Closed Book Cover (Unscrollable, matches exact aspect of opened page w-[340px] h-[476px])
   const renderClosedBook = () => (
-    <div className="w-full h-[calc(100vh-140px)] overflow-hidden flex flex-col items-center justify-center p-4 bg-transparent relative z-10">
+    <div className="w-full h-[calc(100vh-140px)] overflow-hidden flex items-center justify-center p-4 bg-transparent relative z-10">
       {/* watercolor dream backdrops */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[10%] -left-20 w-80 h-80 rounded-full bg-pink-200/10 blur-[80px]" />
@@ -289,15 +322,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-full max-w-[340px] h-[520px] rounded-[36px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="w-full max-w-[340px] h-[476px] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
         
         <div className="flex-1 flex flex-col items-center justify-center gap-1 mt-8">
-          <h2 className="display text-[44px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
-          <span className="text-3xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
-          <h2 className="display text-[44px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
+          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
+          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
+          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
         </div>
         
         <div className="mb-4">
@@ -324,13 +357,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return "";
   };
 
-  // Render Open Book Layout
+  // Render Open Book Layout (Scrollable container, pages size max-w-[340px] aspect-[1/1.4] matching cover)
   const renderOpenBook = () => {
     return (
-      <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full">
-        {/* Floating Page navigation sub-header under main app header */}
+      <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
+        {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE tabs middle slot */}
         <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-5">
-          <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
             <button
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-1 text-[11px] text-foreground/60 hover:text-foreground font-bold shrink-0"
@@ -338,30 +371,32 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               <ArrowLeft size={13} /> Close
             </button>
 
-            {/* horizontal page list */}
-            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 flex-1 max-w-[190px]">
-              {pages.map((p, idx) => {
-                const active = currentPageIdx === idx;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setCurrentPageIdx(idx);
-                      setSelectedItemId(null);
-                    }}
-                    className={`px-3 py-1.5 text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
-                      active
-                        ? "bg-white text-primary border-primary/20 shadow-sm"
-                        : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
-                    }`}
-                  >
-                    Page {idx + 1}
-                  </button>
-                );
-              })}
+            {/* center horizontally scrollable page list tabs (safe from overlapping buttons) */}
+            <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 min-w-0 py-0.5">
+              <div className="flex items-center gap-1">
+                {pages.map((p, idx) => {
+                  const active = currentPageIdx === idx;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setCurrentPageIdx(idx);
+                        setSelectedItemId(null);
+                      }}
+                      className={`px-3 py-1 text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                        active
+                          ? "bg-white text-primary border-primary/20 shadow-sm"
+                          : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
+                      }`}
+                    >
+                      Page {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Plus and Trash controls side-by-side */}
+            {/* Plus and Trash controls side-by-side on the right */}
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => addPage.mutate()}
@@ -392,7 +427,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </div>
         </div>
 
-        {/* Dynamic Paper Page layout (Full width, matching customize panel width) */}
+        {/* Dynamic Paper Page layout (Full width w-[340px] aspect-[1/1.4] matching cover page dimensions exactly) */}
         <div className="relative w-full flex flex-col items-center p-1">
           <AnimatePresence mode="wait">
             <motion.div
@@ -402,7 +437,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
               transition={{ type: "spring", damping: 20, stiffness: 130 }}
-              className="relative w-full aspect-[1/1.25] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-[340px] aspect-[1/1.4] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
               onClick={() => setSelectedItemId(null)}
             >
               {/* Grid notebook texture */}
@@ -463,7 +498,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           setSelectedItemId(isSelected ? null : it.id);
                         }}
                       >
-                        {/* 1. Stickers / Preset & User custom stickers */}
+                        {/* 1. Stickers / User custom stickers */}
                         {it.item_type === "sticker" && (
                           <div className="select-none pointer-events-none drop-shadow-md">
                             {it.image_url ? (
@@ -519,7 +554,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           </div>
                         )}
 
-                        {/* Selection actions panel (Eye, Rotate, Trash) */}
+                        {/* Selection actions panel (Eye, Rotate, Trash) - COUNTER ROTATED TO REMAIN UPRIGHT */}
                         <AnimatePresence>
                           {isSelected && (
                             <motion.div
@@ -527,6 +562,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.8 }}
                               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 bg-white/95 border border-white/40 rounded-full shadow-lg p-1 z-50 pointer-events-auto"
+                              style={{ rotate: -it.rotation }}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {(it.item_type === "polaroid" || it.item_type === "picture" || (it.item_type === "sticker" && it.image_url)) && it.image_url && (
@@ -571,42 +607,19 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               )}
             </motion.div>
           </AnimatePresence>
-
-          {/* Page Counter Navigation (glass layout at bottom right) */}
-          <div className="w-full flex justify-end mt-2 mb-4 px-1">
-            <div className="flex items-center gap-1 bg-white/40 border border-white/50 backdrop-blur-md rounded-full px-2 py-0.5 text-[10px] font-bold text-foreground/80 shadow-sm shrink-0 select-none">
-              <button
-                onClick={() => {
-                  setCurrentPageIdx(p => Math.max(0, p - 1));
-                  setSelectedItemId(null);
-                }}
-                disabled={currentPageIdx === 0}
-                className="p-1 hover:bg-black/5 rounded-full disabled:opacity-30"
-              >
-                <ChevronLeft size={10} />
-              </button>
-              <span className="px-1.5">page {currentPageIdx + 1}</span>
-              <button
-                onClick={() => {
-                  setCurrentPageIdx(p => Math.min(pages.length - 1, p + 1));
-                  setSelectedItemId(null);
-                }}
-                disabled={currentPageIdx >= pages.length - 1}
-                className="p-1 hover:bg-black/5 rounded-full disabled:opacity-30"
-              >
-                <ChevronRight size={10} />
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Customize Toolbar Area */}
         {activePage && (
-          <div className="w-full flex flex-col gap-3 rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-xl">
+          <div className="w-full flex flex-col gap-3 rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-xl mt-4">
             <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
               <span>Customize</span>
               {activeTab && (
-                <button onClick={() => setActiveTab(null)} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors">
+                <button onClick={() => {
+                  setActiveTab(null);
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors">
                   <X size={12} />
                 </button>
               )}
@@ -615,7 +628,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             {/* Icons list (Star for decorate, Add Text note changes) */}
             <div className="flex items-center justify-between gap-1.5 mt-1">
               <button
-                onClick={() => setActiveTab(activeTab === "stickers" ? null : "stickers")}
+                onClick={() => {
+                  setActiveTab(activeTab === "stickers" ? null : "stickers");
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
                   activeTab === "stickers" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
                 }`}
@@ -624,7 +641,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 Decorate
               </button>
               <button
-                onClick={() => setActiveTab(activeTab === "photos" ? null : "photos")}
+                onClick={() => {
+                  setActiveTab(activeTab === "photos" ? null : "photos");
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
                   activeTab === "photos" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
                 }`}
@@ -633,7 +654,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 Add Photo
               </button>
               <button
-                onClick={() => setActiveTab(activeTab === "note" ? null : "note")}
+                onClick={() => {
+                  setActiveTab(activeTab === "note" ? null : "note");
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
                   activeTab === "note" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
                 }`}
@@ -643,9 +668,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               </button>
             </div>
 
-            {/* Dynamic tool panels (recently added items displayed inside at the first section) */}
+            {/* Dynamic tool panels */}
             <AnimatePresence mode="wait">
-              {/* DECORATE Tab */}
+              {/* DECORATE Tab - USER OWN STICKERS ONLY */}
               {activeTab === "stickers" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -653,12 +678,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-3"
                 >
-                  {/* Recently Pinned custom user stickers */}
-                  {userStickers.length > 0 && (
+                  {/* Recently Added Stickers (Created in the last 24 hours) */}
+                  {recentStickers.length > 0 && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recently Pinned Stickers:</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recently Added Stickers:</div>
                       <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
-                        {userStickers.slice(0, 8).map((st: any) => (
+                        {recentStickers.map((st: any) => (
                           <button
                             key={st.id}
                             onClick={() => {
@@ -685,37 +710,48 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   )}
 
-                  {/* Standard Sticker presets */}
+                  {/* My Stickers (Older than 24 hours) */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Sticker Presets:</div>
-                    <div className="grid grid-cols-8 gap-2.5 p-1 max-h-24 overflow-y-auto">
-                      {["💝", "💖", "💕", "🌸", "🌷", "🐱", "🐾", "✨", "🧸", "🎈", "🍫", "🍩", "💌", "🏡", "⭐", "🎉"].map((st) => (
-                        <button
-                          key={st}
-                          onClick={() => {
-                            addItem.mutate({
-                              page_id: activePage.id,
-                              item_type: "sticker",
-                              content: st,
-                              image_url: null,
-                              color: null,
-                              pos_x: 35,
-                              pos_y: 35,
-                              scale: 1,
-                              rotation: 0
-                            });
-                          }}
-                          className="text-2xl hover:scale-110 active:scale-95 transition-transform"
-                        >
-                          {st}
-                        </button>
-                      ))}
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">My Stickers:</div>
+                    <div className="grid grid-cols-4 gap-3 p-1 max-h-44 overflow-y-auto">
+                      {olderStickers.length === 0 && recentStickers.length === 0 ? (
+                        <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
+                          No stickers created on the Stickers page yet. Go create some!
+                        </div>
+                      ) : olderStickers.length === 0 ? (
+                        <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
+                          All stickers are listed under Recently Added.
+                        </div>
+                      ) : (
+                        olderStickers.map((st: any) => (
+                          <button
+                            key={st.id}
+                            onClick={() => {
+                              addItem.mutate({
+                                page_id: activePage.id,
+                                item_type: "sticker",
+                                content: null,
+                                image_url: st.image_url,
+                                color: null,
+                                pos_x: 35,
+                                pos_y: 35,
+                                scale: 1,
+                                rotation: 0
+                              });
+                              toast.success("Sticker added!");
+                            }}
+                            className="aspect-square p-1.5 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/60 active:scale-95 transition-all overflow-hidden flex items-center justify-center shadow-sm"
+                          >
+                            <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none select-none" />
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 </motion.div>
               )}
 
-              {/* PHOTO upload options + shape selector + recent polaroids drawer */}
+              {/* PHOTO options + shape selector + recent polaroids drawer + preview system */}
               {activeTab === "photos" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -723,12 +759,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-4"
                 >
-                  {/* Recent Polaroids selector displayed at the very top */}
-                  {recentPolaroids.length > 0 && (
+                  {/* Recent Polaroids list (added in last 24 hours) */}
+                  {recentPolaroids.length > 0 && !previewUrl && (
                     <div className="space-y-1.5">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Polaroids:</div>
                       <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
-                        {recentPolaroids.slice(0, 8).map((p: any) => (
+                        {recentPolaroids.map((p: any) => (
                           <button
                             key={p.id}
                             onClick={() => {
@@ -755,59 +791,118 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   )}
 
-                  {/* Frame Selector */}
-                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
-                    <div className="flex gap-1 flex-wrap">
-                      {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setPhotoShape(s)}
-                          className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
-                            photoShape === s
-                              ? "bg-primary border-primary text-white"
-                              : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
-                          }`}
-                        >
-                          {s.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Frame Border Color Selector */}
-                  <div className="space-y-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
-                    <div className="flex gap-1.5">
-                      {OUTLINE_COLORS.map((oc) => (
-                        <button
-                          key={oc.value}
-                          onClick={() => setPhotoOutline(oc.value)}
-                          className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
-                            photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
-                          }`}
-                          style={{ background: oc.value }}
-                          title={oc.label}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Upload Actions */}
-                  <div className="space-y-2">
-                    <label className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadPhoto.mutate({ file: f, shape: photoShape, outline: photoOutline });
+                  {/* Custom Photo Preview & Confirmation frame */}
+                  {previewUrl && (
+                    <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Outline & Frame Preview:</div>
+                      
+                      {/* Live outline frame preview container */}
+                      <div
+                        className={`flex items-center justify-center overflow-hidden border border-black/5 shadow-md ${getBorderRadiusClass(photoShape)}`}
+                        style={{
+                          width: photoShape === "rect" ? "114px" : "100px",
+                          height: "100px",
+                          ...getPictureShapeStyles(photoShape),
+                          background: photoOutline
                         }}
-                      />
-                      Upload & Add Picture
-                    </label>
-                  </div>
+                      >
+                        <div
+                          className={`overflow-hidden ${getBorderRadiusClass(photoShape)}`}
+                          style={{
+                            width: photoShape === "rect" ? "110px" : "96px",
+                            height: "96px",
+                            ...getPictureShapeStyles(photoShape),
+                          }}
+                        >
+                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                      </div>
+
+                      {/* Confirm / Cancel actions */}
+                      <div className="flex gap-2 w-full max-w-[200px] font-bold text-xs">
+                        <button
+                          onClick={() => {
+                            if (selectedFile) {
+                              uploadPhoto.mutate({ file: selectedFile, shape: photoShape, outline: photoOutline });
+                            }
+                          }}
+                          disabled={uploadPhoto.isPending}
+                          className="flex-1 py-1.5 rounded-full bg-primary text-white hover:bg-primary/95 text-center active:scale-95 transition-all shadow"
+                        >
+                          {uploadPhoto.isPending ? "Adding..." : "Add Picture"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setPreviewUrl(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/80 text-center active:scale-95 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Frame & Outline selection widgets */}
+                  {!previewUrl && (
+                    <>
+                      {/* Frame Selector */}
+                      <div className="space-y-1.5 border-t border-white/10 pt-2.5">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
+                        <div className="flex gap-1 flex-wrap">
+                          {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setPhotoShape(s)}
+                              className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
+                                photoShape === s
+                                  ? "bg-primary border-primary text-white"
+                                  : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
+                              }`}
+                            >
+                              {s.toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Frame Border Color Selector */}
+                      <div className="space-y-1.5">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
+                        <div className="flex gap-1.5">
+                          {OUTLINE_COLORS.map((oc) => (
+                            <button
+                              key={oc.value}
+                              onClick={() => setPhotoOutline(oc.value)}
+                              className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
+                                photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                              }`}
+                              style={{ background: oc.value }}
+                              title={oc.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Choose File Widget */}
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm"
+                        >
+                          Select Image File
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
 
@@ -819,12 +914,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-4"
                 >
-                  {/* Recent Texts list displayed at the very top */}
+                  {/* Recent Texts list (added in last 24 hours) */}
                   {recentTexts.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Texts:</div>
                       <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
-                        {recentTexts.slice(0, 8).map((t: any) => (
+                        {recentTexts.map((t: any) => (
                           <button
                             key={t.id}
                             onClick={() => {

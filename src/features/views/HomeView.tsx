@@ -229,11 +229,12 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     },
   });
 
-  const start = anniversary ? new Date(anniversary + "T00:00:00") : null;
-  const months = start ? (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) : null;
+  const start = new Date((anniversary || "2026-06-19") + "T00:00:00");
+  const months = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
 
   const [timeTogether, setTimeTogether] = useState<{
     years: number;
+    months: number;
     days: number;
     hours: number;
     mins: number;
@@ -241,30 +242,41 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   } | null>(null);
 
   useEffect(() => {
-    if (!start) return;
-    
     const update = () => {
       const now = new Date();
-      let years = now.getFullYear() - start.getFullYear();
-      let m = now.getMonth() - start.getMonth();
-      if (m < 0 || (m === 0 && now.getDate() < start.getDate())) {
-        years--;
-      }
+      let diffMs = now.getTime() - start.getTime();
+      if (diffMs < 0) diffMs = 0;
       
-      const lastAnniv = new Date(start);
-      lastAnniv.setFullYear(start.getFullYear() + years);
-      
-      const diffMs = now.getTime() - lastAnniv.getTime();
       const diffSecs = Math.floor(diffMs / 1000);
       const diffMins = Math.floor(diffSecs / 60);
       const diffHours = Math.floor(diffMins / 60);
-      
-      const days = Math.floor(diffHours / 24);
       const hours = diffHours % 24;
       const mins = diffMins % 60;
       const secs = diffSecs % 60;
       
-      setTimeTogether({ years, days, hours, mins, secs });
+      let years = now.getFullYear() - start.getFullYear();
+      let months = now.getMonth() - start.getMonth();
+      if (months < 0 || (months === 0 && now.getDate() < start.getDate())) {
+        years--;
+        months = 12 + months;
+      }
+      if (now.getDate() < start.getDate()) {
+        months--;
+      }
+      
+      const tempDate = new Date(start);
+      tempDate.setFullYear(start.getFullYear() + years);
+      tempDate.setMonth(start.getMonth() + months);
+      const remainingDays = Math.floor((now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      setTimeTogether({
+        years,
+        months: months >= 0 ? months : 0,
+        days: remainingDays >= 0 ? remainingDays : 0,
+        hours,
+        mins,
+        secs
+      });
     };
     
     update();
@@ -319,6 +331,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                   <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">We have been together for:</div>
                   <div className="display text-[15px] font-bold text-primary leading-tight">
                     {timeTogether.years > 0 ? `${timeTogether.years}y ` : ""}
+                    {timeTogether.months > 0 ? `${timeTogether.months}m ` : ""}
                     {`${timeTogether.days}d ${timeTogether.hours}h ${timeTogether.mins}m ${timeTogether.secs}s`}
                   </div>
                 </div>

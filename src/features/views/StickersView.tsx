@@ -319,7 +319,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, rotate: 2, y: -15 }}
             transition={{ type: "spring", damping: 20, stiffness: 130 }}
-            className={`relative w-full max-w-[320px] aspect-[3/4.2] rounded-3xl border border-white/60 shadow-2xl overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
+            className={`relative w-full max-w-[340px] aspect-[1/1.4] rounded-3xl border border-white/60 shadow-2xl overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
             onClick={() => setSelectedStickerId(null)}
           >
             {pageStickers.length === 0 ? (
