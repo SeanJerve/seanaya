@@ -446,7 +446,6 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   style={{ background: enlargedNote.color ?? "oklch(0.95 0.07 90 / 0.85)" }}
                 >
                   <div>
-                    <div className="text-[9px] uppercase tracking-widest text-foreground/35 mb-2 select-none pointer-events-none">{enlargedNote.kind}</div>
                     <p className="text-sm leading-relaxed text-foreground/85 font-[Nunito] break-words whitespace-pre-wrap select-text selection:bg-black/10">
                       {enlargedNote.body}
                     </p>
@@ -527,7 +526,6 @@ function StickyNote({
 
       <div className="px-3 pt-4.5 pb-2 relative flex-1 flex flex-col justify-between">
         <div>
-          <div className="text-[8px] uppercase tracking-widest text-foreground/35 mb-1 select-none pointer-events-none">{note.kind}</div>
           <p className="text-xs leading-relaxed text-foreground/80 font-[Nunito] break-words line-clamp-5 overflow-hidden whitespace-pre-wrap select-none pointer-events-none">
             {note.body}
           </p>

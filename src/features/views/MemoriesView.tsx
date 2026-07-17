@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ type AlbumItem = {
   item_type: string; // 'sticker' | 'polaroid' | 'picture' | 'text'
   content: string | null;
   image_url: string | null;
-  color: string | null; // used as shape ('rect' | 'square' | 'circle' | 'heart' | 'star') for pictures, background color for text notes
+  color: string | null; // used as "shape:outlineColor" for pictures, background color for text notes
   pos_x: number;
   pos_y: number;
   scale: number;
@@ -35,13 +35,23 @@ const PASTEL_COLORS = [
   "oklch(0.94 0.05 230 / 0.85)", // Sky
 ];
 
+const OUTLINE_COLORS = [
+  { label: "White",    value: "#ffffff" },
+  { label: "Rose",     value: "oklch(0.68 0.15 15)" },
+  { label: "Gold",     value: "oklch(0.78 0.15 85)" },
+  { label: "Mint",     value: "oklch(0.78 0.14 165)" },
+  { label: "Lavender", value: "oklch(0.72 0.13 295)" },
+  { label: "Dark",     value: "oklch(0.2 0.02 20)" }
+];
+
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
-  const [activeTab, setActiveTab] = useState<"stickers" | "photos" | "note" | "recent" | null>(null);
+  const [activeTab, setActiveTab] = useState<"stickers" | "photos" | "note" | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteColor, setNoteColor] = useState(PASTEL_COLORS[0]);
   const [photoShape, setPhotoShape] = useState<"rect" | "square" | "circle" | "heart" | "star">("rect");
+  const [photoOutline, setPhotoOutline] = useState("#ffffff");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
@@ -97,14 +107,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .select("*")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false })
-        .limit(15);
+        .limit(20);
       return data || [];
     }
   });
 
-  // Filter recent polaroids from Love Wall notes list
+  // Filter recent polaroids and recent texts from Love Wall notes list
   const recentPolaroids = useMemo(() => {
     return recentNotes.filter((n: any) => n.kind === "photo" && n.image_url);
+  }, [recentNotes]);
+
+  const recentTexts = useMemo(() => {
+    return recentNotes.filter((n: any) => n.kind === "note" && n.body && n.body !== "(photo)");
   }, [recentNotes]);
 
   // Create a default page if none exist
@@ -196,6 +210,28 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     }
   });
 
+  const updateItemRotation = useMutation({
+    mutationFn: async ({ id, rotation }: { id: string; rotation: number }) => {
+      const { error } = await (supabase as any).from("album_items").update({ rotation }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, rotation }) => {
+      await qc.cancelQueries({ queryKey: ["album-items", relationshipId] });
+      const previous = qc.getQueryData<AlbumItem[]>(["album-items", relationshipId]);
+      qc.setQueryData<AlbumItem[]>(["album-items", relationshipId], (old) => {
+        if (!old) return [];
+        return old.map((it) => (it.id === id ? { ...it, rotation } : it));
+      });
+      return { previous };
+    },
+    onError: (e, vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["album-items", relationshipId], ctx.previous);
+    },
+    onSuccess: () => {
+      refetchItems();
+    }
+  });
+
   const deleteItem = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await (supabase as any).from("album_items").delete().eq("id", id);
@@ -209,7 +245,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   });
 
   const uploadPhoto = useMutation({
-    mutationFn: async ({ file, shape }: { file: File; shape: "rect" | "square" | "circle" | "heart" | "star" }) => {
+    mutationFn: async ({ file, shape, outline }: { file: File; shape: "rect" | "square" | "circle" | "heart" | "star"; outline: string }) => {
       const itemId = crypto.randomUUID();
       const { url } = await uploadImage("wall", relationshipId, file, `album/${itemId}`);
       const activePage = pages[currentPageIdx];
@@ -220,11 +256,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         item_type: "picture",
         content: null,
         image_url: url,
-        color: shape, // Save shape code in color field
+        color: `${shape}:${outline}`, // Save shape and outline color separated by colon
         pos_x: 35,
         pos_y: 35,
         scale: 1,
-        rotation: (Math.random() - 0.5) * 8
+        rotation: 0
       });
     },
     onSuccess: () => {
@@ -240,9 +276,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return items.filter(it => it.page_id === activePage.id);
   }, [items, activePage]);
 
-  // Render Closed Book Cover (Bigger aspect, centered vertical name stacked, no icon or header text)
+  // Render Closed Book Cover (Bigger aspect, fits full width of navbar, no scroll, stacked name letters)
   const renderClosedBook = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 relative min-h-[calc(100vh-140px)]">
+    <div className="w-full h-[calc(100vh-140px)] overflow-hidden flex flex-col items-center justify-center p-4 bg-transparent relative z-10">
       {/* watercolor dream backdrops */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[10%] -left-20 w-80 h-80 rounded-full bg-pink-200/10 blur-[80px]" />
@@ -250,18 +286,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       </div>
 
       <motion.div
-        whileHover={{ scale: 1.02, rotate: 0.5 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01, rotate: 0.5 }}
+        whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-[300px] h-[480px] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10 animate-in fade-in zoom-in-95 duration-300"
+        className="w-full max-w-[340px] h-[520px] rounded-[36px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
         
         <div className="flex-1 flex flex-col items-center justify-center gap-1 mt-8">
-          <h2 className="display text-[38px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
-          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
-          <h2 className="display text-[38px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
+          <h2 className="display text-[44px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
+          <span className="text-3xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
+          <h2 className="display text-[44px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
         </div>
         
         <div className="mb-4">
@@ -272,22 +308,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   );
 
   // Helper classes for picture item shapes
-  const getPictureShapeClasses = (shape: string | null) => {
-    switch (shape) {
-      case "square":
-        return "w-24 aspect-square rounded-2xl";
-      case "circle":
-        return "w-24 aspect-square rounded-full";
-      case "heart":
-        return "w-24 aspect-square";
-      case "star":
-        return "w-24 aspect-square";
-      case "rect":
-      default:
-        return "w-28 aspect-[4/3] rounded-2xl";
-    }
-  };
-
   const getPictureShapeStyles = (shape: string | null) => {
     if (shape === "heart") {
       return { clipPath: "url(#heart-mask)" };
@@ -298,74 +318,82 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return {};
   };
 
+  const getBorderRadiusClass = (shape: string | null) => {
+    if (shape === "circle") return "rounded-full";
+    if (shape === "square" || shape === "rect") return "rounded-2xl";
+    return "";
+  };
+
   // Render Open Book Layout
   const renderOpenBook = () => {
     return (
-      <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32">
-        {/* Book Header Toolbar with top pages switcher + icons beside each other */}
-        <div className="w-full flex items-center justify-between mb-4 px-1 text-xs gap-3">
-          <button
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-1 text-foreground/60 hover:text-foreground font-semibold shrink-0"
-          >
-            <ArrowLeft size={14} /> Close
-          </button>
-
-          {/* horizontal page selection list */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 flex-1 max-w-[200px]">
-            {pages.map((p, idx) => {
-              const active = currentPageIdx === idx;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setCurrentPageIdx(idx);
-                    setSelectedItemId(null);
-                  }}
-                  className={`px-3.5 py-1 text-[10px] font-bold rounded-full border transition-all shrink-0 active:scale-95 ${
-                    active
-                      ? "bg-white text-primary border-primary/20 shadow-sm font-extrabold"
-                      : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
-                  }`}
-                >
-                  Page {idx + 1}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Plus and Trash controls side-by-side */}
-          <div className="flex items-center gap-1 shrink-0">
+      <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full">
+        {/* Floating Page navigation sub-header under main app header */}
+        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-5">
+          <div className="flex items-center justify-between gap-2.5">
             <button
-              onClick={() => addPage.mutate()}
-              className="p-1.5 rounded-full hover:bg-white/65 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
-              title="Add Page"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-1 text-[11px] text-foreground/60 hover:text-foreground font-bold shrink-0"
             >
-              <Plus size={14} />
+              <ArrowLeft size={13} /> Close
             </button>
 
-            {pages.length > 1 && (
+            {/* horizontal page list */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 flex-1 max-w-[190px]">
+              {pages.map((p, idx) => {
+                const active = currentPageIdx === idx;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setCurrentPageIdx(idx);
+                      setSelectedItemId(null);
+                    }}
+                    className={`px-3 py-1.5 text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                      active
+                        ? "bg-white text-primary border-primary/20 shadow-sm"
+                        : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
+                    }`}
+                  >
+                    Page {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Plus and Trash controls side-by-side */}
+            <div className="flex items-center gap-1 shrink-0">
               <button
-                onClick={() => {
-                  confirm({
-                    title: "Delete this page?",
-                    message: "Are you sure you want to delete this page and all items decorated inside it?",
-                    onConfirm: () => {
-                      if (activePage) deletePage.mutate(activePage.id);
-                    }
-                  });
-                }}
-                className="p-1.5 rounded-full hover:bg-red-50 text-red-500 active:scale-95 transition-all"
-                title="Delete Page"
+                onClick={() => addPage.mutate()}
+                className="p-1 rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
+                title="Add Page"
               >
-                <Trash2 size={14} />
+                <Plus size={14} />
               </button>
-            )}
+
+              {pages.length > 1 && (
+                <button
+                  onClick={() => {
+                    confirm({
+                      title: "Delete this page?",
+                      message: "Are you sure you want to delete this page and all items decorated inside it?",
+                      onConfirm: () => {
+                        if (activePage) deletePage.mutate(activePage.id);
+                      }
+                    });
+                  }}
+                  className="p-1 rounded-full hover:bg-red-50 text-red-500 active:scale-95 transition-all"
+                  title="Delete Page"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Dynamic Paper Page layout */}
-        <div className="relative w-full flex items-center justify-center p-2 min-h-[420px]">
+        {/* Dynamic Paper Page layout (Full width, matching customize panel width) */}
+        <div className="relative w-full flex flex-col items-center p-1">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPageIdx}
@@ -374,7 +402,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
               transition={{ type: "spring", damping: 20, stiffness: 130 }}
-              className="relative w-full max-w-[320px] aspect-[1/1.3] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
+              className="relative w-full aspect-[1/1.25] rounded-3xl border border-white/50 bg-[#fafafa] shadow-2xl overflow-hidden"
               onClick={() => setSelectedItemId(null)}
             >
               {/* Grid notebook texture */}
@@ -389,6 +417,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               ) : (
                 activePageItems.map((it) => {
                   const isSelected = selectedItemId === it.id;
+                  const [shape, outlineColor] = (it.color || "rect:#ffffff").split(":");
                   
                   return (
                     <motion.div
@@ -445,13 +474,27 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           </div>
                         )}
 
-                        {/* 2. Plain Picture (cropped shapes support) */}
+                        {/* 2. Plain Picture (cropped shapes support + thin outlines) */}
                         {it.item_type === "picture" && it.image_url && (
                           <div
-                            className={`overflow-hidden border border-white/80 shadow-md bg-white select-none pointer-events-none ${getPictureShapeClasses(it.color)}`}
-                            style={getPictureShapeStyles(it.color)}
+                            className={`flex items-center justify-center overflow-hidden border border-black/5 shadow-md select-none pointer-events-none ${getBorderRadiusClass(shape)}`}
+                            style={{
+                              width: shape === "rect" ? "114px" : "100px",
+                              height: "100px",
+                              ...getPictureShapeStyles(shape),
+                              background: outlineColor || "#ffffff"
+                            }}
                           >
-                            <img src={it.image_url} alt="" className="w-full h-full object-cover" />
+                            <div
+                              className={`overflow-hidden ${getBorderRadiusClass(shape)}`}
+                              style={{
+                                width: shape === "rect" ? "110px" : "96px",
+                                height: "96px",
+                                ...getPictureShapeStyles(shape),
+                              }}
+                            >
+                              <img src={it.image_url} alt="" className="w-full h-full object-cover" />
+                            </div>
                           </div>
                         )}
 
@@ -476,14 +519,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           </div>
                         )}
 
-                        {/* Selection actions panel */}
+                        {/* Selection actions panel (Eye, Rotate, Trash) */}
                         <AnimatePresence>
                           {isSelected && (
                             <motion.div
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.8 }}
-                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1 bg-white/95 border border-white/40 rounded-full shadow-lg p-0.5 z-50 pointer-events-auto"
+                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 bg-white/95 border border-white/40 rounded-full shadow-lg p-1 z-50 pointer-events-auto"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {(it.item_type === "polaroid" || it.item_type === "picture" || (it.item_type === "sticker" && it.image_url)) && it.image_url && (
@@ -493,15 +536,30 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                     setSelectedItemId(null);
                                   }}
                                   className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
+                                  title="View Photo"
                                 >
-                                  <Eye size={11} />
+                                  <Eye size={12} />
                                 </button>
                               )}
+                              
+                              {/* Rotate adjust button */}
+                              <button
+                                onClick={() => {
+                                  const nextRot = (it.rotation + 15) % 360;
+                                  updateItemRotation.mutate({ id: it.id, rotation: nextRot });
+                                }}
+                                className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
+                                title="Rotate"
+                              >
+                                <RotateCw size={12} />
+                              </button>
+
                               <button
                                 onClick={() => deleteItem.mutate(it.id)}
                                 className="p-1 rounded-full hover:bg-red-50 text-red-500"
+                                title="Delete"
                               >
-                                <Trash2 size={11} />
+                                <Trash2 size={12} />
                               </button>
                             </motion.div>
                           )}
@@ -513,6 +571,33 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* Page Counter Navigation (glass layout at bottom right) */}
+          <div className="w-full flex justify-end mt-2 mb-4 px-1">
+            <div className="flex items-center gap-1 bg-white/40 border border-white/50 backdrop-blur-md rounded-full px-2 py-0.5 text-[10px] font-bold text-foreground/80 shadow-sm shrink-0 select-none">
+              <button
+                onClick={() => {
+                  setCurrentPageIdx(p => Math.max(0, p - 1));
+                  setSelectedItemId(null);
+                }}
+                disabled={currentPageIdx === 0}
+                className="p-1 hover:bg-black/5 rounded-full disabled:opacity-30"
+              >
+                <ChevronLeft size={10} />
+              </button>
+              <span className="px-1.5">page {currentPageIdx + 1}</span>
+              <button
+                onClick={() => {
+                  setCurrentPageIdx(p => Math.min(pages.length - 1, p + 1));
+                  setSelectedItemId(null);
+                }}
+                disabled={currentPageIdx >= pages.length - 1}
+                className="p-1 hover:bg-black/5 rounded-full disabled:opacity-30"
+              >
+                <ChevronRight size={10} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Customize Toolbar Area */}
@@ -521,14 +606,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
               <span>Customize</span>
               {activeTab && (
-                <button onClick={() => setActiveTab(null)} className="text-primary hover:underline lowercase font-normal">
-                  close panel
+                <button onClick={() => setActiveTab(null)} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors">
+                  <X size={12} />
                 </button>
               )}
             </div>
 
             {/* Icons list (Star for decorate, Add Text note changes) */}
-            <div className="flex items-center justify-between gap-1 mt-1">
+            <div className="flex items-center justify-between gap-1.5 mt-1">
               <button
                 onClick={() => setActiveTab(activeTab === "stickers" ? null : "stickers")}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
@@ -556,61 +641,81 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 <StickyNote size={14} />
                 Add Text
               </button>
-              <button
-                onClick={() => setActiveTab(activeTab === "recent" ? null : "recent")}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
-                  activeTab === "recent" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
-                }`}
-              >
-                <RefreshCw size={14} />
-                Recently Added
-              </button>
             </div>
 
-            {/* Dynamic tool panels */}
+            {/* Dynamic tool panels (recently added items displayed inside at the first section) */}
             <AnimatePresence mode="wait">
-              {/* STICKERS custom user sticker presets */}
+              {/* DECORATE Tab */}
               {activeTab === "stickers" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="pt-2"
+                  className="pt-2 space-y-3"
                 >
-                  <div className="grid grid-cols-4 gap-3 p-1 max-h-40 overflow-y-auto">
-                    {userStickers.length === 0 ? (
-                      <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
-                        No stickers created on the Stickers page yet. Go create some!
+                  {/* Recently Pinned custom user stickers */}
+                  {userStickers.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recently Pinned Stickers:</div>
+                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                        {userStickers.slice(0, 8).map((st: any) => (
+                          <button
+                            key={st.id}
+                            onClick={() => {
+                              addItem.mutate({
+                                page_id: activePage.id,
+                                item_type: "sticker",
+                                content: null,
+                                image_url: st.image_url,
+                                color: null,
+                                pos_x: 35,
+                                pos_y: 35,
+                                scale: 1,
+                                rotation: 0
+                              });
+                              toast.success("Sticker added!");
+                            }}
+                            className="w-14 h-14 p-1.5 rounded-2xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center relative shadow-sm"
+                          >
+                            <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none" />
+                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-sky/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Sticker</span>
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      userStickers.map((st: any) => (
+                    </div>
+                  )}
+
+                  {/* Standard Sticker presets */}
+                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Sticker Presets:</div>
+                    <div className="grid grid-cols-8 gap-2.5 p-1 max-h-24 overflow-y-auto">
+                      {["💝", "💖", "💕", "🌸", "🌷", "🐱", "🐾", "✨", "🧸", "🎈", "🍫", "🍩", "💌", "🏡", "⭐", "🎉"].map((st) => (
                         <button
-                          key={st.id}
+                          key={st}
                           onClick={() => {
                             addItem.mutate({
                               page_id: activePage.id,
                               item_type: "sticker",
-                              content: null,
-                              image_url: st.image_url,
+                              content: st,
+                              image_url: null,
                               color: null,
                               pos_x: 35,
                               pos_y: 35,
                               scale: 1,
                               rotation: 0
                             });
-                            toast.success("Sticker added to page!");
                           }}
-                          className="aspect-square p-1.5 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/60 active:scale-95 transition-all overflow-hidden flex items-center justify-center shadow-sm"
+                          className="text-2xl hover:scale-110 active:scale-95 transition-transform"
                         >
-                          <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none select-none" />
+                          {st}
                         </button>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
 
-              {/* PHOTO crop options + shape selector + recent polaroids drawer */}
+              {/* PHOTO upload options + shape selector + recent polaroids drawer */}
               {activeTab === "photos" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -618,9 +723,41 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-4"
                 >
-                  {/* Shape Selector */}
-                  <div className="space-y-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Shape:</div>
+                  {/* Recent Polaroids selector displayed at the very top */}
+                  {recentPolaroids.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Polaroids:</div>
+                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                        {recentPolaroids.slice(0, 8).map((p: any) => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              addItem.mutate({
+                                page_id: activePage.id,
+                                item_type: "polaroid",
+                                content: null,
+                                image_url: p.image_url,
+                                color: null,
+                                pos_x: 35,
+                                pos_y: 35,
+                                scale: 1,
+                                rotation: (Math.random() - 0.5) * 8
+                              });
+                              toast.success("Polaroid imported!");
+                            }}
+                            className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden relative"
+                          >
+                            <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
+                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-rose/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Polaroid</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Frame Selector */}
+                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
                     <div className="flex gap-1 flex-wrap">
                       {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
                         <button
@@ -638,6 +775,24 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   </div>
 
+                  {/* Frame Border Color Selector */}
+                  <div className="space-y-1.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
+                    <div className="flex gap-1.5">
+                      {OUTLINE_COLORS.map((oc) => (
+                        <button
+                          key={oc.value}
+                          onClick={() => setPhotoOutline(oc.value)}
+                          className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
+                            photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                          }`}
+                          style={{ background: oc.value }}
+                          title={oc.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Upload Actions */}
                   <div className="space-y-2">
                     <label className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm">
@@ -647,43 +802,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) uploadPhoto.mutate({ file: f, shape: photoShape });
+                          if (f) uploadPhoto.mutate({ file: f, shape: photoShape, outline: photoOutline });
                         }}
                       />
                       Upload & Add Picture
                     </label>
                   </div>
-
-                  {/* Recent Polaroids selector */}
-                  {recentPolaroids.length > 0 && (
-                    <div className="space-y-1.5 border-t border-white/10 pt-3">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Import Polaroid from Wall:</div>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
-                        {recentPolaroids.map((p: any) => (
-                          <button
-                            key={p.id}
-                            onClick={() => {
-                              addItem.mutate({
-                                page_id: activePage.id,
-                                item_type: "polaroid",
-                                content: null,
-                                image_url: p.image_url,
-                                color: null,
-                                pos_x: 35,
-                                pos_y: 35,
-                                scale: 1,
-                                rotation: (Math.random() - 0.5) * 8
-                              });
-                              toast.success("Polaroid imported!");
-                            }}
-                            className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden"
-                          >
-                            <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </motion.div>
               )}
 
@@ -693,19 +817,55 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-3"
+                  className="pt-2 space-y-4"
                 >
-                  <div className="flex items-center gap-1.5 justify-center">
-                    {PASTEL_COLORS.map((col) => (
-                      <button
-                        key={col}
-                        onClick={() => setNoteColor(col)}
-                        className={`h-5 w-5 rounded-full border transition-all ${
-                          noteColor === col ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
-                        }`}
-                        style={{ background: col }}
-                      />
-                    ))}
+                  {/* Recent Texts list displayed at the very top */}
+                  {recentTexts.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Texts:</div>
+                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                        {recentTexts.slice(0, 8).map((t: any) => (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              addItem.mutate({
+                                page_id: activePage.id,
+                                item_type: "text",
+                                content: t.body,
+                                image_url: null,
+                                color: t.color || PASTEL_COLORS[0],
+                                pos_x: 35,
+                                pos_y: 35,
+                                scale: 1,
+                                rotation: 0
+                              });
+                              toast.success("Text imported!");
+                            }}
+                            className="w-24 p-2 rounded-xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden relative text-left"
+                          >
+                            <p className="text-[8px] text-foreground/80 line-clamp-3 leading-tight">{t.body}</p>
+                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-mint/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Love Wall</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pastel Colors picker */}
+                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Background:</div>
+                    <div className="flex items-center gap-1.5">
+                      {PASTEL_COLORS.map((col) => (
+                        <button
+                          key={col}
+                          onClick={() => setNoteColor(col)}
+                          className={`h-5 w-5 rounded-full border transition-all ${
+                            noteColor === col ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                          }`}
+                          style={{ background: col }}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -739,48 +899,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       Pin Text
                     </button>
                   </div>
-                </motion.div>
-              )}
-
-              {/* RECENTLY added selector tray */}
-              {activeTab === "recent" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-2.5 max-h-40 overflow-y-auto pr-1"
-                >
-                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recent Activities</div>
-                  
-                  {recentNotes.length === 0 && (
-                    <div className="text-[10px] text-muted-foreground italic p-2 text-center">No recent entries to import yet.</div>
-                  )}
-
-                  {recentNotes.map((note: any) => (
-                    <button
-                      key={note.id}
-                      onClick={() => {
-                        addItem.mutate({
-                          page_id: activePage.id,
-                          item_type: note.kind === "photo" ? "polaroid" : "text",
-                          content: note.kind === "photo" ? null : note.body,
-                          image_url: note.image_url,
-                          color: note.color,
-                          pos_x: 35,
-                          pos_y: 35,
-                          scale: 1,
-                          rotation: note.rotation || 0
-                        });
-                        toast.success("Imported bulletin note!");
-                      }}
-                      className="w-full flex items-center justify-between gap-3 p-2 bg-white/40 hover:bg-white/60 border border-white/10 rounded-xl text-left text-xs transition-colors"
-                    >
-                      <div className="min-w-0 flex-1 truncate font-medium text-foreground/75">
-                        {note.kind === "photo" ? "Polaroid photo note" : note.body}
-                      </div>
-                      <span className="shrink-0 text-[8px] bg-sky/50 px-2 py-0.5 rounded-full text-foreground/60 font-semibold uppercase font-extrabold">Import</span>
-                    </button>
-                  ))}
                 </motion.div>
               )}
             </AnimatePresence>
