@@ -227,8 +227,11 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        if (!sess.session) {
+        // Verify if session is valid in Supabase
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) {
+          // Stale local token detected (e.g., database was reset), clear it
+          await supabase.auth.signOut();
           const { error } = await supabase.auth.signInAnonymously();
           if (error) {
             console.error("Sign in anonymously failed:", error);
