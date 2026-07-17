@@ -504,7 +504,28 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
         {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
-        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 mb-3">
+        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 mb-3 relative">
+          {showPageSearch && (
+            <div className="flex items-center gap-1 border-b border-white/20 pb-2">
+              <input
+                type="text"
+                value={pageSearchQuery}
+                onChange={(e) => setPageSearchQuery(e.target.value)}
+                placeholder="Search pages by name or number..."
+                className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+                autoFocus
+              />
+              {pageSearchQuery && (
+                <button
+                  onClick={() => setPageSearchQuery("")}
+                  className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
             {/* Arrow icon only back button */}
             <button
@@ -516,77 +537,34 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             </button>
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1 relative">
-              {showPageSearch ? (
-                <div className="flex-1 flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={pageSearchQuery}
-                    onChange={(e) => setPageSearchQuery(e.target.value)}
-                    placeholder="Search page..."
-                    className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
-                    autoFocus
-                  />
-                  {pageSearchQuery && (
-                    <button
-                      onClick={() => setPageSearchQuery("")}
-                      className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
-                    >
-                      <X size={10} />
-                    </button>
-                  )}
-                  {/* Floating dropdown popup for search results */}
-                  <div className="absolute top-[110%] left-0 right-0 z-50 rounded-2xl border border-white/50 bg-white/95 backdrop-blur-xl shadow-lg p-2 max-h-40 overflow-y-auto space-y-1">
-                    {filteredPages.length === 0 ? (
-                      <div className="text-[10px] text-muted-foreground text-center py-2">No matching pages</div>
-                    ) : (
-                      filteredPages.map((p) => {
-                        const idx = p.originalIndex;
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => {
-                              setCurrentPageIdx(idx);
-                              setSelectedItemId(null);
-                              setPageSearchQuery("");
-                              setShowPageSearch(false);
-                            }}
-                            className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-black/5 text-[10px] font-bold text-foreground transition-colors flex items-center justify-between"
-                          >
-                            <span className="truncate">{p.name || `Page ${idx + 1}`}</span>
-                            <span className="text-[9px] text-muted-foreground font-normal shrink-0">Page {idx + 1}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
-                  <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
-                    {pages.map((p, idx) => {
-                      const active = currentPageIdx === idx;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            setCurrentPageIdx(idx);
-                            setSelectedItemId(null);
-                          }}
-                          className={`h-6 w-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
-                            active
-                              ? "bg-white text-primary border-primary/20 shadow-sm"
-                              : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
-                          }`}
-                        >
-                          {idx + 1}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
+              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
+              <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
+                {filteredPages.length === 0 ? (
+                  <span className="text-[10px] text-muted-foreground/60 italic px-1">No pages match</span>
+                ) : (
+                  filteredPages.map((p) => {
+                    const idx = p.originalIndex;
+                    const active = currentPageIdx === idx;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setCurrentPageIdx(idx);
+                          setSelectedItemId(null);
+                        }}
+                        className={`px-2 h-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                          active
+                            ? "bg-white text-primary border-primary/20 shadow-sm"
+                            : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
+                        }`}
+                      >
+                        {p.name ? `${p.name} (${idx + 1})` : idx + 1}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             {/* Plus and Trash controls side-by-side on the right */}

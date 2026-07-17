@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
@@ -250,55 +250,35 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
       <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 relative">
+        {showPageSearch && (
+          <div className="flex items-center gap-1 border-b border-white/20 pb-2">
+            <input
+              type="text"
+              value={pageSearchQuery}
+              onChange={(e) => setPageSearchQuery(e.target.value)}
+              placeholder="Search pages by name or number..."
+              className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+              autoFocus
+            />
+            {pageSearchQuery && (
+              <button
+                onClick={() => setPageSearchQuery("")}
+                className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Row 1: Tabs List */}
         <div className="flex items-center justify-between gap-2">
-          {showPageSearch ? (
-            <div className="flex-1 flex items-center gap-1">
-              <input
-                type="text"
-                value={pageSearchQuery}
-                onChange={(e) => setPageSearchQuery(e.target.value)}
-                placeholder="Search page..."
-                className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
-                autoFocus
-              />
-              {pageSearchQuery && (
-                <button
-                  onClick={() => setPageSearchQuery("")}
-                  className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <X size={10} />
-                </button>
-              )}
-              {/* Floating dropdown popup for search results */}
-              <div className="absolute top-[110%] left-4 right-4 z-50 rounded-2xl border border-white/50 bg-white/95 backdrop-blur-xl shadow-lg p-2 max-h-40 overflow-y-auto space-y-1">
-                {filteredPages.length === 0 ? (
-                  <div className="text-[10px] text-muted-foreground text-center py-2">No matching pages</div>
-                ) : (
-                  filteredPages.map((p) => {
-                    const idx = p.originalIndex;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          setActivePageId(p.id);
-                          setSelectedStickerId(null);
-                          setPageSearchQuery("");
-                          setShowPageSearch(false);
-                        }}
-                        className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-black/5 text-[10px] font-bold text-foreground transition-colors flex items-center justify-between"
-                      >
-                        <span className="truncate">{p.name || `Page ${idx + 1}`}</span>
-                        <span className="text-[9px] text-muted-foreground font-normal shrink-0">Page {idx + 1}</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
-              {pages.map((p) => {
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
+            {filteredPages.length === 0 ? (
+              <span className="text-[10px] text-muted-foreground/60 italic px-1">No pages match search</span>
+            ) : (
+              filteredPages.map((p) => {
+                const idx = p.originalIndex;
                 const active = activePage?.id === p.id;
                 return (
                   <button
@@ -313,12 +293,12 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                         : "bg-white/40 text-foreground/60 border-transparent hover:bg-white/60 hover:text-foreground"
                     }`}
                   >
-                    {p.name}
+                    {p.name ? `${p.name} (${idx + 1})` : idx + 1}
                   </button>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
 
         {/* Row 2: Page Tools */}
