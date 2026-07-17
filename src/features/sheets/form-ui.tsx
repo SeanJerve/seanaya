@@ -9,7 +9,7 @@ export function FieldWrap({ label, children }: { label: string; children: ReactN
   );
 }
 
-const fieldClass = "w-full rounded-2xl border border-white/50 bg-white/60 backdrop-blur-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40";
+const fieldClass = "font-sans w-full rounded-2xl border border-white/50 bg-white/60 backdrop-blur-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${fieldClass} ${props.className ?? ""}`} />;
@@ -24,7 +24,7 @@ export function PrimaryButton({ children, ...rest }: ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...rest}
-      className="w-full rounded-full bg-foreground/90 py-3 text-sm text-background shadow-[0_10px_30px_-14px_rgba(0,0,0,0.4)] disabled:opacity-50 transition active:scale-[0.99]"
+      className="font-sans font-semibold w-full rounded-full bg-foreground/90 py-3 text-sm text-background shadow-[0_10px_30px_-14px_rgba(0,0,0,0.4)] disabled:opacity-50 transition active:scale-[0.99]"
     >{children}</button>
   );
 }

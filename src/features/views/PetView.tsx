@@ -495,7 +495,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   placeholder="Mocha, Lily, etc..."
                   value={petName}
                   onChange={(e) => setPetName(e.target.value)}
-                  className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
+                  className="font-sans w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
                 />
               </div>
 
@@ -505,7 +505,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   type="date"
                   value={birthday}
                   onChange={(e) => setBirthday(e.target.value)}
-                  className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all shadow-inner"
+                  className="font-sans w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all shadow-inner"
                 />
               </div>
 
@@ -557,7 +557,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <button
                 onClick={() => createPet.mutate()}
                 disabled={createPet.isPending || !petName.trim() || !faceFile || !patternFile}
-                className="w-full py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold active:scale-95 transition-all shadow-md disabled:opacity-50 mt-2"
+                className="font-sans font-semibold w-full py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs active:scale-95 transition-all shadow-md disabled:opacity-50 mt-2"
               >
                 {createPet.isPending ? "Welcoming Cat..." : "Welcome Cat"}
               </button>

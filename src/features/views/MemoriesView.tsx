@@ -71,7 +71,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [renameNameText, setRenameNameText] = useState("");
 
   const pageRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const { confirm } = useAppStore();
 
@@ -1074,19 +1073,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Choose File Widget */}
                   {!previewUrl && (
                     <div className="space-y-2">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
+                      <label
                         className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]"
                       >
                         Select Image File
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="sr-only"
-                        onChange={handleFileChange}
-                      />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                      </label>
                     </div>
                   )}
                 </motion.div>

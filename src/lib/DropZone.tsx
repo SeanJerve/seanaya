@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type Props = {
   onFile: (file: File) => void;
@@ -10,15 +10,9 @@ type Props = {
 
 export function DropZone({ onFile, accept = "image/*", className = "", children, disabled }: Props) {
   const [over, setOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        if (!disabled) inputRef.current?.click();
-      }}
+    <label
       onDragOver={(e) => { e.preventDefault(); if (!disabled) setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
@@ -27,17 +21,17 @@ export function DropZone({ onFile, accept = "image/*", className = "", children,
         const f = e.dataTransfer.files?.[0];
         if (f) onFile(f);
       }}
-      className={`${className} ${over ? "ring-2 ring-primary/50" : ""} transition cursor-pointer w-full text-left block`}
+      className={`${className} ${over ? "ring-2 ring-primary/50" : ""} transition cursor-pointer w-full text-left block ${disabled ? "pointer-events-none opacity-50" : ""}`}
       aria-label="Drop or choose an image"
     >
       <input
-        ref={inputRef}
         type="file"
         accept={accept}
-        className="sr-only"
+        className="hidden"
+        disabled={disabled}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ""; }}
       />
       {children}
-    </button>
+    </label>
   );
 }
