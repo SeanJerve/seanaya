@@ -8,7 +8,7 @@ import { FieldWrap, Select, Textarea, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { DropZone } from "@/lib/DropZone";
 import { uploadImage } from "@/lib/storage";
-import { Upload, X, CloudOff, Save } from "lucide-react";
+import { Upload, X, CloudOff, Palette } from "lucide-react";
 
 const KINDS = ["note","compliment","promise","gratitude","photo"] as const;
 const PASTEL_COLORS = [
