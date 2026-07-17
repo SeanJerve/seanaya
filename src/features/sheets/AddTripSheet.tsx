@@ -8,7 +8,7 @@ import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { uploadImage } from "@/lib/storage";
 import { DropZone } from "@/lib/DropZone";
-import { ImagePlus, X, CloudOff, Save } from "lucide-react";
+import { CloudOff, Save, Upload, X } from "lucide-react";
 
 const STATUSES = ["visited","dream","planned"] as const;
 
@@ -82,8 +82,8 @@ export function AddTripSheet({ relationshipId }: { relationshipId: string }) {
         ) : (
           <DropZone onFile={onFile}
             className="flex h-32 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground">
-            <ImagePlus size={18} />
-            <span>Drop a photo or tap to choose</span>
+            <Upload size={18} />
+            <span>Upload photo</span>
           </DropZone>
         )}
       </FieldWrap>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Eye, EyeOff, Camera, X, Cat } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Camera, X, Cat, Upload } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { differenceInDays } from "date-fns";
 import { uploadImage } from "@/lib/storage";
@@ -416,8 +416,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground font-semibold">Face Image:</span>
                       <label className="font-semibold text-primary hover:text-primary-hover cursor-pointer flex items-center gap-1.5">
-                        <Camera size={11} />
-                        Change Face
+                        <Upload size={11} />
+                        Upload photo
                         <input
                           type="file"
                           accept="image/*"
@@ -430,8 +430,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     <div className="flex flex-col gap-1 border-l border-white/10 pl-3">
                       <span className="text-muted-foreground font-semibold">Coat Pattern:</span>
                       <label className="font-semibold text-primary hover:text-primary-hover cursor-pointer flex items-center gap-1.5">
-                        <Camera size={11} />
-                        Change Coat
+                        <Upload size={11} />
+                        Upload photo
                         <input
                           type="file"
                           accept="image/*"
@@ -519,8 +519,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       <img src={facePreviewUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <Camera size={16} className="text-foreground/40" />
-                        <span className="text-[8px] text-foreground/50 mt-1">Upload</span>
+                        <Upload size={16} className="text-foreground/40" />
+                        <span className="text-[8px] text-foreground/50 mt-1">Upload photo</span>
                       </>
                     )}
                     <input
@@ -540,8 +540,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       <img src={patternPreviewUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <Camera size={16} className="text-foreground/40" />
-                        <span className="text-[8px] text-foreground/50 mt-1">Upload</span>
+                        <Upload size={16} className="text-foreground/40" />
+                        <span className="text-[8px] text-foreground/50 mt-1">Upload photo</span>
                       </>
                     )}
                     <input
@@ -557,7 +557,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <button
                 onClick={() => createPet.mutate()}
                 disabled={createPet.isPending || !petName.trim() || !faceFile || !patternFile}
-                className="font-sans font-semibold w-full py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs active:scale-95 transition-all shadow-md disabled:opacity-50 mt-2"
+                className="font-sans font-semibold w-full py-3 rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-foreground text-xs active:scale-[0.99] transition-all shadow-[0_10px_30px_-14px_rgba(80,110,160,0.25)] disabled:opacity-50 mt-2 cursor-pointer"
               >
                 {createPet.isPending ? "Welcoming Cat..." : "Welcome Cat"}
               </button>

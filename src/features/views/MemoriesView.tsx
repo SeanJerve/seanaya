@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil } from "lucide-react";
+import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil, Upload } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -1074,9 +1074,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {!previewUrl && (
                     <div className="space-y-2">
                       <label
-                        className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]"
+                        className="flex items-center justify-center gap-1.5 w-full py-3 text-center rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-xs font-semibold text-foreground cursor-pointer active:scale-95 transition-all shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)]"
                       >
-                        Select Image File
+                        <Upload size={14} />
+                        Upload photo
                         <input
                           type="file"
                           accept="image/*"

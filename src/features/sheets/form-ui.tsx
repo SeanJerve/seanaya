@@ -24,7 +24,7 @@ export function PrimaryButton({ children, ...rest }: ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...rest}
-      className="font-sans font-semibold w-full rounded-full bg-foreground/90 py-3 text-sm text-background shadow-[0_10px_30px_-14px_rgba(0,0,0,0.4)] disabled:opacity-50 transition active:scale-[0.99]"
+      className="font-sans font-semibold w-full rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl py-3 text-sm text-foreground shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)] disabled:opacity-50 transition active:scale-[0.99] cursor-pointer"
     >{children}</button>
   );
 }

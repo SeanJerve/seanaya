@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { Sun, Moon, Sunset, Bell, BookHeart, Calendar, MapPin, PinIcon, Music2, Heart } from "lucide-react";
+import { Sun, Moon, Sunset, Bell, BookHeart, Calendar, MapPin, PinIcon, Music2, Heart, Upload } from "lucide-react";
 import { pinStorage, hashPin, ANNIVERSARY_ISO, type Slot } from "@/features/pin/pin-utils";
 import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useTheme, type Theme } from "@/lib/theme";
@@ -107,25 +107,19 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
 
   return (
     <div className="space-y-6">
-      <section className="space-y-2">
-        <SectionHead label="Signed in as" />
-        <div className="rounded-2xl bg-white/50 px-4 py-3 text-sm backdrop-blur-xl">
-          <div className="text-foreground">{yourName || "you"}</div>
-          {partnerName && <div className="mt-0.5 text-[11px] text-muted-foreground">with {partnerName}</div>}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <SectionHead label="Profile Picture" />
-        <div className="flex items-center gap-4 rounded-2xl bg-white/50 px-4 py-3 backdrop-blur-xl">
-          <div className="relative w-16 h-16 rounded-full bg-white/60 dark:bg-black/30 border border-white/50 dark:border-neutral-800 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+      <section className="space-y-4 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
+        <SectionHead label="Your Profile" />
+        
+        {/* Profile Picture and Info Row */}
+        <div className="flex items-center gap-4">
+          <div className="relative w-16 h-16 rounded-full bg-white/60 border border-white/50 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
             {myProfile?.avatar_url ? (
               <img src={myProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <span className="text-xl font-bold text-foreground/45">{displayName.slice(0, 1).toUpperCase() || "?"}</span>
             )}
           </div>
-          <div className="flex-1 flex flex-col gap-2">
+          <div className="flex-1 flex flex-col gap-1.5">
             <input
               type="file"
               accept="image/*"
@@ -137,9 +131,10 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
             <div className="flex gap-2">
               <label
                 htmlFor="profile-pic-upload"
-                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-white/50 bg-white/70 hover:bg-white/80 active:scale-95 transition-all cursor-pointer shadow-sm text-foreground/80 dark:bg-neutral-800 dark:border-neutral-700 dark:hover:bg-neutral-750 dark:text-foreground"
+                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-white/50 bg-white/70 hover:bg-white/80 active:scale-95 transition-all cursor-pointer shadow-sm text-foreground/80"
               >
-                {uploadingAvatar ? "Uploading..." : "Choose Photo"}
+                <Upload size={12} className="mr-1.5" />
+                {uploadingAvatar ? "Uploading..." : "Upload photo"}
               </label>
               {myProfile?.avatar_url && (
                 <button
@@ -153,20 +148,31 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
             <p className="text-[10px] text-muted-foreground">Upload a profile picture to show next to your activity.</p>
           </div>
         </div>
+
+        {/* Display Name Input */}
+        <div className="space-y-3 pt-2 border-t border-white/20">
+          <FieldWrap label="Displayed as">
+            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </FieldWrap>
+          <PrimaryButton onClick={() => saveName.mutate()}>Save profile</PrimaryButton>
+        </div>
       </section>
 
       <section className="space-y-3">
         <SectionHead label="Theme" />
         <div className="grid grid-cols-2 gap-2">
-          {([
-            { key: "light", label: "Light", icon: <Sun size={14} /> },
-            { key: "dark",  label: "Dark",  icon: <Moon size={14} /> },
-          ] as { key: Theme; label: string; icon: React.ReactNode }[]).map((t) => (
-            <button key={t.key} onClick={() => setTheme(t.key)}
-              className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-xs backdrop-blur-xl transition cursor-pointer ${theme === t.key ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40"}`}>
-              <span className="text-foreground/70">{t.icon}</span>{t.label}
-            </button>
-          ))}
+          <button
+            onClick={() => setTheme("light")}
+            className="flex flex-col items-center gap-1 rounded-2xl border border-primary/60 bg-white/70 px-3 py-3 text-xs backdrop-blur-xl transition cursor-pointer"
+          >
+            <span className="text-foreground/70"><Sun size={14} /></span>Light
+          </button>
+          <button
+            disabled
+            className="flex flex-col items-center gap-1 rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-xs backdrop-blur-xl opacity-50 cursor-not-allowed text-muted-foreground/60"
+          >
+            <span><Moon size={14} /></span>Dark (Work in progress)
+          </button>
         </div>
       </section>
 
@@ -183,11 +189,7 @@ export function SettingsSheet({ relationshipId, inviteCode }: { relationshipId: 
         </div>
       </section>
 
-      <section className="space-y-3">
-        <SectionHead label="Your name" />
-        <FieldWrap label="Displayed as"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></FieldWrap>
-        <PrimaryButton onClick={() => saveName.mutate()}>Save name</PrimaryButton>
-      </section>
+
 
       <section className="space-y-3">
         <SectionHead label="Your PIN" />

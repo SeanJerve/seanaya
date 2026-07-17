@@ -4,16 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
-import { FieldWrap, Input, Select, Textarea, PrimaryButton } from "./form-ui";
+import { FieldWrap, Input, Textarea, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { uploadImage } from "@/lib/storage";
 import { DropZone } from "@/lib/DropZone";
-import { ImagePlus, X, CloudOff, Save } from "lucide-react";
-
-const CATS = ["firsts","campus","travel","random","family","future"] as const;
+import { Upload, X, CloudOff, Save } from "lucide-react";
 
 type Form = {
-  title: string; description: string; date: string; category: typeof CATS[number]; location: string;
+  title: string; description: string; date: string; location: string;
 };
 
 export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
@@ -23,7 +21,7 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   const online = useOnline();
 
   const [form, setForm] = useState<Form>({
-    title: "", description: "", date: new Date().toISOString().slice(0, 10), category: "random", location: "",
+    title: "", description: "", date: new Date().toISOString().slice(0, 10), location: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -45,7 +43,7 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
       const { data: mem, error } = await supabase.from("memories").insert({
         relationship_id: relationshipId, created_by: user.id,
         title: form.title, description: form.description || null,
-        memory_date: form.date, category: form.category, location: form.location || null,
+        memory_date: form.date, category: "random", location: form.location || null,
         featured,
       }).select("id").single();
       if (error) throw error;
@@ -97,22 +95,15 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
             onFile={onFile}
             className="flex h-32 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground"
           >
-            <ImagePlus size={18} />
-            <span>Drop a photo or tap to choose</span>
+            <Upload size={18} />
+            <span>Upload photo</span>
           </DropZone>
         )}
       </FieldWrap>
 
       <FieldWrap label="Title"><Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="A moment worth keeping" /></FieldWrap>
       <FieldWrap label="Story"><Textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Tell the story…" /></FieldWrap>
-      <div className="grid grid-cols-2 gap-3">
-        <FieldWrap label="Date"><Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></FieldWrap>
-        <FieldWrap label="Category">
-          <Select value={form.category} onChange={(e) => set("category", e.target.value as Form["category"])}>
-            {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
-        </FieldWrap>
-      </div>
+      <FieldWrap label="Date"><Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></FieldWrap>
       <FieldWrap label="Location"><Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Optional" /></FieldWrap>
       <label className="flex items-center gap-2 text-sm text-foreground/80">
         <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="accent-foreground" />

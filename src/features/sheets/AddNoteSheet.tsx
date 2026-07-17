@@ -8,7 +8,7 @@ import { FieldWrap, Select, Textarea, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { DropZone } from "@/lib/DropZone";
 import { uploadImage } from "@/lib/storage";
-import { ImagePlus, X, CloudOff, Palette } from "lucide-react";
+import { Upload, X, CloudOff, Save } from "lucide-react";
 
 const KINDS = ["note","compliment","promise","gratitude","photo"] as const;
 const PASTEL_COLORS = [
@@ -95,7 +95,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
             setForm((prev) => ({ ...prev, body: prev.body.slice(0, 20) }));
           }}
             className="flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground">
-            <ImagePlus size={16} /><span>Drop a photo or tap to choose</span>
+            <Upload size={16} /><span>Upload photo</span>
           </DropZone>
         )}
       </FieldWrap>

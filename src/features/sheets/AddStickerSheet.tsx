@@ -113,16 +113,10 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-yellow-500 animate-pulse" />
-        <h4 className="text-sm font-semibold text-foreground/80">Die-Cut Sticker Maker</h4>
-      </div>
-
       {!file ? (
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/60 bg-white/20 hover:bg-white/30 transition-all rounded-2xl p-6 cursor-pointer text-center group">
-          <Upload size={24} className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform" />
-          <span className="text-xs font-semibold text-foreground/70">Upload Doodle / Screenshot</span>
-          <span className="text-[9px] text-muted-foreground mt-0.5">We'll automatically extract and trace it</span>
+        <label className="flex flex-col items-center justify-center border border-dashed border-foreground/25 bg-white/40 hover:bg-white/50 transition-all rounded-2xl p-8 cursor-pointer text-center group">
+          <Upload size={20} className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-semibold text-foreground/75">Upload photo</span>
           <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
         </label>
       ) : (
