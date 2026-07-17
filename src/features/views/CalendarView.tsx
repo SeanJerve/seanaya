@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
 import { Lightbox } from "@/lib/Lightbox";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Memory = {
   id: string;
@@ -29,6 +30,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
   const [isFullscreenTimeline, setIsFullscreenTimeline] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -480,10 +482,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   <div className="truncate text-sm font-medium">{e.title}</div>
                   <div className="text-[11px] text-muted-foreground">{format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}</div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
-                  <span className="rounded-full bg-white/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {e.category}
-                  </span>
+                 <div className="flex items-center gap-2 shrink-0 ml-3">
                   <button
                     onClick={(evt) => {
                       evt.stopPropagation();
@@ -566,18 +565,59 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
       {/* Consistent Stacked Floating Action Buttons at bottom right */}
       <div className="fixed bottom-24 right-5 z-40 flex flex-col gap-2.5 items-end justify-end pointer-events-none">
-        <button
-          onClick={() => openSheet("add-event")}
-          className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
-        >
-          <Plus size={16} /> Add Moment
-        </button>
-        <button
-          onClick={() => openSheet("add-memory")}
-          className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all font-semibold"
-        >
-          <Plus size={16} /> Add Memory
-        </button>
+        <AnimatePresence mode="wait">
+          {!isExpanded ? (
+            <motion.button
+              key="collapsed-add-trigger"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => setIsExpanded(true)}
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-primary text-white px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.5),0_4px_12px_rgba(0,0,0,0.12)] hover:bg-primary/95 active:scale-95 transition-all font-semibold"
+            >
+              <Plus size={16} /> Add
+            </motion.button>
+          ) : (
+            <div className="flex flex-col gap-2.5 items-end">
+              <motion.button
+                key="add-moment-btn"
+                initial={{ opacity: 0, y: 15, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 15, scale: 0.8 }}
+                onClick={() => {
+                  openSheet("add-event");
+                  setIsExpanded(false);
+                }}
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/80 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.45),0_4px_12px_rgba(0,0,0,0.1)] hover:bg-white/90 active:scale-95 transition-all font-semibold"
+              >
+                <Plus size={16} /> Add Moment
+              </motion.button>
+              <motion.button
+                key="add-memory-btn"
+                initial={{ opacity: 0, y: 15, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 15, scale: 0.8 }}
+                onClick={() => {
+                  openSheet("add-memory");
+                  setIsExpanded(false);
+                }}
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/80 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.45),0_4px_12px_rgba(0,0,0,0.1)] hover:bg-white/90 active:scale-95 transition-all font-semibold"
+              >
+                <Plus size={16} /> Add Memory
+              </motion.button>
+              <motion.button
+                key="close-btn"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                onClick={() => setIsExpanded(false)}
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-4 py-2 text-xs text-foreground/60 hover:text-foreground active:scale-95 transition-all shadow-md"
+              >
+                <X size={12} /> Cancel
+              </motion.button>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
 
       <LongPressModal
@@ -754,9 +794,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
             <div className="p-6 pt-5 space-y-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary font-bold">
-                  <Tag size={10} /> {activeMemory.category}
-                </div>
                 <h3 className="display text-2xl text-foreground font-semibold leading-snug">
                   {activeMemory.title}
                 </h3>

@@ -66,6 +66,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [isDraggingPreview, setIsDraggingPreview] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
+  // Custom rename states
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [renameNameText, setRenameNameText] = useState("");
+
   const pageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
@@ -236,11 +240,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const addPage = useMutation({
     mutationFn: async () => {
       const maxIdx = pages.reduce((max, p) => p.page_index > max ? p.page_index : max, -1);
-      const name = prompt("Enter sheet name (optional):");
       const { error } = await (supabase as any).from("album_pages").insert({
         relationship_id: relationshipId,
         page_index: maxIdx + 1,
-        name: name ? name.trim() : null
+        name: null
       });
       if (error) throw error;
     },
@@ -275,6 +278,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       toast.success("Page renamed!");
     }
   });
+
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (activePage && renameNameText.trim()) {
+      renamePage.mutate({ id: activePage.id, name: renameNameText.trim() });
+      setRenameModalOpen(false);
+    }
+  };
 
   const addItem = useMutation({
     mutationFn: async (item: Omit<AlbumItem, "id">) => {
@@ -477,15 +488,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
         <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-md flex flex-col gap-2 shrink-0 z-20 mb-3">
           <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
+            {/* Arrow icon only back button */}
             <button
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-1 text-[11px] text-foreground/60 hover:text-foreground font-bold shrink-0"
+              className="p-1.5 rounded-full bg-white/40 border border-white/30 text-foreground/65 hover:text-foreground active:scale-95 transition-all shadow-sm shrink-0 flex items-center justify-center"
+              title="Go Back"
             >
-              <ArrowLeft size={13} /> Close
+              <ArrowLeft size={14} />
             </button>
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
               <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
               <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
                 {pages.map((p, idx) => {
@@ -541,26 +554,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </div>
         </div>
 
-        {/* Page renaming row under pages bar */}
+        {/* Page renaming row under pages bar - Styled exactly like stickers page name */}
         {activePage && (
-          <div className="w-full flex items-center justify-between px-2 mb-4 shrink-0">
-            <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full border border-white/25">
-              <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
+          <div className="w-full flex justify-start px-1 mb-1 shrink-0">
+            <button
+              onClick={() => {
+                setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
+                setRenameModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 bg-white/40 px-3.5 py-1 rounded-full border border-white/30 text-xs font-bold text-foreground/75 active:scale-95 transition-all shadow-sm"
+            >
+              <span className="uppercase tracking-wider">
                 {activePage.name || `Page ${currentPageIdx + 1}`}
               </span>
-              <button
-                onClick={() => {
-                  const newName = prompt("Rename page:", activePage.name || `Page ${currentPageIdx + 1}`);
-                  if (newName !== null) {
-                    renamePage.mutate({ id: activePage.id, name: newName.trim() });
-                  }
-                }}
-                className="p-0.5 text-foreground/45 hover:text-foreground hover:bg-black/5 rounded transition-all"
-                title="Rename page"
-              >
-                <Pencil size={10} />
-              </button>
-            </div>
+              <Pencil size={11} className="text-foreground/45" />
+            </button>
           </div>
         )}
 
@@ -749,13 +757,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setActiveTab(null);
                   setSelectedFile(null);
                   setPreviewUrl(null);
-                }} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors">
+                }} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors animate-in spin-in-12 duration-200">
                   <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Icons list (Star for decorate, Add Text note changes) */}
+            {/* Icons list with consistent glass layout styles */}
             <div className="flex items-center justify-between gap-1.5 mt-1">
               <button
                 onClick={() => {
@@ -764,7 +772,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setPreviewUrl(null);
                 }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
-                  activeTab === "stickers" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
+                  activeTab === "stickers"
+                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
+                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
                 }`}
               >
                 <Star size={14} />
@@ -777,7 +787,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setPreviewUrl(null);
                 }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
-                  activeTab === "photos" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
+                  activeTab === "photos"
+                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
+                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
                 }`}
               >
                 <ImageIcon size={14} />
@@ -790,7 +802,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setPreviewUrl(null);
                 }}
                 className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
-                  activeTab === "note" ? "bg-primary border-primary text-white" : "bg-white/40 border-white/20 text-foreground/60 hover:bg-white/60"
+                  activeTab === "note"
+                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
+                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
                 }`}
               >
                 <StickyNote size={14} />
@@ -808,33 +822,34 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-3"
                 >
-                  {/* Recently Added Stickers (Created in the last 24 hours) */}
+                  {/* Recently Added Stickers (Created in the last 24 hours) - Taxonomy tag outside */}
                   {recentStickers.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recently Added Stickers:</div>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentStickers.map((st: any) => (
-                          <button
-                            key={st.id}
-                            onClick={() => {
-                              addItem.mutate({
-                                page_id: activePage.id,
-                                item_type: "sticker",
-                                content: null,
-                                image_url: st.image_url,
-                                color: null,
-                                pos_x: 30,
-                                pos_y: 30,
-                                scale: 1,
-                                rotation: 0
-                              });
-                              toast.success("Sticker added!");
-                            }}
-                            className="w-14 h-14 p-1.5 rounded-2xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center relative shadow-sm"
-                          >
-                            <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none" />
-                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-sky/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Sticker</span>
-                          </button>
+                          <div key={st.id} className="flex flex-col items-center shrink-0 gap-1">
+                            <button
+                              onClick={() => {
+                                addItem.mutate({
+                                  page_id: activePage.id,
+                                  item_type: "sticker",
+                                  content: null,
+                                  image_url: st.image_url,
+                                  color: null,
+                                  pos_x: 30,
+                                  pos_y: 30,
+                                  scale: 1,
+                                  rotation: 0
+                                });
+                                toast.success("Sticker added!");
+                              }}
+                              className="w-14 h-14 p-1.5 rounded-2xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center relative shadow-sm"
+                            >
+                              <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none" />
+                            </button>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Sticker</span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -889,33 +904,34 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-4"
                 >
-                  {/* Recent Polaroids list (added in last 24 hours) */}
+                  {/* Recent Polaroids list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentPolaroids.length > 0 && !previewUrl && (
                     <div className="space-y-1.5">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Polaroids:</div>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentPolaroids.map((p: any) => (
-                          <button
-                            key={p.id}
-                            onClick={() => {
-                              addItem.mutate({
-                                page_id: activePage.id,
-                                item_type: "polaroid",
-                                content: null,
-                                image_url: p.image_url,
-                                color: null,
-                                pos_x: 30,
-                                pos_y: 30,
-                                scale: 1,
-                                rotation: (Math.random() - 0.5) * 8
-                              });
-                              toast.success("Polaroid imported!");
-                            }}
-                            className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden relative"
-                          >
-                            <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
-                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-rose/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Polaroid</span>
-                          </button>
+                          <div key={p.id} className="flex flex-col items-center shrink-0 gap-1">
+                            <button
+                              onClick={() => {
+                                addItem.mutate({
+                                  page_id: activePage.id,
+                                  item_type: "polaroid",
+                                  content: null,
+                                  image_url: p.image_url,
+                                  color: null,
+                                  pos_x: 30,
+                                  pos_y: 30,
+                                  scale: 1,
+                                  rotation: (Math.random() - 0.5) * 8
+                                });
+                                toast.success("Polaroid imported!");
+                              }}
+                              className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 hover:scale-105 active:scale-95 transition-all overflow-hidden relative"
+                            >
+                              <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
+                            </button>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Polaroid</span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -982,8 +998,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         />
                       </div>
 
-                      {/* Add/Cancel buttons */}
-                      <div className="flex gap-2 w-full font-bold text-xs pt-1">
+                      {/* Add/Cancel buttons with premium glass styles */}
+                      <div className="flex gap-2 w-full font-semibold text-xs pt-1">
                         <button
                           onClick={() => {
                             if (selectedFile) {
@@ -998,7 +1014,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                             }
                           }}
                           disabled={uploadBakedPhoto.isPending}
-                          className="flex-1 py-2 rounded-full bg-primary text-white hover:bg-primary/95 text-center active:scale-95 transition-all shadow"
+                          className="flex-1 py-2 rounded-full bg-white/70 hover:bg-white/80 border border-white/60 text-primary active:scale-95 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_4px_12px_-4px_rgba(80,110,160,0.2)] text-center font-bold backdrop-blur-md"
                         >
                           {uploadBakedPhoto.isPending ? "Adding..." : "Add Picture"}
                         </button>
@@ -1007,7 +1023,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                             setSelectedFile(null);
                             setPreviewUrl(null);
                           }}
-                          className="flex-1 py-2 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/80 text-center active:scale-95 transition-all"
+                          className="flex-1 py-2 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/75 text-center active:scale-95 transition-all"
                         >
                           Cancel
                         </button>
@@ -1015,7 +1031,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   )}
 
-                  {/* Frame & Outline color picking widgets (Always active for live switching preview) */}
+                  {/* Frame & Shape selections with glass styling */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
                     <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
                     <div className="flex gap-1 flex-wrap">
@@ -1025,8 +1041,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           onClick={() => setPhotoShape(s)}
                           className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
                             photoShape === s
-                              ? "bg-primary border-primary text-white"
-                              : "bg-white/50 border-white/30 text-foreground/60 hover:bg-white/70"
+                              ? "bg-white/75 border-white/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.8),0_4px_10px_-3px_rgba(80,110,160,0.2)] backdrop-blur-md"
+                              : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
                           }`}
                         >
                           {s.toUpperCase()}
@@ -1058,7 +1074,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     <div className="space-y-2">
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-sm"
+                        className="block w-full py-2.5 text-center rounded-2xl border border-white/60 bg-white/40 hover:bg-white/60 text-[11px] font-bold cursor-pointer active:scale-95 transition-all shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]"
                       >
                         Select Image File
                       </button>
@@ -1082,33 +1098,34 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="pt-2 space-y-4"
                 >
-                  {/* Recent Texts list (added in last 24 hours) */}
+                  {/* Recent Texts list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentTexts.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Texts:</div>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-none py-1">
+                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentTexts.map((t: any) => (
-                          <button
-                            key={t.id}
-                            onClick={() => {
-                              addItem.mutate({
-                                page_id: activePage.id,
-                                item_type: "text",
-                                content: t.body,
-                                image_url: null,
-                                color: t.color || PASTEL_COLORS[0],
-                                pos_x: 30,
-                                pos_y: 30,
-                                scale: 1,
-                                rotation: 0
-                              });
-                              toast.success("Text imported!");
-                            }}
-                            className="w-24 p-2 rounded-xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden relative text-left"
-                          >
-                            <p className="text-[8px] text-foreground/80 line-clamp-3 leading-tight">{t.body}</p>
-                            <span className="absolute bottom-0.5 right-0.5 text-[5px] bg-mint/60 px-1 rounded text-foreground/80 font-extrabold select-none pointer-events-none">Love Wall</span>
-                          </button>
+                          <div key={t.id} className="flex flex-col items-center shrink-0 gap-1">
+                            <button
+                              onClick={() => {
+                                addItem.mutate({
+                                  page_id: activePage.id,
+                                  item_type: "text",
+                                  content: t.body,
+                                  image_url: null,
+                                  color: t.color || PASTEL_COLORS[0],
+                                  pos_x: 30,
+                                  pos_y: 30,
+                                  scale: 1,
+                                  rotation: 0
+                                });
+                                toast.success("Text imported!");
+                              }}
+                              className="w-24 h-16 p-2 rounded-xl bg-white/40 border border-white/50 hover:scale-105 active:scale-95 transition-all overflow-hidden text-left shadow-sm flex flex-col justify-between"
+                            >
+                              <p className="text-[10px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">{t.body}</p>
+                            </button>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Love Wall</span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1157,7 +1174,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         setNoteText("");
                         setActiveTab(null);
                       }}
-                      className="rounded-2xl bg-primary text-white px-4 py-2 text-xs font-bold active:scale-95 transition-all"
+                      className="rounded-2xl bg-white/70 hover:bg-white/80 border border-white/60 text-primary px-4 py-2 text-xs font-bold active:scale-95 transition-all shadow-[0_2px_8px_-3px_rgba(0,0,0,0.08)] backdrop-blur-md"
                     >
                       Pin Text
                     </button>
@@ -1175,6 +1192,54 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     <div className="min-h-screen pb-32 relative select-none overflow-x-hidden">
       {!isOpen ? renderClosedBook() : renderOpenBook()}
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+
+      {/* ── Rename Page Modal (Glassmorphic, styled exactly like StickersView) ── */}
+      <AnimatePresence>
+        {renameModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRenameModalOpen(false)}
+              className="absolute inset-0 bg-black/20 backdrop-blur-[3px]"
+            />
+            <motion.form
+              onSubmit={handleRenameSubmit}
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              className="relative w-full max-w-[280px] rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl z-10 space-y-4"
+            >
+              <h3 className="display text-sm font-semibold text-foreground/80">Rename Page Name</h3>
+              <input
+                type="text"
+                autoFocus
+                placeholder="e.g. Summer Vacation, My Love"
+                value={renameNameText}
+                onChange={(e) => setRenameNameText(e.target.value)}
+                className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
+              />
+              <div className="flex gap-2 text-xs font-semibold pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRenameModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/75 active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!renameNameText.trim() || renamePage.isPending}
+                  className="flex-1 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white active:scale-95 transition-all shadow-md"
+                >
+                  Save
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* SVG Masks for heart/star crop picture masks */}
       <svg className="absolute w-0 h-0 pointer-events-none">
