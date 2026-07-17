@@ -28,7 +28,12 @@ export function AddTripSheet({ relationshipId }: { relationshipId: string }) {
 
   const { clear } = useDraft(`trip:${relationshipId}`, form, setForm);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const onFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
+  const onFile = (f: File) => {
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  };
 
   const create = useMutation({
     mutationFn: async () => {

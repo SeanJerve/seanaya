@@ -429,6 +429,7 @@ function RoamingPet({
           patternUrl={patternUrl}
           isPhotoFace={isPhotoFace}
           patternColor={config.patternColor}
+          petId={pet.id}
         />
       </div>
     </div>
@@ -437,7 +438,7 @@ function RoamingPet({
 
 // Render clean, outline-free cat vector shapes with soft pastel fills
 function AnimatedKitten({ 
-  behavior, speed, isHopping, faceUrl, patternUrl, isPhotoFace, patternColor 
+  behavior, speed, isHopping, faceUrl, patternUrl, isPhotoFace, patternColor, petId 
 }: { 
   behavior: PetBehavior; 
   speed: PetSpeed; 
@@ -446,6 +447,7 @@ function AnimatedKitten({
   patternUrl: string | null;
   isPhotoFace: boolean;
   patternColor: string;
+  petId: string;
 }) {
   const isWalking = behavior === "walk";
   const isSleeping = behavior === "sleep";
@@ -467,8 +469,8 @@ function AnimatedKitten({
   } as React.CSSProperties;
 
   const hasPattern = !!patternUrl;
-  const mainFill = hasPattern ? "url(#cat-coat-pattern)" : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
-  const mainStroke = hasPattern ? "url(#cat-coat-pattern)" : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
+  const mainFill = hasPattern ? `url(#cat-coat-pattern-${petId})` : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
+  const mainStroke = hasPattern ? `url(#cat-coat-pattern-${petId})` : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
 
   // ── RENDER SITTING POSTURE (Matching Pear-Shaped Reference Silhouette!) ──
   if (isSitting) {
@@ -484,7 +486,7 @@ function AnimatedKitten({
         <defs>
           {/* Unified coat pattern ID so photo pattern renders correctly when sitting! */}
           {hasPattern && (
-            <pattern id="cat-coat-pattern" x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
+            <pattern id={`cat-coat-pattern-${petId}`} x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
               <image href={patternUrl} x="0" y="0" width="38" height="30" preserveAspectRatio="xMidYMid slice" />
             </pattern>
           )}
@@ -585,7 +587,7 @@ function AnimatedKitten({
     >
       <defs>
         {hasPattern && (
-          <pattern id="cat-coat-pattern" x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
+          <pattern id={`cat-coat-pattern-${petId}`} x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
             <image href={patternUrl} x="0" y="0" width="38" height="30" preserveAspectRatio="xMidYMid slice" />
           </pattern>
         )}

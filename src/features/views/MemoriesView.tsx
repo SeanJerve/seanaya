@@ -176,19 +176,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     };
   }, []);
 
-  // Clean preview URLs
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
       setSelectedFile(f);
-      const url = URL.createObjectURL(f);
-      setPreviewUrl(url);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(f);
       setPreviewOffsetX(0);
       setPreviewOffsetY(0);
       setPreviewScale(1.2);
@@ -368,7 +364,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
       // 1. Create a helper image element
       const img = new Image();
-      img.src = URL.createObjectURL(file);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      img.src = dataUrl;
       await new Promise((resolve) => { img.onload = resolve; });
 
       // 2. Setup canvas dimensions
@@ -433,7 +435,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         rotation: 0
       });
 
-      URL.revokeObjectURL(img.src);
+
     },
     onSuccess: () => {
       toast.success("Picture added!");
