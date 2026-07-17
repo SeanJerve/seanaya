@@ -463,7 +463,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-full aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="w-full max-w-md aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[0_30px_70px_-15px_rgba(80,110,160,0.6),inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />

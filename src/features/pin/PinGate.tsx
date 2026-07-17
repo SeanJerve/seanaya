@@ -965,7 +965,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "unlock" && (
           <Screen key="unlock">
-            <Title kicker="Seanaya" title="Enter your PIN" sub={space?.name_a && space?.name_b ? `${space.name_a} · ${space.name_b}` : "Either PIN opens your space"} />
+            <Title kicker="Seanaya" title="Enter your PIN" sub="Either PIN opens your space" />
             <div className="mt-10">
               <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>
