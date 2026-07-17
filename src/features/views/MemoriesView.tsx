@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil, Upload } from "lucide-react";
+import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil, Upload, Search } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -49,6 +49,8 @@ const OUTLINE_COLORS = [
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
+  const [showPageSearch, setShowPageSearch] = useState(false);
+  const [pageSearchQuery, setPageSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"stickers" | "photos" | "note" | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteColor, setNoteColor] = useState(PASTEL_COLORS[0]);
@@ -87,6 +89,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       return data as AlbumPage[];
     }
   });
+
+  // Filter pages based on search query
+  const filteredPages = useMemo(() => {
+    if (!pageSearchQuery.trim()) {
+      return pages.map((p, idx) => ({ ...p, originalIndex: idx }));
+    }
+    const q = pageSearchQuery.toLowerCase().trim();
+    return pages
+      .map((p, idx) => ({ ...p, originalIndex: idx }))
+      .filter((p) => {
+        const nameMatch = p.name ? p.name.toLowerCase().includes(q) : false;
+        const indexMatch = String(p.page_index + 1).includes(q);
+        return nameMatch || indexMatch;
+      });
+  }, [pages, pageSearchQuery]);
 
   // Fetch album items
   const { data: items = [], refetch: refetchItems } = useQuery({
@@ -500,32 +517,67 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
-              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
-              <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
-                {pages.map((p, idx) => {
-                  const active = currentPageIdx === idx;
-                  return (
+              {showPageSearch ? (
+                <div className="flex-1 flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={pageSearchQuery}
+                    onChange={(e) => setPageSearchQuery(e.target.value)}
+                    placeholder="Search page..."
+                    className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+                    autoFocus
+                  />
+                  {pageSearchQuery && (
                     <button
-                      key={p.id}
-                      onClick={() => {
-                        setCurrentPageIdx(idx);
-                        setSelectedItemId(null);
-                      }}
-                      className={`h-6 w-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
-                        active
-                          ? "bg-white text-primary border-primary/20 shadow-sm"
-                          : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
-                      }`}
+                      onClick={() => setPageSearchQuery("")}
+                      className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
                     >
-                      {idx + 1}
+                      <X size={10} />
                     </button>
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
+                  <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
+                    {filteredPages.map((p) => {
+                      const idx = p.originalIndex;
+                      const active = currentPageIdx === idx;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            setCurrentPageIdx(idx);
+                            setSelectedItemId(null);
+                          }}
+                          className={`px-2 h-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                            active
+                              ? "bg-white text-primary border-primary/20 shadow-sm"
+                              : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
+                          }`}
+                        >
+                          {p.name ? `${p.name} (${idx + 1})` : idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Plus and Trash controls side-by-side on the right */}
             <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => {
+                  setShowPageSearch(!showPageSearch);
+                  if (showPageSearch) setPageSearchQuery("");
+                }}
+                className={`p-1 rounded-full active:scale-95 transition-all ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/60 hover:text-foreground"}`}
+                title="Search Page"
+              >
+                <Search size={14} />
+              </button>
+
               <button
                 onClick={() => addPage.mutate()}
                 className="p-1 rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
@@ -730,7 +782,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               </button>
 
                               <button
-                                onClick={() => deleteItem.mutate(it.id)}
+                                onClick={() => {
+                                  confirm({
+                                    title: "Delete item?",
+                                    message: "Are you sure you want to permanently remove this item from the page?",
+                                    onConfirm: () => deleteItem.mutate(it.id),
+                                  });
+                                }}
                                 className="p-1 rounded-full hover:bg-red-50 text-red-500"
                                 title="Delete"
                               >

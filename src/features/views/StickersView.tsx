@@ -366,7 +366,6 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                     style={{
                       left: `${px}%`,
                       top: `${py}%`,
-                      rotate: rot,
                       zIndex: isSelected ? 50 : 10,
                     }}
                   >
@@ -382,6 +381,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                         src={s.image_url}
                         alt="Sticker"
                         className="h-24 w-24 object-contain drop-shadow-[0_5px_8px_rgba(0,0,0,0.18)] select-none pointer-events-none"
+                        style={{ transform: `rotate(${rot}deg)` }}
                       />
 
                       {/* ── Selection Quick Actions Overlay (Tap Menu) ── */}
@@ -412,7 +412,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                                   onConfirm: () => deleteSticker.mutate(s),
                                 });
                               }}
-                              className="p-1.5 rounded-full hover:bg-red-500 hover:text-white text-foreground/75 transition-all"
+                              className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-all"
                               title="Delete sticker"
                             >
                               <Trash2 size={12} />
