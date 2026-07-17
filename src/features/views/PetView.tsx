@@ -56,7 +56,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: pets = [] } = useQuery({
+  const { data: pets = [], isLoading: loadingPets } = useQuery({
     queryKey: ["pets", relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -328,7 +328,29 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           Our Cats ({pets.length})
         </h3>
 
-        {pets.length === 0 ? (
+        {loadingPets ? (
+          <ul className="space-y-4 animate-pulse">
+            {[1, 2].map((i) => (
+              <li key={i} className="flex flex-col gap-3 rounded-2xl bg-white/50 p-4 border border-white/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-foreground/10 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-24 bg-foreground/10 rounded" />
+                    <div className="h-2.5 w-16 bg-foreground/10 rounded" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-7 h-7 rounded-full bg-foreground/10" />
+                    <div className="w-7 h-7 rounded-full bg-foreground/10" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-white/10 pt-3">
+                  <div className="h-6 bg-foreground/5 rounded-2xl" />
+                  <div className="h-6 bg-foreground/5 rounded-2xl" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : pets.length === 0 ? (
           <div className="text-xs italic text-muted-foreground text-center py-4">No cats welcomed yet. Welcome your first cat!</div>
         ) : (
           <ul className="space-y-4">

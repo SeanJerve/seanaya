@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, LayoutGrid, Eye, PlusCircle, Trash } from "lucide-react";
+import { Plus, Trash2, LayoutGrid, Eye, PlusCircle, Trash, Search, X } from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
@@ -66,6 +66,8 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const [newPageOpen, setNewPageOpen] = useState(false);
   const [newPageName, setNewPageName] = useState("");
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
+  const [showPageSearch, setShowPageSearch] = useState(false);
+  const [pageSearchQuery, setPageSearchQuery] = useState("");
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
     onClick: () => openSheet("add-sticker")
@@ -81,7 +83,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   }, []);
 
   // Fetch sticker book pages
-  const { data: pages = [], refetch: refetchPages, isFetched } = useQuery({
+  const { data: pages = [], refetch: refetchPages, isFetched, isLoading: loadingPages } = useQuery({
     queryKey: ["sticker-pages", relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -94,7 +96,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   });
 
   // Fetch all stickers
-  const { data: allStickers = [] } = useQuery({
+  const { data: allStickers = [], isLoading: loadingStickers } = useQuery({
     queryKey: ["stickers", relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -105,7 +107,20 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       return data as Sticker[];
     },
   });
-
+  // Filter pages based on search query
+  const filteredPages = useMemo(() => {
+    if (!pageSearchQuery.trim()) {
+      return pages.map((p, idx) => ({ ...p, originalIndex: idx }));
+    }
+    const q = pageSearchQuery.toLowerCase().trim();
+    return pages
+      .map((p, idx) => ({ ...p, originalIndex: idx }))
+      .filter((p) => {
+        const nameMatch = p.name ? p.name.toLowerCase().includes(q) : false;
+        const indexMatch = String(idx + 1).includes(q);
+        return nameMatch || indexMatch;
+      });
+  }, [pages, pageSearchQuery]);
   // Create a default page if none exist
   const createPage = useMutation({
     mutationFn: async (name: string) => {
@@ -234,30 +249,76 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
     <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none mx-auto max-w-md px-4 pt-6">
       
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
-      <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20">
+      <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 relative">
         {/* Row 1: Tabs List */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
-            {pages.map((p) => {
-              const active = activePage?.id === p.id;
-              return (
+          {showPageSearch ? (
+            <div className="flex-1 flex items-center gap-1">
+              <input
+                type="text"
+                value={pageSearchQuery}
+                onChange={(e) => setPageSearchQuery(e.target.value)}
+                placeholder="Search page..."
+                className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+                autoFocus
+              />
+              {pageSearchQuery && (
                 <button
-                  key={p.id}
-                  onClick={() => {
-                    setActivePageId(p.id);
-                    setSelectedStickerId(null);
-                  }}
-                  className={`relative px-3.5 py-1.5 text-[11px] font-semibold rounded-full border transition-all shrink-0 active:scale-95 ${
-                    active
-                      ? "bg-white text-primary border-white shadow-[0_2px_8px_-3px_rgba(0,0,0,0.1)] font-bold scale-105"
-                      : "bg-white/40 text-foreground/60 border-transparent hover:bg-white/60 hover:text-foreground"
-                  }`}
+                  onClick={() => setPageSearchQuery("")}
+                  className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
                 >
-                  {p.name}
+                  <X size={10} />
                 </button>
-              );
-            })}
-          </div>
+              )}
+              {/* Floating dropdown popup for search results */}
+              <div className="absolute top-[110%] left-4 right-4 z-50 rounded-2xl border border-white/50 bg-white/95 backdrop-blur-xl shadow-lg p-2 max-h-40 overflow-y-auto space-y-1">
+                {filteredPages.length === 0 ? (
+                  <div className="text-[10px] text-muted-foreground text-center py-2">No matching pages</div>
+                ) : (
+                  filteredPages.map((p) => {
+                    const idx = p.originalIndex;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setActivePageId(p.id);
+                          setSelectedStickerId(null);
+                          setPageSearchQuery("");
+                          setShowPageSearch(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-black/5 text-[10px] font-bold text-foreground transition-colors flex items-center justify-between"
+                      >
+                        <span className="truncate">{p.name || `Page ${idx + 1}`}</span>
+                        <span className="text-[9px] text-muted-foreground font-normal shrink-0">Page {idx + 1}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
+              {pages.map((p) => {
+                const active = activePage?.id === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setActivePageId(p.id);
+                      setSelectedStickerId(null);
+                    }}
+                    className={`relative px-3.5 py-1.5 text-[11px] font-semibold rounded-full border transition-all shrink-0 active:scale-95 ${
+                      active
+                        ? "bg-white text-primary border-white shadow-[0_2px_8px_-3px_rgba(0,0,0,0.1)] font-bold scale-105"
+                        : "bg-white/40 text-foreground/60 border-transparent hover:bg-white/60 hover:text-foreground"
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Row 2: Page Tools */}
@@ -282,6 +343,16 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             </div>
 
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setShowPageSearch(!showPageSearch);
+                  if (showPageSearch) setPageSearchQuery("");
+                }}
+                className={`p-1.5 rounded-full active:scale-95 transition-all ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/50 hover:text-foreground"}`}
+                title="Search Page"
+              >
+                <Search size={14} />
+              </button>
               <button
                 onClick={() => setNewPageOpen(true)}
                 className="p-1.5 rounded-full hover:bg-white/40 text-foreground/50 hover:text-foreground active:scale-95 transition-all"
@@ -322,7 +393,12 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             className={`relative w-full aspect-[1/1.4] rounded-[32px] border border-white/60 overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
             onClick={() => setSelectedStickerId(null)}
           >
-            {pageStickers.length === 0 ? (
+            {loadingPages || loadingStickers ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none animate-pulse">
+                <div className="h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-2" />
+                <div className="text-xs font-semibold text-foreground/50">Loading board...</div>
+              </div>
+            ) : pageStickers.length === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none">
                 <div className="text-sm font-medium text-foreground/60">This page is empty.</div>
                 <p className="mt-1 text-xs text-muted-foreground max-w-xs">

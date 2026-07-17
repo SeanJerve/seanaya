@@ -91,7 +91,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     },
   });
 
-  const { data: memories = [] } = useQuery({
+  const { data: memories = [], isLoading: loadingMemories } = useQuery({
     queryKey: ["memories", relationshipId],
     queryFn: async () =>
       ((await supabase
@@ -276,10 +276,27 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   };
 
   const renderTimeline = () => (
-    <div className="relative w-full mt-4" style={{ minHeight: groupedMemories.length === 0 ? "auto" : `${groupedMemories.length * rowHeight + 40}px` }}>
-      {groupedMemories.length === 0 ? (
-        <div className="rounded-2xl border border-white/40 bg-white/40 backdrop-blur-md p-6 text-center">
-          <p className="text-xs text-muted-foreground italic">No milestones captured yet. Tap Add Memory below!</p>
+    <div className="relative w-full mt-4" style={{ minHeight: loadingMemories ? "auto" : (groupedMemories.length === 0 ? "auto" : `${groupedMemories.length * rowHeight + 40}px`) }}>
+      {loadingMemories ? (
+        <div className="space-y-4 py-4 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-4 items-center">
+              <div className="w-12 h-4 bg-foreground/10 rounded" />
+              <div className="relative w-1.5 h-16 bg-foreground/10 flex items-center justify-center">
+                <div className="absolute w-4 h-4 rounded-full bg-foreground/20" />
+              </div>
+              <div className="flex-1 rounded-2xl border border-white/40 bg-white/50 p-4 space-y-1.5">
+                <div className="h-4 w-32 bg-foreground/10 rounded" />
+                <div className="h-3 w-48 bg-foreground/10 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : groupedMemories.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center bg-white/40 rounded-3xl border border-white/20 mt-4">
+          <BookHeart size={32} className="text-foreground/20 mb-2" />
+          <div className="text-xs font-semibold text-foreground/50">No memories recorded yet</div>
+          <p className="text-[10px] text-muted-foreground mt-1">Capture your first memory together by tapping the floating button!</p>
         </div>
       ) : (
         <>

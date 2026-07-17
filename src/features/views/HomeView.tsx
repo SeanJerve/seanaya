@@ -18,7 +18,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   const { openSheet, setTab } = useAppStore();
   const { user } = useUser();
 
-  const { data: recentAction } = useQuery({
+  const { data: recentAction, isLoading: loadingAction } = useQuery({
     queryKey: ["recent-partner-action", relationshipId, user?.id],
     enabled: !!user && !!relationshipId,
     queryFn: async () => {
@@ -148,7 +148,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     },
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ["stats", relationshipId],
     queryFn: async () => {
       const [mem, trip, hug, next, recent] = await Promise.all([
@@ -331,7 +331,18 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             }}
             title={recentAction ? "Recently active" : "No recent activity"}
           >
-            {recentAction ? (
+            {loadingAction ? (
+              <div className="flex flex-col h-full justify-between gap-1.5 animate-pulse">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-5 w-5 rounded-full bg-foreground/10 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-2 w-12 bg-foreground/10 rounded" />
+                    <div className="h-1.5 w-16 bg-foreground/10 rounded" />
+                  </div>
+                </div>
+                <div className="flex-1 rounded-lg bg-foreground/5 mt-2" />
+              </div>
+            ) : recentAction ? (
               <div className="flex flex-col h-full justify-between gap-1.5">
                 {/* Partner User row */}
                 <div className="flex items-center gap-1.5">
@@ -404,7 +415,13 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             <CalendarIcon size={11} /> Next moment
           </div>
-          {stats?.nextEvent ? (
+          {loadingStats ? (
+            <div className="mt-2 space-y-1.5 animate-pulse">
+              <div className="h-4 w-32 bg-foreground/10 rounded" />
+              <div className="h-3 w-24 bg-foreground/10 rounded mt-1" />
+              <div className="h-3 w-16 bg-foreground/10 rounded mt-1.5" />
+            </div>
+          ) : stats?.nextEvent ? (
             <button onClick={() => setTab("calendar")} className="mt-1 block w-full text-left">
               <div className="display text-lg leading-tight">{stats.nextEvent.title}</div>
               <div className="text-[11px] text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
@@ -430,7 +447,19 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             </div>
             <button onClick={() => setTab("calendar")} className="text-[11px] text-primary">See all</button>
           </div>
-          {stats?.recent.length ? (
+          {loadingStats ? (
+            <div className="mt-2 space-y-1.5 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
+                  <div className="h-9 w-9 shrink-0 rounded-lg bg-foreground/10" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 w-28 bg-foreground/10 rounded" />
+                  </div>
+                  <div className="h-2.5 w-10 bg-foreground/10 rounded shrink-0" />
+                </div>
+              ))}
+            </div>
+          ) : stats?.recent.length ? (
             <ul className="mt-2 space-y-1.5">
               {stats.recent.map((m) => (
                 <li key={m.id} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
