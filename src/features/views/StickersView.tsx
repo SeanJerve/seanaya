@@ -107,7 +107,6 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       return data as Sticker[];
     },
   });
-  // Filter pages based on search query
   const filteredPages = useMemo(() => {
     if (!pageSearchQuery.trim()) {
       return pages.map((p, idx) => ({ ...p, originalIndex: idx }));
@@ -117,7 +116,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       .map((p, idx) => ({ ...p, originalIndex: idx }))
       .filter((p) => {
         const nameMatch = p.name ? p.name.toLowerCase().includes(q) : false;
-        const indexMatch = String(idx + 1).includes(q);
+        const indexMatch = String(p.originalIndex + 1).includes(q);
         return nameMatch || indexMatch;
       });
   }, [pages, pageSearchQuery]);
