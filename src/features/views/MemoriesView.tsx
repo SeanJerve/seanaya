@@ -1082,7 +1082,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
-                        className="hidden"
+                        className="sr-only"
                         onChange={handleFileChange}
                       />
                     </div>

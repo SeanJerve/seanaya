@@ -31,7 +31,7 @@ export function DropZone({ onFile, accept = "image/*", className = "", children,
         ref={inputRef}
         type="file"
         accept={accept}
-        hidden
+        className="sr-only"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ""; }}
       />
       {children}
