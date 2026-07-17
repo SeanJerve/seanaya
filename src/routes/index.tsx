@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Seanaya — a quiet space for two" },
+      { title: "Seanaya" },
       { name: "description", content: "A private, illustrated home for two — memories, moments, and gentle keepsakes." },
     ],
   }),
