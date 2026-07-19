@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
- 
+
 type Note = {
   id: string;
   body: string;
@@ -26,7 +26,7 @@ type Note = {
   created_at: string;
   author_id: string | null;
 };
- 
+
 type PhotoTile = {
   id: string;
   title: string;
@@ -35,29 +35,29 @@ type PhotoTile = {
   kind: "trip" | "memory";
   dateStr?: string | null;
 };
- 
+
 const PASTEL_COLORS = [
-  { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
-  { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
-  { label: "Mint",     value: "oklch(0.94 0.06 160 / 0.85)" },
+  { label: "Butter", value: "oklch(0.95 0.07 90 / 0.85)" },
+  { label: "Rose", value: "oklch(0.94 0.06 5 / 0.85)" },
+  { label: "Mint", value: "oklch(0.94 0.06 160 / 0.85)" },
   { label: "Lavender", value: "oklch(0.93 0.06 290 / 0.85)" },
-  { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
-  { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" },
+  { label: "Peach", value: "oklch(0.94 0.07 55 / 0.85)" },
+  { label: "Sky", value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
- 
+
 function getTilt(id: string): number {
   const seed = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
   return ((seed % 24) - 12) * 1.35; // range roughly -16.2 to 16.2 degrees
 }
- 
+
 function getSeededCoords(id: string) {
   const seedX = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
   const seedY = id.charCodeAt(1) + id.charCodeAt(id.length - 2);
-  const x = ((seedX % 7) * 0.1) + 0.1; // range 10% to 70%
-  const y = ((seedY % 6) * 0.1) + 0.15; // range 15% to 65%
+  const x = (seedX % 7) * 0.1 + 0.1; // range 10% to 70%
+  const y = (seedY % 6) * 0.1 + 0.15; // range 15% to 65%
   return { x, y };
 }
- 
+
 export function WallView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
   const { openSheet, confirm } = useAppStore();
@@ -72,7 +72,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => openSheet("add-note")
+    onClick: () => openSheet("add-note"),
   });
 
   useEffect(() => {
@@ -102,12 +102,16 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   const { data: notes = [] } = useQuery({
     queryKey: ["notes", relationshipId],
     queryFn: async () =>
-      ((await supabase
-        .from("notes")
-        .select("id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at,author_id")
-        .eq("relationship_id", relationshipId)
-        .order("created_at", { ascending: true }) // Newer notes are painted last (drawn on top)
-      ).data ?? []) as Note[],
+      ((
+        await supabase
+          .from("notes")
+          .select(
+            "id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at,author_id",
+          )
+          .eq("relationship_id", relationshipId)
+          .order("created_at", { ascending: true })
+      ) // Newer notes are painted last (drawn on top)
+      .data ?? []) as Note[],
   });
 
   // Calculate available months dynamically based on note dates
@@ -123,12 +127,12 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   // Filter notes by selected month
   const filteredNotes = useMemo(() => {
     return notes.filter((n) => {
-      const dateStr = n.created_at ? format(new Date(n.created_at), "yyyy-MM") : format(new Date(), "yyyy-MM");
+      const dateStr = n.created_at
+        ? format(new Date(n.created_at), "yyyy-MM")
+        : format(new Date(), "yyyy-MM");
       return dateStr === selectedMonth;
     });
   }, [notes, selectedMonth]);
-
-
 
   const updatePosition = useMutation({
     mutationFn: async ({ id, pos_x, pos_y }: { id: string; pos_x: number; pos_y: number }) => {
@@ -177,9 +181,12 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       const noteId = crypto.randomUUID();
       const { url, path } = await uploadImage("wall", relationshipId, file, `notes/${noteId}`);
       const { error } = await supabase.from("notes").insert({
-        relationship_id: relationshipId, author_id: user.id,
-        body: "(photo)", kind: "photo",
-        image_url: url, image_path: path,
+        relationship_id: relationshipId,
+        author_id: user.id,
+        body: "(photo)",
+        kind: "photo",
+        image_url: url,
+        image_path: path,
         color: PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)].value,
         rotation: (Math.random() - 0.5) * 8,
         pos_x: Math.random() * 0.5 + 0.1,
@@ -187,7 +194,10 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Pinned to your board"); qc.invalidateQueries({ queryKey: ["notes"] }); },
+    onSuccess: () => {
+      toast.success("Pinned to your board");
+      qc.invalidateQueries({ queryKey: ["notes"] });
+    },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
@@ -196,10 +206,14 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
   return (
     <div
       className="min-h-screen pb-32 relative overflow-x-hidden select-none"
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
-        e.preventDefault(); setDragOver(false);
+        e.preventDefault();
+        setDragOver(false);
         const f = e.dataTransfer.files?.[0];
         if (f && f.type.startsWith("image/")) uploadPhotoNote.mutate(f);
       }}
@@ -238,7 +252,9 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   disabled={!canPrev}
                   onClick={() => setSelectedMonth(availableMonths[idx + 1])}
                   className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
-                    canPrev ? "text-foreground hover:bg-white/60 cursor-pointer" : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
+                    canPrev
+                      ? "text-foreground hover:bg-white/60 cursor-pointer"
+                      : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
                   }`}
                   title="Previous month"
                 >
@@ -252,14 +268,18 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   disabled={!canNext}
                   onClick={() => setSelectedMonth(availableMonths[idx - 1])}
                   className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
-                    canNext ? "text-foreground hover:bg-white/60 cursor-pointer" : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
+                    canNext
+                      ? "text-foreground hover:bg-white/60 cursor-pointer"
+                      : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
                   }`}
                   title="Next month"
                 >
                   <ChevronRight size={16} />
                 </button>
               </div>
-              <div className="text-[11px] font-semibold text-muted-foreground">{filteredNotes.length} items</div>
+              <div className="text-[11px] font-semibold text-muted-foreground">
+                {filteredNotes.length} items
+              </div>
             </div>
           );
         })()}
@@ -270,16 +290,22 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
             style={{ background: "oklch(0.97 0.02 70 / 0.5)" }}
           >
             <div className="display text-xl text-foreground/60">This month's board is empty.</div>
-            <p className="mt-2 text-sm text-muted-foreground">Drop a photo or click "New note" to begin pinning.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Drop a photo or click "New note" to begin pinning.
+            </p>
           </div>
         ) : (
           /* Draggable absolute bulletin board space (borderless, overflow-visible to support bleeding) */
-          <div
-            ref={boardRef}
-            className="relative w-full h-[620px] overflow-visible select-none"
-          >
+          <div ref={boardRef} className="relative w-full h-[620px] overflow-visible select-none">
             {/* Background grid line just for fun */}
-            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+            <div
+              className="absolute inset-0 opacity-[0.02] pointer-events-none"
+              style={{
+                backgroundImage:
+                  "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)",
+                backgroundSize: "20px 20px",
+              }}
+            />
 
             {/* Render Draggable Sticky Notes / Polaroid Cards */}
             {filteredNotes.map((n) => {
@@ -321,7 +347,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   }}
                   whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
                 >
-                  <div 
+                  <div
                     className="relative"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -331,13 +357,23 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                     {n.image_url ? (
                       <PolaroidCard
                         note={n}
-                        isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
+                        isNew={
+                          lastViewedNotes
+                            ? new Date(n.created_at) > new Date(lastViewedNotes) &&
+                              n.author_id !== user?.id
+                            : false
+                        }
                         onImageClick={() => setSelectedNoteId(n.id)}
                       />
                     ) : (
                       <StickyNote
                         note={n}
-                        isNew={lastViewedNotes ? (new Date(n.created_at) > new Date(lastViewedNotes) && n.author_id !== user?.id) : false}
+                        isNew={
+                          lastViewedNotes
+                            ? new Date(n.created_at) > new Date(lastViewedNotes) &&
+                              n.author_id !== user?.id
+                            : false
+                        }
                       />
                     )}
 
@@ -365,7 +401,8 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                             onClick={() => {
                               confirm({
                                 title: "Delete note?",
-                                message: "Are you sure you want to permanently delete this note from the board?",
+                                message:
+                                  "Are you sure you want to permanently delete this note from the board?",
                                 onConfirm: () => deleteNote.mutate(n),
                               });
                               setSelectedNoteId(null);
@@ -406,7 +443,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       {/* Enlarged Note Modal */}
       <AnimatePresence>
         {enlargedNote && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/20 backdrop-blur-[4px]"
             onClick={() => setEnlargedNote(null)}
           >
@@ -428,8 +465,15 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
               {enlargedNote.image_url ? (
                 /* Enlarged Polaroid Card */
                 <div className="rounded-md shadow-2xl w-[260px] p-4 bg-white pb-6 flex flex-col justify-between select-text">
-                  <div className="relative overflow-hidden rounded-sm mb-3" style={{ aspectRatio: "1" }}>
-                    <img src={enlargedNote.image_url} alt="" className="w-full h-full object-cover" />
+                  <div
+                    className="relative overflow-hidden rounded-sm mb-3"
+                    style={{ aspectRatio: "1" }}
+                  >
+                    <img
+                      src={enlargedNote.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   {enlargedNote.body && enlargedNote.body !== "(photo)" && (
                     <div className="text-center px-1">
@@ -441,7 +485,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                 </div>
               ) : (
                 /* Enlarged Sticky Note */
-                <div 
+                <div
                   className="rounded-md shadow-2xl w-[240px] min-h-[220px] p-5 pb-6 flex flex-col justify-between select-text"
                   style={{ background: enlargedNote.color ?? "oklch(0.95 0.07 90 / 0.85)" }}
                 >
@@ -462,7 +506,9 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
 // ── Standalone Polaroid Frame Component (Used for Photo Notes) ─────────────────────
 function PolaroidCard({
-  note, isNew, onImageClick
+  note,
+  isNew,
+  onImageClick,
 }: {
   note: Note;
   isNew: boolean;
@@ -483,25 +529,27 @@ function PolaroidCard({
       {/* Photo */}
       <button onClick={onImageClick} className="block w-full">
         <div className="relative overflow-hidden rounded-sm" style={{ aspectRatio: "1" }}>
-          <img src={note.image_url!} alt="" loading="lazy" className="w-full h-full object-cover pointer-events-none" />
+          <img
+            src={note.image_url!}
+            alt=""
+            loading="lazy"
+            className="w-full h-full object-cover pointer-events-none"
+          />
         </div>
       </button>
 
       {/* Caption area */}
       <div className="px-0.5 pt-2 pb-0.5 text-center pointer-events-none min-w-0">
-        <p className="text-[10px] text-foreground/75 leading-snug truncate font-[Nunito]">{note.body !== "(photo)" ? note.body : ""}</p>
+        <p className="text-[10px] text-foreground/75 leading-snug truncate font-[Nunito]">
+          {note.body !== "(photo)" ? note.body : ""}
+        </p>
       </div>
     </div>
   );
 }
 
 // ── Sticky Note Component (Only text, no overlaid polaroid anymore!) ────────────────────────────────
-function StickyNote({
-  note, isNew
-}: {
-  note: Note;
-  isNew: boolean;
-}) {
+function StickyNote({ note, isNew }: { note: Note; isNew: boolean }) {
   const bg = note.color ?? PASTEL_COLORS[0].value;
 
   return (

@@ -6,7 +6,10 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Seanaya" },
-      { name: "description", content: "A private, illustrated home for two — memories, moments, and gentle keepsakes." },
+      {
+        name: "description",
+        content: "Our own digital space.",
+      },
     ],
   }),
   component: SeanayaApp,

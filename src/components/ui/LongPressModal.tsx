@@ -5,7 +5,7 @@ export function LongPressModal({
   isOpen,
   onClose,
   title,
-  description
+  description,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -35,7 +35,9 @@ export function LongPressModal({
 
             <div className="flex items-center gap-2 text-primary dark:text-primary-foreground">
               <HelpCircle size={18} />
-              <h3 className="display text-base font-semibold text-foreground/80 dark:text-foreground/90">About: {title}</h3>
+              <h3 className="display text-base font-semibold text-foreground/80 dark:text-foreground/90">
+                About: {title}
+              </h3>
             </div>
 
             <p className="text-xs leading-relaxed text-foreground/75 dark:text-foreground/80 font-medium font-[Nunito] whitespace-pre-line select-none">

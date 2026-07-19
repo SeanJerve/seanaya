@@ -18,7 +18,13 @@ const OUTLINE_COLORS = [
   { value: "#C8E6C9", label: "Green" },
 ];
 
-export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: string; pageId?: string }) {
+export function AddStickerSheet({
+  relationshipId,
+  pageId,
+}: {
+  relationshipId: string;
+  pageId?: string;
+}) {
   const { user } = useUser();
   const qc = useQueryClient();
   const { closeSheet } = useAppStore();
@@ -78,7 +84,7 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
         "stickers",
         relationshipId,
         processedBlob,
-        `sticker_${stickerId}`
+        `sticker_${stickerId}`,
       );
 
       // Insert sticker record
@@ -115,7 +121,10 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
     <div className="space-y-4">
       {!file ? (
         <label className="flex flex-col items-center justify-center border border-dashed border-foreground/25 bg-white/40 hover:bg-white/50 transition-all rounded-2xl p-8 cursor-pointer text-center group">
-          <Upload size={20} className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform" />
+          <Upload
+            size={20}
+            className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform"
+          />
           <span className="text-xs font-semibold text-foreground/75">Upload photo</span>
           <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
         </label>
@@ -142,7 +151,9 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
             {/* Tolerance Adjuster */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <span className="flex items-center gap-1"><Sliders size={10} /> Background Cut Tolerance</span>
+                <span className="flex items-center gap-1">
+                  <Sliders size={10} /> Background Cut Tolerance
+                </span>
                 <span>{tolerance}</span>
               </div>
               <input
@@ -158,7 +169,9 @@ export function AddStickerSheet({ relationshipId, pageId }: { relationshipId: st
             {/* Outline Size Adjuster */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <span className="flex items-center gap-1"><Sliders size={10} /> Sticker Border Thickness</span>
+                <span className="flex items-center gap-1">
+                  <Sliders size={10} /> Sticker Border Thickness
+                </span>
                 <span>{outlineSize}px</span>
               </div>
               <input

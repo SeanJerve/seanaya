@@ -1,11 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  format, startOfMonth, endOfMonth, eachDayOfInterval,
-  isSameDay, addMonths, subMonths, isSameMonth, getDay,
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  getDay,
 } from "date-fns";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, MapPin, Tag, X, Maximize2, Minimize2, CalendarDays, BookHeart, Eye, EyeOff } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  MapPin,
+  Tag,
+  X,
+  Maximize2,
+  Minimize2,
+  CalendarDays,
+  BookHeart,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -41,7 +62,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => openSheet("add-event")
+    onClick: () => openSheet("add-event"),
   });
 
   useEffect(() => {
@@ -85,8 +106,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     queryFn: async () => {
       const s = startOfMonth(cursor).toISOString();
       const e = endOfMonth(cursor).toISOString();
-      const { data } = await supabase.from("events").select("*")
-        .eq("relationship_id", relationshipId).gte("starts_at", s).lte("starts_at", e).order("starts_at");
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("relationship_id", relationshipId)
+        .gte("starts_at", s)
+        .lte("starts_at", e)
+        .order("starts_at");
       return data ?? [];
     },
   });
@@ -94,13 +120,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const { data: memories = [], isLoading: loadingMemories } = useQuery({
     queryKey: ["memories", relationshipId],
     queryFn: async () =>
-      ((await supabase
-        .from("memories")
-        .select("id,title,description,memory_date,category,location,cover_url,created_at")
-        .eq("relationship_id", relationshipId)
-        .order("memory_date", { ascending: false })
-        .order("created_at", { ascending: true })
-        .limit(100)
+      ((
+        await supabase
+          .from("memories")
+          .select("id,title,description,memory_date,category,location,cover_url,created_at")
+          .eq("relationship_id", relationshipId)
+          .order("memory_date", { ascending: false })
+          .order("created_at", { ascending: true })
+          .limit(100)
       ).data ?? []) as Memory[],
   });
 
@@ -139,9 +166,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
   // Extract unique dates for date skip picker
   const availableDates = useMemo(() => {
-    return groupedMemories
-      .map((g) => g.date)
-      .filter((d): d is string => d !== null);
+    return groupedMemories.map((g) => g.date).filter((d): d is string => d !== null);
   }, [groupedMemories]);
 
   // Track container width for timeline S-curve rendering
@@ -167,19 +192,21 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       const sDateEnd = format(endOfMonth(cursor), "yyyy-MM-dd");
 
       const [mems, notes] = await Promise.all([
-        supabase.from("memories")
+        supabase
+          .from("memories")
           .select("id,memory_date,cover_url,title")
           .eq("relationship_id", relationshipId)
           .gte("memory_date", sDateStart)
           .lte("memory_date", sDateEnd)
           .not("cover_url", "is", null),
-        supabase.from("notes")
+        supabase
+          .from("notes")
           .select("id,created_at,image_url,body")
           .eq("relationship_id", relationshipId)
           .eq("kind", "photo")
           .gte("created_at", sStart)
           .lte("created_at", sEnd)
-          .not("image_url", "is", null)
+          .not("image_url", "is", null),
       ]);
 
       const list: { dateStr: string; url: string; title: string }[] = [];
@@ -191,7 +218,11 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       notes.data?.forEach((n) => {
         if (n.created_at && n.image_url) {
           const dStr = format(new Date(n.created_at), "yyyy-MM-dd");
-          list.push({ dateStr: dStr, url: n.image_url, title: n.body !== "(photo)" ? n.body : "Photo Pin" });
+          list.push({
+            dateStr: dStr,
+            url: n.image_url,
+            title: n.body !== "(photo)" ? n.body : "Photo Pin",
+          });
         }
       });
       return list;
@@ -234,7 +265,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const matchingDateGroups = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    
+
     return groupedMemories.filter((group) => {
       if (group.date) {
         const formatted = format(new Date(group.date + "T00:00:00"), "MMM d, yyyy").toLowerCase();
@@ -245,7 +276,12 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         const desc = (m.description || "").toLowerCase();
         const cat = (m.category || "").toLowerCase();
         const loc = (m.location || "").toLowerCase();
-        return title.includes(query) || desc.includes(query) || cat.includes(query) || loc.includes(query);
+        return (
+          title.includes(query) ||
+          desc.includes(query) ||
+          cat.includes(query) ||
+          loc.includes(query)
+        );
       });
     });
   }, [groupedMemories, searchQuery]);
@@ -259,7 +295,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       const el = document.getElementById(elId);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-4", "ring-primary", "ring-offset-2", "scale-105", "transition-all", "duration-500");
+        el.classList.add(
+          "ring-4",
+          "ring-primary",
+          "ring-offset-2",
+          "scale-105",
+          "transition-all",
+          "duration-500",
+        );
         const timer = setTimeout(() => {
           el.classList.remove("ring-4", "ring-primary", "ring-offset-2", "scale-105");
         }, 2000);
@@ -276,7 +319,16 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   };
 
   const renderTimeline = () => (
-    <div className="relative w-full mt-4" style={{ minHeight: loadingMemories ? "auto" : (groupedMemories.length === 0 ? "auto" : `${groupedMemories.length * rowHeight + 40}px`) }}>
+    <div
+      className="relative w-full mt-4"
+      style={{
+        minHeight: loadingMemories
+          ? "auto"
+          : groupedMemories.length === 0
+            ? "auto"
+            : `${groupedMemories.length * rowHeight + 40}px`,
+      }}
+    >
       {loadingMemories ? (
         <div className="space-y-4 py-4 animate-pulse">
           {[1, 2, 3].map((i) => (
@@ -296,7 +348,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         <div className="flex flex-col items-center justify-center p-8 text-center bg-white/40 rounded-3xl border border-white/20 mt-4">
           <BookHeart size={32} className="text-foreground/20 mb-2" />
           <div className="text-xs font-semibold text-foreground/50">No memories recorded yet</div>
-          <p className="text-[10px] text-muted-foreground mt-1">Capture your first memory together by tapping the floating button!</p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Capture your first memory together by tapping the floating button!
+          </p>
         </div>
       ) : (
         <>
@@ -329,7 +383,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           )}
 
           {/* Bubbles Grid */}
-          <div className="relative z-10 grid grid-cols-3" style={{ gridAutoRows: `${rowHeight}px` }}>
+          <div
+            className="relative z-10 grid grid-cols-3"
+            style={{ gridAutoRows: `${rowHeight}px` }}
+          >
             {groupedMemories.map((group, idx) => {
               const colClass = getColClass(idx);
               const rowStart = idx + 1;
@@ -345,11 +402,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   <div className="flex items-center justify-center -space-x-3.5">
                     {group.memories.map((m, mIdx) => {
                       const isMain = mIdx === 0;
-                      const sizeClass = isMain 
-                        ? "w-20 h-20 z-20" 
+                      const sizeClass = isMain
+                        ? "w-20 h-20 z-20"
                         : "w-13 h-13 z-10 opacity-90 hover:opacity-100 hover:scale-105 hover:z-30";
-                      
-                      const formattedMDate = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
+
+                      const formattedMDate = m.memory_date
+                        ? new Date(m.memory_date + "T00:00:00")
+                        : null;
 
                       return (
                         <div key={m.id} className="flex flex-col items-center relative">
@@ -370,7 +429,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                             )}
 
                             {isMain ? (
-                              <div className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}>
+                              <div
+                                className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}
+                              >
                                 {formattedMDate ? (
                                   <>
                                     <span className="text-[8px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
@@ -390,7 +451,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 )}
                               </div>
                             ) : (
-                              <div className={`relative z-10 text-foreground/75 ${m.cover_url ? "drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]" : ""}`}>
+                              <div
+                                className={`relative z-10 text-foreground/75 ${m.cover_url ? "drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]" : ""}`}
+                              >
                                 {m.cover_url ? null : <Tag size={12} />}
                               </div>
                             )}
@@ -403,7 +466,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   <div
                     onClick={() => setActiveMemory(group.memories[0])}
                     className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm text-[10px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center"
-                    title={group.memories.map(m => m.title).join(", ")}
+                    title={group.memories.map((m) => m.title).join(", ")}
                   >
                     {group.memories[0].title}
                     {group.memories.length > 1 && ` (+${group.memories.length - 1})`}
@@ -422,25 +485,35 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       {/* Calendar section */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
         <div className="flex items-center justify-between">
-          <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5">
+          <button
+            onClick={() => setCursor(subMonths(cursor, 1))}
+            className="rounded-full p-1.5 hover:bg-black/5"
+          >
             <ChevronLeft size={16} />
           </button>
           <div className="display text-lg">{format(cursor, "MMMM yyyy")}</div>
-          <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5">
+          <button
+            onClick={() => setCursor(addMonths(cursor, 1))}
+            className="rounded-full p-1.5 hover:bg-black/5"
+          >
             <ChevronRight size={16} />
           </button>
         </div>
 
         <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-          {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
+          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+            <div key={i}>{d}</div>
+          ))}
         </div>
 
         <div className="mt-2 grid grid-cols-7 gap-1.5 text-center text-sm">
-          {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
+          {Array.from({ length: leading }).map((_, i) => (
+            <div key={`b${i}`} />
+          ))}
           {days.map((d) => {
             const hasEvent = events.some((e) => isSameDay(new Date(e.starts_at), d));
             const dayPhoto = monthPhotos.find(
-              (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d)
+              (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d),
             );
             const isToday = isSameDay(d, today);
             const inMonth = isSameMonth(d, cursor);
@@ -472,8 +545,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   <div className="absolute inset-0 rounded-full hover:bg-black/5" />
                 )}
 
-                <span className={`relative z-10 text-xs font-semibold
-                  ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}>
+                <span
+                  className={`relative z-10 text-xs font-semibold
+                  ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}
+                >
                   {d.getDate()}
                 </span>
 
@@ -488,18 +563,25 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
       {/* Events list */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
-        <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Moment list</div>
+        <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          Moment list
+        </div>
         {events.length === 0 ? (
           <div className="text-sm text-muted-foreground italic">Quiet month. Add some moments!</div>
         ) : (
           <ul className="space-y-2">
             {events.map((e) => (
-              <li key={e.id} className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3 border border-white/50">
+              <li
+                key={e.id}
+                className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3 border border-white/50"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{e.title}</div>
-                  <div className="text-[11px] text-muted-foreground">{format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}
+                  </div>
                 </div>
-                 <div className="flex items-center gap-2 shrink-0 ml-3">
+                <div className="flex items-center gap-2 shrink-0 ml-3">
                   <button
                     onClick={(evt) => {
                       evt.stopPropagation();
@@ -542,15 +624,23 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 />
                 {matchingDateGroups.length > 0 && (
                   <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
-                    <span>{activeSearchIndex + 1}/{matchingDateGroups.length}</span>
+                    <span>
+                      {activeSearchIndex + 1}/{matchingDateGroups.length}
+                    </span>
                     <button
-                      onClick={() => setActiveSearchIndex(i => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length)}
+                      onClick={() =>
+                        setActiveSearchIndex(
+                          (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
+                        )
+                      }
                       className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
                     >
                       <ChevronLeft size={9} />
                     </button>
                     <button
-                      onClick={() => setActiveSearchIndex(i => (i + 1) % matchingDateGroups.length)}
+                      onClick={() =>
+                        setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
+                      }
                       className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
                     >
                       <ChevronRight size={9} />
@@ -559,7 +649,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
               </div>
             )}
-            
+
             <button
               onClick={() => setIsFullscreenTimeline(true)}
               className="p-1 rounded-full hover:bg-black/5 text-foreground/60 transition-colors"
@@ -666,15 +756,23 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   />
                   {matchingDateGroups.length > 0 && (
                     <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
-                      <span>{activeSearchIndex + 1}/{matchingDateGroups.length}</span>
+                      <span>
+                        {activeSearchIndex + 1}/{matchingDateGroups.length}
+                      </span>
                       <button
-                        onClick={() => setActiveSearchIndex(i => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length)}
+                        onClick={() =>
+                          setActiveSearchIndex(
+                            (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
+                          )
+                        }
                         className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
                       >
                         <ChevronLeft size={9} />
                       </button>
                       <button
-                        onClick={() => setActiveSearchIndex(i => (i + 1) % matchingDateGroups.length)}
+                        onClick={() =>
+                          setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
+                        }
                         className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
                       >
                         <ChevronRight size={9} />
@@ -692,7 +790,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
             </div>
 
             {/* Render full screen bubbles */}
-            <div className="relative w-full flex-1" style={{ minHeight: `${groupedMemories.length * rowHeight + 100}px` }}>
+            <div
+              className="relative w-full flex-1"
+              style={{ minHeight: `${groupedMemories.length * rowHeight + 100}px` }}
+            >
               {points.length > 1 && (
                 <svg className="absolute inset-x-5 top-0 bottom-0 w-[calc(100%-2.5rem)] h-full pointer-events-none z-0">
                   <path
@@ -713,7 +814,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 </svg>
               )}
 
-              <div className="relative z-10 grid grid-cols-3" style={{ gridAutoRows: `${rowHeight}px` }}>
+              <div
+                className="relative z-10 grid grid-cols-3"
+                style={{ gridAutoRows: `${rowHeight}px` }}
+              >
                 {groupedMemories.map((group, idx) => {
                   const colClass = getColClass(idx);
                   const rowStart = idx + 1;
@@ -730,7 +834,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                         {group.memories.map((m, mIdx) => {
                           const isMain = mIdx === 0;
                           const sizeClass = isMain ? "w-20 h-20 z-20" : "w-13 h-13 z-10";
-                          const formattedMDate = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
+                          const formattedMDate = m.memory_date
+                            ? new Date(m.memory_date + "T00:00:00")
+                            : null;
 
                           return (
                             <button
@@ -742,19 +848,33 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                               className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-md transition-all hover:scale-105 ${sizeClass}`}
                             >
                               {m.cover_url && (
-                                <img src={m.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                <img
+                                  src={m.cover_url}
+                                  alt=""
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                />
                               )}
                               {isMain ? (
                                 <div className="relative z-10 flex flex-col items-center text-foreground font-bold">
                                   {formattedMDate ? (
                                     <>
-                                      <span className="text-[8px] uppercase">{format(formattedMDate, "MMM")}</span>
-                                      <span className="text-xl leading-none mt-0.5">{format(formattedMDate, "d")}</span>
-                                      <span className="text-[7px] opacity-70 mt-0.5">{format(formattedMDate, "yyyy")}</span>
+                                      <span className="text-[8px] uppercase">
+                                        {format(formattedMDate, "MMM")}
+                                      </span>
+                                      <span className="text-xl leading-none mt-0.5">
+                                        {format(formattedMDate, "d")}
+                                      </span>
+                                      <span className="text-[7px] opacity-70 mt-0.5">
+                                        {format(formattedMDate, "yyyy")}
+                                      </span>
                                     </>
-                                  ) : "Special"}
+                                  ) : (
+                                    "Special"
+                                  )}
                                 </div>
-                              ) : <Tag size={12} className="relative z-10 text-foreground/75" />}
+                              ) : (
+                                <Tag size={12} className="relative z-10 text-foreground/75" />
+                              )}
                             </button>
                           );
                         })}
@@ -803,7 +923,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
             </button>
 
             {activeMemory.cover_url && (
-              <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => setLightbox(activeMemory.cover_url)}>
+              <div
+                className="relative h-48 w-full overflow-hidden cursor-pointer"
+                onClick={() => setLightbox(activeMemory.cover_url)}
+              >
                 <img src={activeMemory.cover_url} alt="" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/70 via-transparent to-transparent" />
               </div>
@@ -817,7 +940,8 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground pt-0.5">
                   {activeMemory.memory_date && (
                     <span className="flex items-center gap-1">
-                      <CalendarDays size={12} /> {format(new Date(activeMemory.memory_date + "T00:00:00"), "MMMM d, yyyy")}
+                      <CalendarDays size={12} />{" "}
+                      {format(new Date(activeMemory.memory_date + "T00:00:00"), "MMMM d, yyyy")}
                     </span>
                   )}
                   {activeMemory.location && (
@@ -833,7 +957,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   {activeMemory.description}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic">No description added to this memory.</p>
+                <p className="text-xs text-muted-foreground italic">
+                  No description added to this memory.
+                </p>
               )}
 
               {activeMemory.cover_url && (

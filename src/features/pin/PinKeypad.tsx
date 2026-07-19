@@ -31,15 +31,19 @@ export function PinKeypad({ value, length = 4, onChange, onComplete, bottomActio
             animate={{ scale: value.length > i ? 1.15 : 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 22 }}
             className={`h-3.5 w-3.5 rounded-full border transition-colors ${
-              value.length > i ? "bg-foreground border-foreground" : "border-foreground/30 bg-transparent"
+              value.length > i
+                ? "bg-foreground border-foreground"
+                : "border-foreground/30 bg-transparent"
             }`}
           />
         ))}
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {["1","2","3","4","5","6","7","8","9"].map((d) => (
-          <KeyButton key={d} onClick={() => press(d)}>{d}</KeyButton>
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+          <KeyButton key={d} onClick={() => press(d)}>
+            {d}
+          </KeyButton>
         ))}
         <div>{bottomAction}</div>
         <KeyButton onClick={() => press("0")}>0</KeyButton>

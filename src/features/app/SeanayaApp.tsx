@@ -26,7 +26,9 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { bootTheme } from "@/lib/theme";
 
 export function SeanayaApp() {
-  useEffect(() => { bootTheme(); }, []);
+  useEffect(() => {
+    bootTheme();
+  }, []);
   return (
     <PinGate>
       <Inner />
@@ -46,49 +48,133 @@ function Inner() {
     const channelId = `realtime-sync-${currentRelId}-${Math.random().toString(36).slice(2, 10)}`;
     const ch = supabase.channel(channelId);
 
-    ch
-      .on("postgres_changes", { event: "*", schema: "public", table: "notes", filter: `relationship_id=eq.${currentRelId}` }, () => {
+    ch.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "notes",
+        filter: `relationship_id=eq.${currentRelId}`,
+      },
+      () => {
         qc.invalidateQueries({ queryKey: ["notes"] });
         qc.invalidateQueries({ queryKey: ["latest-note"] });
         qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "stickers", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["stickers"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "sticker_pages", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["sticker-pages"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "pets", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["pets"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "relationships", filter: `id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["settings-rel"] });
-        qc.invalidateQueries({ queryKey: ["relationship"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "memories", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["memories"] });
-        qc.invalidateQueries({ queryKey: ["stats"] });
-        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "events", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["events"] });
-        qc.invalidateQueries({ queryKey: ["stats"] });
-        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "trips", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["trips"] });
-        qc.invalidateQueries({ queryKey: ["stats"] });
-        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "songs", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["songs"] });
-        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "hugs", filter: `relationship_id=eq.${currentRelId}` }, () => {
-        qc.invalidateQueries({ queryKey: ["hugs"] });
-        qc.invalidateQueries({ queryKey: ["stats"] });
-        qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
-      })
+      },
+    )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "stickers",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["stickers"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sticker_pages",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["sticker-pages"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pets",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["pets"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "relationships", filter: `id=eq.${currentRelId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["settings-rel"] });
+          qc.invalidateQueries({ queryKey: ["relationship"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "memories",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["memories"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+          qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "events",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["events"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+          qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "trips",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["trips"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+          qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "songs",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["songs"] });
+          qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "hugs",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["hugs"] });
+          qc.invalidateQueries({ queryKey: ["stats"] });
+          qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -98,7 +184,10 @@ function Inner() {
 
   if (isLoading || !rel) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{ background: "var(--gradient-sky)" }}>
+      <div
+        className="fixed inset-0 flex items-center justify-center"
+        style={{ background: "var(--gradient-sky)" }}
+      >
         <div className="text-sm text-muted-foreground">Preparing your space…</div>
       </div>
     );
@@ -107,14 +196,16 @@ function Inner() {
   const relId = rel.id;
   const inviteCode = rel?.invite_code ?? "";
 
-  const headerTitle = ({ 
-    home: "Home", 
-    calendar: "Memories", 
-    memories: "Album", 
-    wall: "Love Wall", 
-    stickers: "Stickers", 
-    pet: "Pet Room" 
-  } as const)[tab];
+  const headerTitle = (
+    {
+      home: "Home",
+      calendar: "Memories",
+      memories: "Album",
+      wall: "Love Wall",
+      stickers: "Stickers",
+      pet: "Pet Room",
+    } as const
+  )[tab];
 
   return (
     <div className="min-h-[100dvh] w-full seanaya-bg">
@@ -131,14 +222,30 @@ function Inner() {
 
       <BottomNav relationshipId={relId} />
 
-      <Sheet open={sheet === "add-memory"} title="New memory"><AddMemorySheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "add-event"}  title="New event"><AddEventSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "add-note"}   title="New note"><AddNoteSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "add-trip"}   title="New place"><AddTripSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "add-song"}   title="New song"><AddSongSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "settings"}   title="Settings"><SettingsSheet relationshipId={relId} inviteCode={inviteCode} /></Sheet>
-      <Sheet open={sheet === "notifications"} title="Whispers"><NotificationsSheet relationshipId={relId} /></Sheet>
-      <Sheet open={sheet === "add-sticker"} title="New sticker"><AddStickerSheet relationshipId={relId} /></Sheet>
+      <Sheet open={sheet === "add-memory"} title="New memory">
+        <AddMemorySheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "add-event"} title="New event">
+        <AddEventSheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "add-note"} title="New note">
+        <AddNoteSheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "add-trip"} title="New place">
+        <AddTripSheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "add-song"} title="New song">
+        <AddSongSheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "settings"} title="Settings">
+        <SettingsSheet relationshipId={relId} inviteCode={inviteCode} />
+      </Sheet>
+      <Sheet open={sheet === "notifications"} title="Whispers">
+        <NotificationsSheet relationshipId={relId} />
+      </Sheet>
+      <Sheet open={sheet === "add-sticker"} title="New sticker">
+        <AddStickerSheet relationshipId={relId} />
+      </Sheet>
 
       <HugOverlay relationshipId={relId} />
       <ConfirmDialog />

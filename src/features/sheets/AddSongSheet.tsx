@@ -22,7 +22,9 @@ export function AddSongSheet({ relationshipId }: { relationshipId: string }) {
       if (!form.title) throw new Error("Song title is required");
       const { error } = await supabase.from("songs").insert({
         relationship_id: relationshipId,
-        title: form.title, artist: form.artist || null, category: "favorite",
+        title: form.title,
+        artist: form.artist || null,
+        category: "favorite",
       });
       if (error) throw error;
     },
@@ -43,9 +45,20 @@ export function AddSongSheet({ relationshipId }: { relationshipId: string }) {
         </div>
       )}
 
-      <FieldWrap label="Title"><Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Song title" /></FieldWrap>
-      <FieldWrap label="Artist"><Input value={form.artist} onChange={(e) => set("artist", e.target.value)} placeholder="Optional" /></FieldWrap>
-
+      <FieldWrap label="Title">
+        <Input
+          value={form.title}
+          onChange={(e) => set("title", e.target.value)}
+          placeholder="Song title"
+        />
+      </FieldWrap>
+      <FieldWrap label="Artist">
+        <Input
+          value={form.artist}
+          onChange={(e) => set("artist", e.target.value)}
+          placeholder="Optional"
+        />
+      </FieldWrap>
 
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
         <Save size={11} /> Draft autosaved locally

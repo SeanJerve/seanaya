@@ -1,7 +1,25 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, X, Trash2, BookHeart, Eye, ArrowLeft, Heart, Image as ImageIcon, Star, StickyNote, RefreshCw, ChevronLeft, ChevronRight, RotateCw, Pencil, Upload, Search } from "lucide-react";
+import {
+  Plus,
+  X,
+  Trash2,
+  BookHeart,
+  Eye,
+  ArrowLeft,
+  Heart,
+  Image as ImageIcon,
+  Star,
+  StickyNote,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  RotateCw,
+  Pencil,
+  Upload,
+  Search,
+} from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
@@ -28,22 +46,22 @@ type AlbumItem = {
 };
 
 const PASTEL_COLORS = [
-  "oklch(0.95 0.07 90 / 0.85)",  // Butter
-  "oklch(0.94 0.06 5 / 0.85)",   // Rose
+  "oklch(0.95 0.07 90 / 0.85)", // Butter
+  "oklch(0.94 0.06 5 / 0.85)", // Rose
   "oklch(0.94 0.06 160 / 0.85)", // Mint
   "oklch(0.93 0.06 290 / 0.85)", // Lavender
-  "oklch(0.94 0.07 55 / 0.85)",  // Peach
+  "oklch(0.94 0.07 55 / 0.85)", // Peach
   "oklch(0.94 0.05 230 / 0.85)", // Sky
 ];
 
 const OUTLINE_COLORS = [
-  { label: "White",    value: "#ffffff" },
-  { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
-  { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
-  { label: "Mint",     value: "oklch(0.94 0.06 160 / 0.85)" },
+  { label: "White", value: "#ffffff" },
+  { label: "Butter", value: "oklch(0.95 0.07 90 / 0.85)" },
+  { label: "Rose", value: "oklch(0.94 0.06 5 / 0.85)" },
+  { label: "Mint", value: "oklch(0.94 0.06 160 / 0.85)" },
   { label: "Lavender", value: "oklch(0.93 0.06 290 / 0.85)" },
-  { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
-  { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" }
+  { label: "Peach", value: "oklch(0.94 0.07 55 / 0.85)" },
+  { label: "Sky", value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
 
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
@@ -54,11 +72,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [activeTab, setActiveTab] = useState<"stickers" | "photos" | "note" | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteColor, setNoteColor] = useState(PASTEL_COLORS[0]);
-  const [photoShape, setPhotoShape] = useState<"rect" | "square" | "circle" | "heart" | "star">("rect");
+  const [photoShape, setPhotoShape] = useState<"rect" | "square" | "circle" | "heart" | "star">(
+    "rect",
+  );
   const [photoOutline, setPhotoOutline] = useState("#ffffff");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  
+
   // Custom Photo preview & crop states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -77,7 +97,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const { confirm } = useAppStore();
 
   // Fetch album pages
-  const { data: pages = [], refetch: refetchPages, isLoading: loadingPages } = useQuery({
+  const {
+    data: pages = [],
+    refetch: refetchPages,
+    isLoading: loadingPages,
+  } = useQuery({
     queryKey: ["album-pages", relationshipId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -87,7 +111,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .order("page_index", { ascending: true });
       if (error) throw error;
       return data as AlbumPage[];
-    }
+    },
   });
 
   // Filter pages based on search query
@@ -106,15 +130,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   }, [pages, pageSearchQuery]);
 
   // Fetch album items
-  const { data: items = [], refetch: refetchItems, isLoading: loadingItems } = useQuery({
+  const {
+    data: items = [],
+    refetch: refetchItems,
+    isLoading: loadingItems,
+  } = useQuery({
     queryKey: ["album-items", relationshipId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("album_items")
-        .select("*");
+      const { data, error } = await (supabase as any).from("album_items").select("*");
       if (error) throw error;
       return data as AlbumItem[];
-    }
+    },
   });
 
   // Fetch user created stickers from stickers board
@@ -127,7 +153,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false });
       return data || [];
-    }
+    },
   });
 
   // Fetch recent bulletin board notes/photos for import
@@ -141,18 +167,23 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         .order("created_at", { ascending: false })
         .limit(30);
       return data || [];
-    }
+    },
   });
 
   // Filter 24-hours threshold helper
   const oneDayAgo = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000), []);
 
   const recentPolaroids = useMemo(() => {
-    return recentNotes.filter((n: any) => n.kind === "photo" && n.image_url && new Date(n.created_at) > oneDayAgo);
+    return recentNotes.filter(
+      (n: any) => n.kind === "photo" && n.image_url && new Date(n.created_at) > oneDayAgo,
+    );
   }, [recentNotes, oneDayAgo]);
 
   const recentTexts = useMemo(() => {
-    return recentNotes.filter((n: any) => n.kind === "note" && n.body && n.body !== "(photo)" && new Date(n.created_at) > oneDayAgo);
+    return recentNotes.filter(
+      (n: any) =>
+        n.kind === "note" && n.body && n.body !== "(photo)" && new Date(n.created_at) > oneDayAgo,
+    );
   }, [recentNotes, oneDayAgo]);
 
   const recentStickers = useMemo(() => {
@@ -169,7 +200,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       (async () => {
         await (supabase as any).from("album_pages").insert({
           relationship_id: relationshipId,
-          page_index: 0
+          page_index: 0,
         });
         refetchPages();
       })();
@@ -224,17 +255,36 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   };
 
   // Canvas shapes helpers for baking photo crop
-  const drawHeart = (ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number) => {
+  const drawHeart = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    ox: number,
+    oy: number,
+  ) => {
     ctx.moveTo(ox + w * 0.5, oy + h * 0.9);
     ctx.bezierCurveTo(ox + w * 0.05, oy + h * 0.6, ox, oy + h * 0.45, ox, oy + h * 0.3);
     ctx.bezierCurveTo(ox, oy + h * 0.15, ox + w * 0.1, oy, ox + w * 0.25, oy);
     ctx.bezierCurveTo(ox + w * 0.35, oy, ox + w * 0.45, oy + h * 0.1, ox + w * 0.5, oy + h * 0.2);
     ctx.bezierCurveTo(ox + w * 0.55, oy + h * 0.1, ox + w * 0.65, oy, ox + w * 0.75, oy);
     ctx.bezierCurveTo(ox + w * 0.9, oy, ox + w * 1.0, oy + h * 0.15, ox + w * 1.0, oy + h * 0.3);
-    ctx.bezierCurveTo(ox + w * 1.0, oy + h * 0.45, ox + w * 0.95, oy + h * 0.6, ox + w * 0.5, oy + h * 0.9);
+    ctx.bezierCurveTo(
+      ox + w * 1.0,
+      oy + h * 0.45,
+      ox + w * 0.95,
+      oy + h * 0.6,
+      ox + w * 0.5,
+      oy + h * 0.9,
+    );
   };
 
-  const drawStar = (ctx: CanvasRenderingContext2D, w: number, h: number, ox: number, oy: number) => {
+  const drawStar = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    ox: number,
+    oy: number,
+  ) => {
     ctx.moveTo(ox + w * 0.5, oy);
     ctx.lineTo(ox + w * 0.65, oy + h * 0.35);
     ctx.lineTo(ox + w, oy + h * 0.35);
@@ -251,18 +301,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   // Mutations
   const addPage = useMutation({
     mutationFn: async () => {
-      const maxIdx = pages.reduce((max, p) => p.page_index > max ? p.page_index : max, -1);
+      const maxIdx = pages.reduce((max, p) => (p.page_index > max ? p.page_index : max), -1);
       const { error } = await (supabase as any).from("album_pages").insert({
         relationship_id: relationshipId,
         page_index: maxIdx + 1,
-        name: null
+        name: null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       refetchPages();
       toast.success("Page added to album!");
-    }
+    },
   });
 
   const deletePage = useMutation({
@@ -272,23 +322,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     },
     onSuccess: () => {
       refetchPages();
-      setCurrentPageIdx(prev => Math.max(0, prev - 1));
+      setCurrentPageIdx((prev) => Math.max(0, prev - 1));
       toast.success("Page deleted");
-    }
+    },
   });
 
   const renamePage = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await (supabase as any)
-        .from("album_pages")
-        .update({ name })
-        .eq("id", id);
+      const { error } = await (supabase as any).from("album_pages").update({ name }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       refetchPages();
       toast.success("Page renamed!");
-    }
+    },
   });
 
   const handleRenameSubmit = (e: React.FormEvent) => {
@@ -306,12 +353,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     },
     onSuccess: () => {
       refetchItems();
-    }
+    },
   });
 
   const updateItemPosition = useMutation({
     mutationFn: async ({ id, pos_x, pos_y }: { id: string; pos_x: number; pos_y: number }) => {
-      const { error } = await (supabase as any).from("album_items").update({ pos_x, pos_y }).eq("id", id);
+      const { error } = await (supabase as any)
+        .from("album_items")
+        .update({ pos_x, pos_y })
+        .eq("id", id);
       if (error) throw error;
     },
     onMutate: async ({ id, pos_x, pos_y }) => {
@@ -328,12 +378,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     },
     onSuccess: () => {
       refetchItems();
-    }
+    },
   });
 
   const updateItemRotation = useMutation({
     mutationFn: async ({ id, rotation }: { id: string; rotation: number }) => {
-      const { error } = await (supabase as any).from("album_items").update({ rotation }).eq("id", id);
+      const { error } = await (supabase as any)
+        .from("album_items")
+        .update({ rotation })
+        .eq("id", id);
       if (error) throw error;
     },
     onMutate: async ({ id, rotation }) => {
@@ -350,7 +403,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     },
     onSuccess: () => {
       refetchItems();
-    }
+    },
   });
 
   const deleteItem = useMutation({
@@ -362,14 +415,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       refetchItems();
       setSelectedItemId(null);
       toast.success("Item removed");
-    }
+    },
   });
 
   // Upload and bake canvas crop
   const uploadBakedPhoto = useMutation({
-    mutationFn: async ({ file, shape, outline, scale, offsetX, offsetY }: { 
-      file: File; 
-      shape: "rect" | "square" | "circle" | "heart" | "star"; 
+    mutationFn: async ({
+      file,
+      shape,
+      outline,
+      scale,
+      offsetX,
+      offsetY,
+    }: {
+      file: File;
+      shape: "rect" | "square" | "circle" | "heart" | "star";
       outline: string;
       scale: number;
       offsetX: number;
@@ -387,7 +447,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         reader.readAsDataURL(file);
       });
       img.src = dataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
 
       // 2. Setup canvas dimensions
       const canvas = document.createElement("canvas");
@@ -448,10 +510,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         pos_x: 30,
         pos_y: 30,
         scale: 1,
-        rotation: 0
+        rotation: 0,
       });
-
-
     },
     onSuccess: () => {
       toast.success("Picture added!");
@@ -459,13 +519,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       setPreviewUrl(null);
       setActiveTab(null);
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to add picture")
+    onError: (e: any) => toast.error(e?.message || "Failed to add picture"),
   });
 
   const activePage = pages[currentPageIdx];
   const activePageItems = useMemo(() => {
     if (!activePage) return [];
-    return items.filter(it => it.page_id === activePage.id);
+    return items.filter((it) => it.page_id === activePage.id);
   }, [items, activePage]);
 
   // Render Closed Book Cover (Takes w-full, stretches to match customize panel, aspect 1/1.4)
@@ -485,15 +545,23 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       >
         <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
         <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
-        
+
         <div className="flex-1 flex flex-col items-center justify-center gap-1 mt-8">
-          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Sean</h2>
-          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">&</span>
-          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">Aya</h2>
+          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
+            Sean
+          </h2>
+          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">
+            &
+          </span>
+          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
+            Aya
+          </h2>
         </div>
-        
+
         <div className="mb-4">
-          <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-bold block animate-pulse">Tap to Open</span>
+          <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-bold block animate-pulse">
+            Tap to Open
+          </span>
         </div>
       </motion.div>
     </div>
@@ -538,10 +606,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
-              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">Page:</span>
+              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">
+                Page:
+              </span>
               <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
                 {filteredPages.length === 0 ? (
-                  <span className="text-[10px] text-muted-foreground/60 italic px-1">No pages match</span>
+                  <span className="text-[10px] text-muted-foreground/60 italic px-1">
+                    No pages match
+                  </span>
                 ) : (
                   filteredPages.map((p) => {
                     const idx = p.originalIndex;
@@ -593,10 +665,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   onClick={() => {
                     confirm({
                       title: "Delete this page?",
-                      message: "Are you sure you want to delete this page and all items decorated inside it?",
+                      message:
+                        "Are you sure you want to delete this page and all items decorated inside it?",
                       onConfirm: () => {
                         if (activePage) deletePage.mutate(activePage.id);
-                      }
+                      },
                     });
                   }}
                   className="p-1 rounded-full hover:bg-red-50 text-red-500 active:scale-95 transition-all"
@@ -652,12 +725,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
                   <BookHeart size={32} className="text-foreground/20 mb-2" />
                   <div className="text-xs font-semibold text-foreground/50">This page is empty</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Use Customize tools below to start decorating our space!</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Use Customize tools below to start decorating our space!
+                  </p>
                 </div>
               ) : (
                 activePageItems.map((it) => {
                   const isSelected = selectedItemId === it.id;
-                  
+
                   return (
                     <motion.div
                       key={`${it.id}-${it.pos_x.toFixed(3)}-${it.pos_y.toFixed(3)}`}
@@ -674,14 +749,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           const rect = card.getBoundingClientRect();
                           let xPct = ((rect.left - page.left) / page.width) * 100;
                           let yPct = ((rect.top - page.top) / page.height) * 100;
-                          
+
                           // constrain bounds so items stay within book sheet
                           xPct = Math.max(0, Math.min(68, xPct));
                           yPct = Math.max(0, Math.min(80, yPct));
                           updateItemPosition.mutate({
                             id: it.id,
                             pos_x: xPct,
-                            pos_y: yPct
+                            pos_y: yPct,
                           });
                         }
                       }}
@@ -691,7 +766,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       style={{
                         left: `${it.pos_x}%`,
                         top: `${it.pos_y}%`,
-                        zIndex: isSelected ? 50 : 10
+                        zIndex: isSelected ? 50 : 10,
                       }}
                     >
                       {/* DIV holding rotate transformation ONLY on the inner item content */}
@@ -704,7 +779,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       >
                         {/* 1. Stickers / User custom stickers */}
                         {it.item_type === "sticker" && (
-                          <div 
+                          <div
                             className="select-none pointer-events-none drop-shadow-md"
                             style={{ transform: `rotate(${it.rotation}deg)` }}
                           >
@@ -728,12 +803,16 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                         {/* 3. Polaroid Frame */}
                         {it.item_type === "polaroid" && it.image_url && (
-                          <div 
+                          <div
                             className="w-24 p-1.5 pb-5 rounded bg-white shadow-lg border border-black/5 flex flex-col items-center select-none pointer-events-none"
                             style={{ transform: `rotate(${it.rotation}deg)` }}
                           >
                             <div className="w-full aspect-square overflow-hidden bg-slate-50">
-                              <img src={it.image_url} alt="" className="w-full h-full object-cover" />
+                              <img
+                                src={it.image_url}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           </div>
                         )}
@@ -742,9 +821,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         {it.item_type === "text" && (
                           <div
                             className="max-w-[130px] p-2.5 rounded-lg shadow-md border border-white/20 select-none pointer-events-none text-left"
-                            style={{ 
+                            style={{
                               background: it.color || PASTEL_COLORS[0],
-                              transform: `rotate(${it.rotation}deg)`
+                              transform: `rotate(${it.rotation}deg)`,
                             }}
                           >
                             <p className="text-[10px] text-foreground/80 font-medium leading-tight whitespace-pre-wrap break-words">
@@ -763,19 +842,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 bg-white/95 border border-white/40 rounded-full shadow-lg p-1 z-50 pointer-events-auto"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {(it.item_type === "polaroid" || it.item_type === "picture" || (it.item_type === "sticker" && it.image_url)) && it.image_url && (
-                                <button
-                                  onClick={() => {
-                                    setLightbox(it.image_url);
-                                    setSelectedItemId(null);
-                                  }}
-                                  className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
-                                  title="View Photo"
-                                >
-                                  <Eye size={12} />
-                                </button>
-                              )}
-                              
+                              {(it.item_type === "polaroid" ||
+                                it.item_type === "picture" ||
+                                (it.item_type === "sticker" && it.image_url)) &&
+                                it.image_url && (
+                                  <button
+                                    onClick={() => {
+                                      setLightbox(it.image_url);
+                                      setSelectedItemId(null);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
+                                    title="View Photo"
+                                  >
+                                    <Eye size={12} />
+                                  </button>
+                                )}
+
                               {/* Rotate adjust button */}
                               <button
                                 onClick={() => {
@@ -792,7 +874,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 onClick={() => {
                                   confirm({
                                     title: "Delete item?",
-                                    message: "Are you sure you want to permanently remove this item from the page?",
+                                    message:
+                                      "Are you sure you want to permanently remove this item from the page?",
                                     onConfirm: () => deleteItem.mutate(it.id),
                                   });
                                 }}
@@ -819,11 +902,14 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
               <span>Customize</span>
               {activeTab && (
-                <button onClick={() => {
-                  setActiveTab(null);
-                  setSelectedFile(null);
-                  setPreviewUrl(null);
-                }} className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors animate-in spin-in-12 duration-200">
+                <button
+                  onClick={() => {
+                    setActiveTab(null);
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
+                  className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors animate-in spin-in-12 duration-200"
+                >
                   <X size={12} />
                 </button>
               )}
@@ -891,7 +977,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recently Added Stickers (Created in the last 24 hours) - Taxonomy tag outside */}
                   {recentStickers.length > 0 && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">Recently Added Stickers:</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
+                        Recently Added Stickers:
+                      </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentStickers.map((st: any) => (
                           <div key={st.id} className="flex flex-col items-center shrink-0 gap-1">
@@ -906,15 +994,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   pos_x: 30,
                                   pos_y: 30,
                                   scale: 1,
-                                  rotation: 0
+                                  rotation: 0,
                                 });
                                 toast.success("Sticker added!");
                               }}
                               className="w-14 h-14 p-1.5 rounded-2xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center relative shadow-sm"
                             >
-                              <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none" />
+                              <img
+                                src={st.image_url}
+                                alt=""
+                                className="max-h-full max-w-full object-contain pointer-events-none"
+                              />
                             </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Sticker</span>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
+                              Sticker
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -923,7 +1017,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* My Stickers (Older than 24 hours) */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">My Stickers:</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
+                      My Stickers:
+                    </div>
                     <div className="grid grid-cols-4 gap-3 p-1 max-h-44 overflow-y-auto">
                       {olderStickers.length === 0 && recentStickers.length === 0 ? (
                         <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
@@ -947,13 +1043,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 pos_x: 30,
                                 pos_y: 30,
                                 scale: 1,
-                                rotation: 0
+                                rotation: 0,
                               });
                               toast.success("Sticker added!");
                             }}
                             className="aspect-square p-1.5 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/60 active:scale-95 transition-all overflow-hidden flex items-center justify-center shadow-sm"
                           >
-                            <img src={st.image_url} alt="" className="max-h-full max-w-full object-contain pointer-events-none select-none" />
+                            <img
+                              src={st.image_url}
+                              alt=""
+                              className="max-h-full max-w-full object-contain pointer-events-none select-none"
+                            />
                           </button>
                         ))
                       )}
@@ -973,7 +1073,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recent Polaroids list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentPolaroids.length > 0 && !previewUrl && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Polaroids:</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                        Recently Added Polaroids:
+                      </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentPolaroids.map((p: any) => (
                           <div key={p.id} className="flex flex-col items-center shrink-0 gap-1">
@@ -988,15 +1090,21 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   pos_x: 30,
                                   pos_y: 30,
                                   scale: 1,
-                                  rotation: (Math.random() - 0.5) * 8
+                                  rotation: (Math.random() - 0.5) * 8,
                                 });
                                 toast.success("Polaroid imported!");
                               }}
                               className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 hover:scale-105 active:scale-95 transition-all overflow-hidden relative"
                             >
-                              <img src={p.image_url} alt="" className="w-full aspect-square object-cover rounded-sm pointer-events-none" />
+                              <img
+                                src={p.image_url}
+                                alt=""
+                                className="w-full aspect-square object-cover rounded-sm pointer-events-none"
+                              />
                             </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Polaroid</span>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
+                              Polaroid
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -1006,32 +1114,60 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* LIVE Interactive Drag & Crop Preview */}
                   {previewUrl && (
                     <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200 w-full">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Preview (Drag inside to position):</div>
-                      
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">
+                        Preview (Drag inside to position):
+                      </div>
+
                       {/* Live Crop and drag container */}
                       <div
                         className="relative overflow-hidden cursor-move select-none flex items-center justify-center border border-black/5 shadow-md"
                         style={{
                           width: photoShape === "rect" ? "140px" : "140px",
                           height: photoShape === "rect" ? "196px" : "140px",
-                          borderRadius: photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "24px" : "0px",
-                          clipPath: photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                          borderRadius:
+                            photoShape === "circle"
+                              ? "50%"
+                              : photoShape === "square" || photoShape === "rect"
+                                ? "24px"
+                                : "0px",
+                          clipPath:
+                            photoShape === "heart"
+                              ? "url(#heart-mask)"
+                              : photoShape === "star"
+                                ? "url(#star-mask)"
+                                : undefined,
                           background: photoOutline,
-                          padding: "6px" // thickness of outline in preview
+                          padding: "6px", // thickness of outline in preview
                         }}
                         onMouseDown={(e) => handlePreviewDragStart(e.clientX, e.clientY)}
                         onMouseMove={(e) => handlePreviewDragMove(e.clientX, e.clientY)}
                         onMouseUp={handlePreviewDragEnd}
                         onMouseLeave={handlePreviewDragEnd}
-                        onTouchStart={(e) => e.touches[0] && handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)}
-                        onTouchMove={(e) => e.touches[0] && handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)}
+                        onTouchStart={(e) =>
+                          e.touches[0] &&
+                          handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)
+                        }
+                        onTouchMove={(e) =>
+                          e.touches[0] &&
+                          handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)
+                        }
                         onTouchEnd={handlePreviewDragEnd}
                       >
                         <div
                           className="w-full h-full overflow-hidden pointer-events-none"
                           style={{
-                            borderRadius: photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "18px" : "0px",
-                            clipPath: photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined
+                            borderRadius:
+                              photoShape === "circle"
+                                ? "50%"
+                                : photoShape === "square" || photoShape === "rect"
+                                  ? "18px"
+                                  : "0px",
+                            clipPath:
+                              photoShape === "heart"
+                                ? "url(#heart-mask)"
+                                : photoShape === "star"
+                                  ? "url(#star-mask)"
+                                  : undefined,
                           }}
                         >
                           <img
@@ -1041,7 +1177,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                             className="max-w-none origin-center"
                             style={{
                               width: photoShape === "rect" ? "140px" : "140px",
-                              transform: `translate(${previewOffsetX}px, ${previewOffsetY}px) scale(${previewScale})`
+                              transform: `translate(${previewOffsetX}px, ${previewOffsetY}px) scale(${previewScale})`,
                             }}
                           />
                         </div>
@@ -1069,13 +1205,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         <button
                           onClick={() => {
                             if (selectedFile) {
-                              uploadBakedPhoto.mutate({ 
-                                file: selectedFile, 
-                                shape: photoShape, 
+                              uploadBakedPhoto.mutate({
+                                file: selectedFile,
+                                shape: photoShape,
                                 outline: photoOutline,
                                 scale: previewScale,
                                 offsetX: previewOffsetX,
-                                offsetY: previewOffsetY
+                                offsetY: previewOffsetY,
                               });
                             }
                           }}
@@ -1099,7 +1235,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Frame & Shape selections with glass styling */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Frame:</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                      Choose Frame:
+                    </div>
                     <div className="flex gap-1 flex-wrap">
                       {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
                         <button
@@ -1119,14 +1257,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Frame Border Color Selector - pastel choices matching choose background */}
                   <div className="space-y-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Frame Outline Color:</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                      Frame Outline Color:
+                    </div>
                     <div className="flex gap-1.5">
                       {OUTLINE_COLORS.map((oc) => (
                         <button
                           key={oc.value}
                           onClick={() => setPhotoOutline(oc.value)}
                           className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
-                            photoOutline === oc.value ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                            photoOutline === oc.value
+                              ? "ring-2 ring-primary ring-offset-1 scale-110"
+                              : "border-white/50"
                           }`}
                           style={{ background: oc.value }}
                           title={oc.label}
@@ -1138,9 +1280,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Choose File Widget */}
                   {!previewUrl && (
                     <div className="space-y-2">
-                      <label
-                        className="flex items-center justify-center gap-1.5 w-full py-3 text-center rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-xs font-semibold text-foreground cursor-pointer active:scale-95 transition-all shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)]"
-                      >
+                      <label className="flex items-center justify-center gap-1.5 w-full py-3 text-center rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-xs font-semibold text-foreground cursor-pointer active:scale-95 transition-all shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)]">
                         <Upload size={14} />
                         Upload photo
                         <input
@@ -1166,7 +1306,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recent Texts list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentTexts.length > 0 && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Recently Added Texts:</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                        Recently Added Texts:
+                      </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
                         {recentTexts.map((t: any) => (
                           <div key={t.id} className="flex flex-col items-center shrink-0 gap-1">
@@ -1181,15 +1323,19 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   pos_x: 30,
                                   pos_y: 30,
                                   scale: 1,
-                                  rotation: 0
+                                  rotation: 0,
                                 });
                                 toast.success("Text imported!");
                               }}
                               className="w-24 h-16 p-2 rounded-xl bg-white/40 border border-white/50 hover:scale-105 active:scale-95 transition-all overflow-hidden text-left shadow-sm flex flex-col justify-between"
                             >
-                              <p className="text-[10px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">{t.body}</p>
+                              <p className="text-[10px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">
+                                {t.body}
+                              </p>
                             </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">Love Wall</span>
+                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
+                              Love Wall
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -1198,14 +1344,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Pastel Colors picker */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">Choose Background:</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                      Choose Background:
+                    </div>
                     <div className="flex items-center gap-1.5">
                       {PASTEL_COLORS.map((col) => (
                         <button
                           key={col}
                           onClick={() => setNoteColor(col)}
                           className={`h-5 w-5 rounded-full border transition-all ${
-                            noteColor === col ? "ring-2 ring-primary ring-offset-1 scale-110" : "border-white/50"
+                            noteColor === col
+                              ? "ring-2 ring-primary ring-offset-1 scale-110"
+                              : "border-white/50"
                           }`}
                           style={{ background: col }}
                         />
@@ -1234,7 +1384,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           pos_x: 30,
                           pos_y: 30,
                           scale: 1,
-                          rotation: 0
+                          rotation: 0,
                         });
                         setNoteText("");
                         setActiveTab(null);

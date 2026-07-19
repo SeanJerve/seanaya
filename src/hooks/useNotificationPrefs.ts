@@ -5,7 +5,15 @@ import { useUser } from "./useUser";
 export type PrefKind = "memory" | "event" | "trip" | "note" | "song" | "hug" | "capsule";
 export type Prefs = Record<PrefKind, boolean>;
 
-const DEFAULT: Prefs = { memory: true, event: true, trip: true, note: true, song: true, hug: true, capsule: true };
+const DEFAULT: Prefs = {
+  memory: true,
+  event: true,
+  trip: true,
+  note: true,
+  song: true,
+  hug: true,
+  capsule: true,
+};
 
 export function useNotificationPrefs() {
   const { user } = useUser();
@@ -15,11 +23,20 @@ export function useNotificationPrefs() {
     queryKey: ["notification-prefs", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Prefs> => {
-      const { data } = await supabase.from("notification_preferences").select("*").eq("user_id", user!.id).maybeSingle();
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
       if (!data) return DEFAULT;
       return {
-        memory: data.memory, event: data.event, trip: data.trip,
-        note: data.note, song: data.song, hug: data.hug, capsule: data.capsule,
+        memory: data.memory,
+        event: data.event,
+        trip: data.trip,
+        note: data.note,
+        song: data.song,
+        hug: data.hug,
+        capsule: data.capsule,
       };
     },
   });
@@ -31,7 +48,9 @@ export function useNotificationPrefs() {
       await supabase.from("notification_preferences").upsert({ user_id: user.id, ...next });
       return next;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notification-prefs"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notification-prefs"] });
+    },
   });
 
   return { prefs: q.data ?? DEFAULT, isLoading: q.isLoading, set: set.mutate };

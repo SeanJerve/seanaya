@@ -8,14 +8,14 @@ import { PinKeypad } from "./PinKeypad";
 
 type Stage =
   | "loading"
-  | "setup-name"        // no space yet — first user (creator)
+  | "setup-name" // no space yet — first user (creator)
   | "setup-pin"
   | "setup-confirm"
-  | "partner-name"      // Page 1: Greeting + Voice Message
-  | "partner-name-input"// Page 2: Name Onboarding
+  | "partner-name" // Page 1: Greeting + Voice Message
+  | "partner-name-input" // Page 2: Name Onboarding
   | "partner-pin"
   | "partner-confirm"
-  | "unlock"            // both PINs exist → PIN pad
+  | "unlock" // both PINs exist → PIN pad
   | "forgot-who"
   | "forgot-date"
   | "forgot-newpin"
@@ -29,8 +29,6 @@ type SpaceState = {
   has_a: boolean;
   has_b: boolean;
 };
-
-
 
 const COMPLIMENT_WORDS = [
   "loving",
@@ -58,7 +56,7 @@ const COMPLIMENT_WORDS = [
   "magical",
   "marvelous",
   "captivating",
-  "magnificent"
+  "magnificent",
 ];
 
 const sentenceVariants = {
@@ -140,7 +138,9 @@ function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
       }
     };
     draw();
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [analyser]);
 
   return (
@@ -173,8 +173,16 @@ function BackgroundSparkles() {
       {sparkles.map((s, idx) => (
         <motion.svg
           key={idx}
-          animate={{ opacity: [0.12, 0.45, 0.12], scale: [s.scale * 0.8, s.scale * 1.2, s.scale * 0.8] }}
-          transition={{ duration: 4 + Math.random() * 3, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
+          animate={{
+            opacity: [0.12, 0.45, 0.12],
+            scale: [s.scale * 0.8, s.scale * 1.2, s.scale * 0.8],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: s.delay,
+          }}
           style={{ top: s.top, left: s.left }}
           className="absolute w-3 h-3 text-white/40"
           viewBox="0 0 24 24"
@@ -253,7 +261,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         const urlInvite = new URLSearchParams(window.location.search).get("invite");
         const urlReset = new URLSearchParams(window.location.search).get("reset");
         const urlDate = new URLSearchParams(window.location.search).get("date");
-        
+
         if (!s) {
           setStage("setup-name");
         } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
@@ -269,7 +277,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             setStage("unlock");
           }
         } else {
-          setStage("setup-name"); 
+          setStage("setup-name");
         }
       } catch (err: any) {
         console.error("Initialization error:", err);
@@ -451,7 +459,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     }
     const ctx = audioCtxRef.current;
     const analyser = ctx.createAnalyser();
-    analyser.fftSize = 128;           // 64 frequency bins — lightweight & smooth
+    analyser.fftSize = 128; // 64 frequency bins — lightweight & smooth
     analyser.smoothingTimeConstant = 0.82; // nice smoothing between frames
     const source = ctx.createMediaElementSource(el);
     source.connect(analyser);
@@ -467,7 +475,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       setHasInteracted(true);
       try {
         // Play Romantic Background Entrance Music
-        const bg = new Audio("https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-12.mp3");
+        const bg = new Audio(
+          "https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-12.mp3",
+        );
         bg.loop = true;
         bg.volume = 0.22;
         bgMusicRef.current = bg;
@@ -550,21 +560,29 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           name_a: name.trim() || null,
           pin_hash_a: hash,
         })
-        .select("id").single();
-      
-      if (error) { toast.error("Could not create your space"); return; }
+        .select("id")
+        .single();
+
+      if (error) {
+        toast.error("Could not create your space");
+        return;
+      }
       pinStorage.setName(name.trim());
       pinStorage.setRel(rel.id);
       pinStorage.setSlot("a");
       pinStorage.setInvite(code);
       await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() });
-      
+
       const inviteLink = `${window.location.origin}/?invite=${code}`;
-      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
         navigator.clipboard.writeText(inviteLink).catch(() => {});
       }
       toast.success("Space created! Invite link copied to clipboard.", { duration: 6000 });
-      
+
       setStage("unlocked");
     } catch (e: any) {
       console.error(e);
@@ -584,14 +602,21 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         _name: name.trim() || "partner",
       });
       if (error) {
-        toast.error(error.message.includes("different pin") ? "Pick a different PIN than your partner" : "Could not join space");
+        toast.error(
+          error.message.includes("different pin")
+            ? "Pick a different PIN than your partner"
+            : "Could not join space",
+        );
         return;
       }
-      
+
       pinStorage.setSlot("b");
       const { data: u } = await supabase.auth.getUser();
-      if (u.user) await supabase.from("profiles").upsert({ id: u.user.id, display_name: name.trim() || "partner" });
-      
+      if (u.user)
+        await supabase
+          .from("profiles")
+          .upsert({ id: u.user.id, display_name: name.trim() || "partner" });
+
       setStage("unlocked");
     } catch (e: any) {
       console.error(e);
@@ -604,11 +629,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     try {
       if (!space) return;
       const hash = await hashPin(input);
-      const { data, error } = await supabase.rpc("claim_slot", { _rel_id: space.id, _pin_hash: hash });
-      if (error || !data) { setPin(""); toast.error("PIN doesn't match"); return; }
+      const { data, error } = await supabase.rpc("claim_slot", {
+        _rel_id: space.id,
+        _pin_hash: hash,
+      });
+      if (error || !data) {
+        setPin("");
+        toast.error("PIN doesn't match");
+        return;
+      }
       const slot = data as Slot;
       pinStorage.setSlot(slot);
-      const label = slot === "a" ? (space.name_a || "you") : (space.name_b || "you");
+      const label = slot === "a" ? space.name_a || "you" : space.name_b || "you";
       pinStorage.setName(label);
       setStage("unlocked");
     } catch (e: any) {
@@ -622,16 +654,22 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     if (!space) return;
     const h = await hashPin(newPin);
     const { error } = await supabase.rpc("reset_slot_pin", {
-      _rel_id: space.id, _slot: resetSlot, _new_hash: h, _anniversary: dateInput,
+      _rel_id: space.id,
+      _slot: resetSlot,
+      _new_hash: h,
+      _anniversary: dateInput,
     });
-    if (error) { toast.error("Reset link is invalid or expired."); return; }
+    if (error) {
+      toast.error("Reset link is invalid or expired.");
+      return;
+    }
     toast.success("PIN updated. You can now log in.");
-    setPin(""); 
-    
+    setPin("");
+
     if (typeof window !== "undefined") {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
+
     setStage("unlock");
     refreshSpace();
   }
@@ -708,31 +746,61 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
       <AnimatePresence mode="wait">
         {stage === "loading" && (
-          <Screen key="loading"><div className="text-sm text-muted-foreground">Warming your space...</div></Screen>
+          <Screen key="loading">
+            <div className="text-sm text-muted-foreground">Warming your space...</div>
+          </Screen>
         )}
 
         {stage === "setup-name" && (
           <Screen key="name">
-            <Title kicker="Welcome to" title="Seanaya" sub="This is your space. What should we call you?" />
+            <Title
+              kicker="Welcome to"
+              title="Seanaya"
+              sub="This is your space. What should we call you?"
+            />
             <NameInput value={name} onChange={setName} />
             <ContinueButton disabled={!name.trim()} onClick={() => setStage("setup-pin")} />
           </Screen>
         )}
         {stage === "setup-pin" && (
           <Screen key="setpin">
-            <Title kicker={`Hi, ${name.trim()}`} title="Set your PIN" sub="Four digits. This is just yours." />
+            <Title
+              kicker={`Hi, ${name.trim()}`}
+              title="Set your PIN"
+              sub="Four digits. This is just yours."
+            />
             <div className="mt-10">
-              <PinKeypad value={pin} onChange={setPin}
-                onComplete={(v) => { setPinConfirm(""); setPin(v); setStage("setup-confirm"); }} />
+              <PinKeypad
+                value={pin}
+                onChange={setPin}
+                onComplete={(v) => {
+                  setPinConfirm("");
+                  setPin(v);
+                  setStage("setup-confirm");
+                }}
+              />
             </div>
           </Screen>
         )}
         {stage === "setup-confirm" && (
           <Screen key="confirm">
-            <Title kicker="Almost there" title="Confirm your PIN" sub="Enter the same four digits again." />
+            <Title
+              kicker="Almost there"
+              title="Confirm your PIN"
+              sub="Enter the same four digits again."
+            />
             <div className="mt-10">
-              <PinKeypad value={pinConfirm} onChange={setPinConfirm}
-                onComplete={(v) => { if (v === pin) completeSetup(v); else { setPinConfirm(""); toast.error("Doesn't match. Try again."); } }} />
+              <PinKeypad
+                value={pinConfirm}
+                onChange={setPinConfirm}
+                onComplete={(v) => {
+                  if (v === pin) completeSetup(v);
+                  else {
+                    setPinConfirm("");
+                    toast.error("Doesn't match. Try again.");
+                  }
+                }}
+              />
             </div>
           </Screen>
         )}
@@ -749,18 +817,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               {"Happy 1st Monthsary, Aya!".split(" ").map((word, wordIdx) => (
                 <span key={wordIdx} className="inline-block whitespace-nowrap mr-2">
                   {Array.from(word).map((char, charIdx) => (
-                    <motion.span
-                      key={charIdx}
-                      variants={letterVariants}
-                      className="inline-block"
-                    >
+                    <motion.span key={charIdx} variants={letterVariants} className="inline-block">
                       {char}
                     </motion.span>
                   ))}
                 </span>
               ))}
             </motion.h1>
-            
+
             {/* Center Lily: Large floating bouquet with glowing backdrop and 8 twinkling stars directly touching the flower */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -774,7 +838,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute w-52 h-52 bg-[radial-gradient(circle,rgba(255,255,255,0.75)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
               />
-              
+
               {/* Floating Bouquet wrapper */}
               <motion.img
                 animate={{ y: [0, -8, 0] }}
@@ -922,7 +986,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 </motion.div>
               )}
             </AnimatePresence>
-
           </Screen>
         )}
 
@@ -950,9 +1013,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             <h1 className="display mt-3 text-4xl leading-tight text-foreground">
               Congratulations on your monthsary!
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              What should we call you here?
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">What should we call you here?</p>
 
             <NameInput value={name} onChange={setName} />
             <ContinueButton
@@ -967,19 +1028,43 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "partner-pin" && (
           <Screen key="ppin">
-            <Title kicker={name ? `Hi, ${name}` : "Hi"} title="Set your own PIN" sub="Four digits — just yours. Different from your partner's." />
+            <Title
+              kicker={name ? `Hi, ${name}` : "Hi"}
+              title="Set your own PIN"
+              sub="Four digits — just yours. Different from your partner's."
+            />
             <div className="mt-10">
-              <PinKeypad value={pin} onChange={setPin}
-                onComplete={(v) => { setPinConfirm(""); setPin(v); setStage("partner-confirm"); }} />
+              <PinKeypad
+                value={pin}
+                onChange={setPin}
+                onComplete={(v) => {
+                  setPinConfirm("");
+                  setPin(v);
+                  setStage("partner-confirm");
+                }}
+              />
             </div>
           </Screen>
         )}
         {stage === "partner-confirm" && (
           <Screen key="pconfirm">
-            <Title kicker="Almost there" title="Confirm your PIN" sub="Enter the same four digits again." />
+            <Title
+              kicker="Almost there"
+              title="Confirm your PIN"
+              sub="Enter the same four digits again."
+            />
             <div className="mt-10">
-              <PinKeypad value={pinConfirm} onChange={setPinConfirm}
-                onComplete={(v) => { if (v === pin) completePartnerSetup(v); else { setPinConfirm(""); toast.error("Doesn't match."); } }} />
+              <PinKeypad
+                value={pinConfirm}
+                onChange={setPinConfirm}
+                onComplete={(v) => {
+                  if (v === pin) completePartnerSetup(v);
+                  else {
+                    setPinConfirm("");
+                    toast.error("Doesn't match.");
+                  }
+                }}
+              />
             </div>
           </Screen>
         )}
@@ -1009,24 +1094,34 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 function NameInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <input
-      autoFocus value={value} onChange={(e) => onChange(e.target.value)}
-      placeholder="Your name" maxLength={40}
+      autoFocus
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Your name"
+      maxLength={40}
       className="mt-8 w-72 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-6 py-3 text-center text-lg outline-none focus:ring-2 focus:ring-primary/40"
     />
   );
 }
 function ContinueButton({ disabled, onClick }: { disabled?: boolean; onClick: () => void }) {
   return (
-    <button disabled={disabled} onClick={onClick}
-      className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm disabled:opacity-40 disabled:hover:bg-white/40 font-medium">
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm disabled:opacity-40 disabled:hover:bg-white/40 font-medium"
+    >
       Continue
     </button>
   );
 }
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-      className="relative z-10 flex w-full max-w-md flex-col items-center px-6 text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="relative z-10 flex w-full max-w-md flex-col items-center px-6 text-center"
+    >
       {children}
     </motion.div>
   );

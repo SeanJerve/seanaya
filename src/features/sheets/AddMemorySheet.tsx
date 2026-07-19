@@ -11,7 +11,10 @@ import { DropZone } from "@/lib/DropZone";
 import { Upload, X, CloudOff, Save } from "lucide-react";
 
 type Form = {
-  title: string; description: string; date: string; location: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
 };
 
 export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
@@ -21,7 +24,10 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   const online = useOnline();
 
   const [form, setForm] = useState<Form>({
-    title: "", description: "", date: new Date().toISOString().slice(0, 10), location: "",
+    title: "",
+    description: "",
+    date: new Date().toISOString().slice(0, 10),
+    location: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -40,26 +46,45 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   const create = useMutation({
     mutationFn: async () => {
       if (!user || !form.title.trim()) throw new Error("Title is required");
-      const { data: mem, error } = await supabase.from("memories").insert({
-        relationship_id: relationshipId, created_by: user.id,
-        title: form.title, description: form.description || null,
-        memory_date: form.date, category: "random", location: form.location || null,
-        featured,
-      }).select("id").single();
+      const { data: mem, error } = await supabase
+        .from("memories")
+        .insert({
+          relationship_id: relationshipId,
+          created_by: user.id,
+          title: form.title,
+          description: form.description || null,
+          memory_date: form.date,
+          category: "random",
+          location: form.location || null,
+          featured,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
 
       if (file) {
         try {
-          const { path, url } = await uploadImage("memories", relationshipId, file, `${mem.id}/cover`);
-          await supabase.from("memories").update({ cover_url: url, cover_path: path }).eq("id", mem.id);
+          const { path, url } = await uploadImage(
+            "memories",
+            relationshipId,
+            file,
+            `${mem.id}/cover`,
+          );
+          await supabase
+            .from("memories")
+            .update({ cover_url: url, cover_path: path })
+            .eq("id", mem.id);
         } catch (e) {
           console.warn("Photo upload failed", e);
           toast.error("Memory saved, but the photo didn't upload");
         }
       }
       await supabase.from("lilies").insert({
-        relationship_id: relationshipId, memory_id: mem.id, stage: "sprout",
-        position_x: Math.random(), position_y: 0.5 + Math.random() * 0.4,
+        relationship_id: relationshipId,
+        memory_id: mem.id,
+        stage: "sprout",
+        position_x: Math.random(),
+        position_y: 0.5 + Math.random() * 0.4,
       });
     },
     onSuccess: () => {
@@ -86,9 +111,14 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
             <img src={preview} alt="" className="h-40 w-full object-cover" />
             <button
               type="button"
-              onClick={() => { setFile(null); setPreview(null); }}
+              onClick={() => {
+                setFile(null);
+                setPreview(null);
+              }}
               className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"
-            ><X size={14} /></button>
+            >
+              <X size={14} />
+            </button>
           </div>
         ) : (
           <DropZone
@@ -101,12 +131,38 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
         )}
       </FieldWrap>
 
-      <FieldWrap label="Title"><Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="A moment worth keeping" /></FieldWrap>
-      <FieldWrap label="Story"><Textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Tell the story…" /></FieldWrap>
-      <FieldWrap label="Date"><Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></FieldWrap>
-      <FieldWrap label="Location"><Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Optional" /></FieldWrap>
+      <FieldWrap label="Title">
+        <Input
+          value={form.title}
+          onChange={(e) => set("title", e.target.value)}
+          placeholder="A moment worth keeping"
+        />
+      </FieldWrap>
+      <FieldWrap label="Story">
+        <Textarea
+          rows={3}
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder="Tell the story…"
+        />
+      </FieldWrap>
+      <FieldWrap label="Date">
+        <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+      </FieldWrap>
+      <FieldWrap label="Location">
+        <Input
+          value={form.location}
+          onChange={(e) => set("location", e.target.value)}
+          placeholder="Optional"
+        />
+      </FieldWrap>
       <label className="flex items-center gap-2 text-sm text-foreground/80">
-        <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="accent-foreground" />
+        <input
+          type="checkbox"
+          checked={featured}
+          onChange={(e) => setFeatured(e.target.checked)}
+          className="accent-foreground"
+        />
         Feature this month (may appear on Monthsary)
       </label>
 

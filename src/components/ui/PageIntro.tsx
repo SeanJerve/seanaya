@@ -2,7 +2,15 @@ import { useState, useEffect } from "react";
 import { X, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function PageIntro({ pageKey, title, intro }: { pageKey: string; title: string; intro: string }) {
+export function PageIntro({
+  pageKey,
+  title,
+  intro,
+}: {
+  pageKey: string;
+  title: string;
+  intro: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

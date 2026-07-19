@@ -29,7 +29,12 @@ export function bootTheme() {
   }
 }
 
-const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const subscribe = (fn: () => void) => {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+};
 const getSnapshot = () => "light" as Theme;
 
 export function useTheme(): [Theme, (t: Theme) => void] {

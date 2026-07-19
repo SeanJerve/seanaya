@@ -7,12 +7,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
-  { key: "home",     icon: <Home size={22} strokeWidth={1.6} /> },
-  { key: "calendar", icon: <Calendar size={22} strokeWidth={1.6} />, dotKinds: ["event", "memory"] },
+  { key: "home", icon: <Home size={22} strokeWidth={1.6} /> },
+  {
+    key: "calendar",
+    icon: <Calendar size={22} strokeWidth={1.6} />,
+    dotKinds: ["event", "memory"],
+  },
   { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["album_item"] },
-  { key: "wall",     icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
+  { key: "wall", icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
   { key: "stickers", icon: <Star size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
-  { key: "pet",      icon: <Cat size={22} strokeWidth={1.6} />, dotKinds: ["pet"] },
+  { key: "pet", icon: <Cat size={22} strokeWidth={1.6} />, dotKinds: ["pet"] },
 ];
 
 const SPEECH_MESSAGES: Record<string, string[]> = {
@@ -41,17 +45,13 @@ const SPEECH_MESSAGES: Record<string, string[]> = {
     "Let's add more custom stickers!",
     "Mocha loves these outlines!",
   ],
-  pet: [
-    "Mrow! Let's name more pets!",
-    "Adopt more cute kittens!",
-    "Welcome to the pet sanctuary!",
-  ]
+  pet: ["Mrow! Let's name more pets!", "Adopt more cute kittens!", "Welcome to the pet sanctuary!"],
 };
 
 const COLOR_MAP: Record<string, string> = {
   orange: "#ffe0b2",
-  black:  "#cfd8dc",
-  white:  "#fafafa",
+  black: "#cfd8dc",
+  white: "#fafafa",
 };
 
 const parseVariant = (variantStr: string | null) => {
@@ -98,7 +98,6 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none">
       <div className="relative flex w-full max-w-md flex-col pointer-events-auto">
-        
         {/* Style block for animations */}
         <style>{`
           @keyframes pet-tail-wag {
@@ -160,17 +159,17 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
 
         {/* ── Navbar Menu Capsule ── */}
         <div className="relative flex w-full items-stretch justify-between rounded-full border border-white/40 bg-white/40 backdrop-blur-2xl px-2 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_18px_50px_-20px_rgba(80,110,160,0.45)] z-30">
-          
-          {isPetVisible && roamingPets.map((p, idx) => (
-            <RoamingPet 
-              key={p.id} 
-              pet={p} 
-              otherPets={roamingPets} 
-              index={idx}
-              tab={tab}
-              petPositionsRef={petPositionsRef}
-            />
-          ))}
+          {isPetVisible &&
+            roamingPets.map((p, idx) => (
+              <RoamingPet
+                key={p.id}
+                pet={p}
+                otherPets={roamingPets}
+                index={idx}
+                tab={tab}
+                petPositionsRef={petPositionsRef}
+              />
+            ))}
 
           {TABS.map((t) => {
             const active = tab === t.key;
@@ -189,7 +188,9 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
                     className="absolute inset-0 rounded-full border border-white/60 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.75),rgba(255,255,255,0.25)_65%)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_6px_18px_-8px_rgba(80,110,160,0.35)]"
                   />
                 )}
-                <span className={`relative z-10 transition-colors ${active ? "text-foreground" : "text-foreground/45"}`}>
+                <span
+                  className={`relative z-10 transition-colors ${active ? "text-foreground" : "text-foreground/45"}`}
+                >
                   {t.icon}
                   {dot && !active && (
                     <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[color:var(--hug)] shadow-[0_0_6px_var(--hug)]" />
@@ -204,12 +205,16 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
   );
 }
 
-function RoamingPet({ 
-  pet, otherPets, index, tab, petPositionsRef 
-}: { 
-  pet: any; 
-  otherPets: any[]; 
-  index: number; 
+function RoamingPet({
+  pet,
+  otherPets,
+  index,
+  tab,
+  petPositionsRef,
+}: {
+  pet: any;
+  otherPets: any[];
+  index: number;
   tab: TabKey;
   petPositionsRef: React.MutableRefObject<Record<string, number>>;
 }) {
@@ -281,13 +286,13 @@ function RoamingPet({
               lastInteractionTime.current = Date.now();
               setBehavior("sit");
               setDirection(opPos > posX ? 1 : -1);
-              
+
               const greetings = [
                 `Hi ${op.name}!`,
                 "Prrrt!",
                 "Sniff sniff...",
                 "Let's play!",
-                "Purrr..."
+                "Purrr...",
               ];
               setBubbleText(greetings[Math.floor(Math.random() * greetings.length)]);
               setBubbleVisible(true);
@@ -348,13 +353,7 @@ function RoamingPet({
     setBehavior("play");
     setTimeout(() => setIsHopping(false), 600);
 
-    const meows = [
-      "Meow!", 
-      "Purrr...", 
-      "Prrrt?", 
-      "Mrow! Happy to play!", 
-      "I love you, meow!"
-    ];
+    const meows = ["Meow!", "Purrr...", "Prrrt?", "Mrow! Happy to play!", "I love you, meow!"];
     const randomMeow = meows[Math.floor(Math.random() * meows.length)];
     setBubbleText(randomMeow);
     setBubbleVisible(true);
@@ -386,12 +385,15 @@ function RoamingPet({
 
   const config = parseVariant(pet.variant);
   const isPhotoFace = config.faceMode === "photo";
-  
+
   const faceUrl = pet.photos && pet.photos.length > 0 && pet.photos[0] ? pet.photos[0] : null;
-  const patternUrl = config.patternMode === "photo" && pet.photos && pet.photos.length > 1 && pet.photos[1] ? pet.photos[1] : null;
+  const patternUrl =
+    config.patternMode === "photo" && pet.photos && pet.photos.length > 1 && pet.photos[1]
+      ? pet.photos[1]
+      : null;
 
   return (
-    <div 
+    <div
       className="absolute bottom-full mb-[-5px] w-[58px] h-[46px] z-40 flex items-end justify-center pointer-events-auto cursor-pointer select-none touch-none"
       style={{ left: `${posX}%`, transform: "translateX(-50%)" }}
       onPointerDown={handlePointerDown}
@@ -404,7 +406,9 @@ function RoamingPet({
       }}
     >
       {behavior === "sleep" && (
-        <span className="absolute -top-3.5 right-0.5 text-[9px] font-bold text-primary/75 float-zzz select-none pointer-events-none">Zzz</span>
+        <span className="absolute -top-3.5 right-0.5 text-[9px] font-bold text-primary/75 float-zzz select-none pointer-events-none">
+          Zzz
+        </span>
       )}
 
       {/* Lightweight, semi-transparent glassmorphic speech bubble to prevent overlapping blockiness */}
@@ -417,15 +421,15 @@ function RoamingPet({
         )}
       </AnimatePresence>
 
-      <div 
+      <div
         style={{ transform: `scaleX(${direction})` }}
         className="w-full h-full flex items-end justify-center"
       >
-        <AnimatedKitten 
-          behavior={behavior} 
-          speed={speed} 
-          isHopping={isHopping} 
-          faceUrl={faceUrl} 
+        <AnimatedKitten
+          behavior={behavior}
+          speed={speed}
+          isHopping={isHopping}
+          faceUrl={faceUrl}
           patternUrl={patternUrl}
           isPhotoFace={isPhotoFace}
           patternColor={config.patternColor}
@@ -437,13 +441,20 @@ function RoamingPet({
 }
 
 // Render clean, outline-free cat vector shapes with soft pastel fills
-function AnimatedKitten({ 
-  behavior, speed, isHopping, faceUrl, patternUrl, isPhotoFace, patternColor, petId 
-}: { 
-  behavior: PetBehavior; 
-  speed: PetSpeed; 
-  isHopping: boolean; 
-  faceUrl: string | null; 
+function AnimatedKitten({
+  behavior,
+  speed,
+  isHopping,
+  faceUrl,
+  patternUrl,
+  isPhotoFace,
+  patternColor,
+  petId,
+}: {
+  behavior: PetBehavior;
+  speed: PetSpeed;
+  isHopping: boolean;
+  faceUrl: string | null;
   patternUrl: string | null;
   isPhotoFace: boolean;
   patternColor: string;
@@ -469,8 +480,12 @@ function AnimatedKitten({
   } as React.CSSProperties;
 
   const hasPattern = !!patternUrl;
-  const mainFill = hasPattern ? `url(#cat-coat-pattern-${petId})` : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
-  const mainStroke = hasPattern ? `url(#cat-coat-pattern-${petId})` : (COLOR_MAP[patternColor] || COLOR_MAP.orange);
+  const mainFill = hasPattern
+    ? `url(#cat-coat-pattern-${petId})`
+    : COLOR_MAP[patternColor] || COLOR_MAP.orange;
+  const mainStroke = hasPattern
+    ? `url(#cat-coat-pattern-${petId})`
+    : COLOR_MAP[patternColor] || COLOR_MAP.orange;
 
   // ── RENDER SITTING POSTURE (Matching Pear-Shaped Reference Silhouette!) ──
   if (isSitting) {
@@ -486,8 +501,22 @@ function AnimatedKitten({
         <defs>
           {/* Unified coat pattern ID so photo pattern renders correctly when sitting! */}
           {hasPattern && (
-            <pattern id={`cat-coat-pattern-${petId}`} x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
-              <image href={patternUrl} x="0" y="0" width="38" height="30" preserveAspectRatio="xMidYMid slice" />
+            <pattern
+              id={`cat-coat-pattern-${petId}`}
+              x="0"
+              y="0"
+              width="38"
+              height="30"
+              patternUnits="userSpaceOnUse"
+            >
+              <image
+                href={patternUrl}
+                x="0"
+                y="0"
+                width="38"
+                height="30"
+                preserveAspectRatio="xMidYMid slice"
+              />
             </pattern>
           )}
           <clipPath id="head-clip-circle-sit">
@@ -505,8 +534,24 @@ function AnimatedKitten({
         />
 
         {/* Centered front paws */}
-        <line x1="17" y1="23" x2="17" y2="27" stroke={mainStroke} strokeWidth="2.8" strokeLinecap="round" />
-        <line x1="20" y1="23" x2="20" y2="27" stroke={mainStroke} strokeWidth="2.8" strokeLinecap="round" />
+        <line
+          x1="17"
+          y1="23"
+          x2="17"
+          y2="27"
+          stroke={mainStroke}
+          strokeWidth="2.8"
+          strokeLinecap="round"
+        />
+        <line
+          x1="20"
+          y1="23"
+          x2="20"
+          y2="27"
+          stroke={mainStroke}
+          strokeWidth="2.8"
+          strokeLinecap="round"
+        />
 
         {/* Sitting Back leg tuck */}
         <path
@@ -526,14 +571,8 @@ function AnimatedKitten({
         {/* Head Group */}
         <g>
           {/* Round ears (No borders) */}
-          <path
-            d="M 13 6 C 13 3, 14 0.5, 15 0.5 C 16 0.5, 16.5 3, 17 4.5"
-            fill={mainFill}
-          />
-          <path
-            d="M 20 4.5 C 20.5 3, 21 0.5, 22 0.5 C 23 0.5, 24 3, 24 6"
-            fill={mainFill}
-          />
+          <path d="M 13 6 C 13 3, 14 0.5, 15 0.5 C 16 0.5, 16.5 3, 17 4.5" fill={mainFill} />
+          <path d="M 20 4.5 C 20.5 3, 21 0.5, 22 0.5 C 23 0.5, 24 3, 24 6" fill={mainFill} />
 
           {/* Head Circle or Custom Cropped Cat Face Photo */}
           {faceUrl && isPhotoFace ? (
@@ -555,18 +594,70 @@ function AnimatedKitten({
           {/* Eyes, Mouth, Whiskers (Cartoon) */}
           {(!faceUrl || !isPhotoFace) && (
             <>
-              <path d="M 16.5 9 L 17.5 7.5 L 18.5 9" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M 20.5 9 L 21.5 7.5 L 22.5 9" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M 18 11 Q 18.75 12, 19.5 11 Q 20.25 12, 21 11" stroke="oklch(0.2 0.02 60)" strokeWidth="0.6" strokeLinecap="round" fill="none" />
+              <path
+                d="M 16.5 9 L 17.5 7.5 L 18.5 9"
+                stroke="oklch(0.2 0.02 60)"
+                strokeWidth="0.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path
+                d="M 20.5 9 L 21.5 7.5 L 22.5 9"
+                stroke="oklch(0.2 0.02 60)"
+                strokeWidth="0.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path
+                d="M 18 11 Q 18.75 12, 19.5 11 Q 20.25 12, 21 11"
+                stroke="oklch(0.2 0.02 60)"
+                strokeWidth="0.6"
+                strokeLinecap="round"
+                fill="none"
+              />
               <circle cx="19.5" cy="10.2" r="0.5" fill="#ff80ab" />
 
               {/* Whiskers (Left side) */}
-              <line x1="16" y1="10.2" x2="13.5" y2="9.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-              <line x1="16" y1="10.8" x2="13.5" y2="11.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+              <line
+                x1="16"
+                y1="10.2"
+                x2="13.5"
+                y2="9.8"
+                stroke="white"
+                strokeWidth="0.6"
+                strokeLinecap="round"
+              />
+              <line
+                x1="16"
+                y1="10.8"
+                x2="13.5"
+                y2="11.3"
+                stroke="white"
+                strokeWidth="0.6"
+                strokeLinecap="round"
+              />
 
               {/* Whiskers (Right side) */}
-              <line x1="23" y1="10.2" x2="25.5" y2="9.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-              <line x1="23" y1="10.8" x2="25.5" y2="11.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+              <line
+                x1="23"
+                y1="10.2"
+                x2="25.5"
+                y2="9.8"
+                stroke="white"
+                strokeWidth="0.6"
+                strokeLinecap="round"
+              />
+              <line
+                x1="23"
+                y1="10.8"
+                x2="25.5"
+                y2="11.3"
+                stroke="white"
+                strokeWidth="0.6"
+                strokeLinecap="round"
+              />
             </>
           )}
         </g>
@@ -587,8 +678,22 @@ function AnimatedKitten({
     >
       <defs>
         {hasPattern && (
-          <pattern id={`cat-coat-pattern-${petId}`} x="0" y="0" width="38" height="30" patternUnits="userSpaceOnUse">
-            <image href={patternUrl} x="0" y="0" width="38" height="30" preserveAspectRatio="xMidYMid slice" />
+          <pattern
+            id={`cat-coat-pattern-${petId}`}
+            x="0"
+            y="0"
+            width="38"
+            height="30"
+            patternUnits="userSpaceOnUse"
+          >
+            <image
+              href={patternUrl}
+              x="0"
+              y="0"
+              width="38"
+              height="30"
+              preserveAspectRatio="xMidYMid slice"
+            />
           </pattern>
         )}
         <clipPath id="head-clip-circle">
@@ -611,21 +716,30 @@ function AnimatedKitten({
         <>
           <line
             className={isWalking ? "pet-walking-leg-2" : ""}
-            x1="12" y1="21" x2="10" y2="27"
+            x1="12"
+            y1="21"
+            x2="10"
+            y2="27"
             stroke="oklch(0.55 0.05 240 / 0.12)"
             strokeWidth="3.2"
             strokeLinecap="round"
           />
           <line
             className={isWalking ? "pet-walking-leg-2" : ""}
-            x1="12" y1="21" x2="10" y2="27"
+            x1="12"
+            y1="21"
+            x2="10"
+            y2="27"
             stroke={mainStroke}
             strokeWidth="3"
             strokeLinecap="round"
           />
           <line
             className={isWalking ? "pet-walking-leg-1" : ""}
-            x1="26" y1="21" x2="28" y2="27"
+            x1="26"
+            y1="21"
+            x2="28"
+            y2="27"
             stroke={mainStroke}
             strokeWidth="3"
             strokeLinecap="round"
@@ -649,14 +763,20 @@ function AnimatedKitten({
         <>
           <line
             className={isWalking ? "pet-walking-leg-1" : ""}
-            x1="14" y1="21" x2="15" y2="27"
+            x1="14"
+            y1="21"
+            x2="15"
+            y2="27"
             stroke={mainStroke}
             strokeWidth="3"
             strokeLinecap="round"
           />
           <line
             className={isWalking ? "pet-walking-leg-2" : ""}
-            x1="24" y1="21" x2="23" y2="27"
+            x1="24"
+            y1="21"
+            x2="23"
+            y2="27"
             stroke={mainStroke}
             strokeWidth="3"
             strokeLinecap="round"
@@ -665,22 +785,32 @@ function AnimatedKitten({
       ) : (
         /* Sleeping paws tucked under body */
         <>
-          <line x1="13" y1="23" x2="16" y2="23" stroke={mainStroke} strokeWidth="3" strokeLinecap="round" />
-          <line x1="21" y1="23" x2="24" y2="23" stroke={mainStroke} strokeWidth="3" strokeLinecap="round" />
+          <line
+            x1="13"
+            y1="23"
+            x2="16"
+            y2="23"
+            stroke={mainStroke}
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <line
+            x1="21"
+            y1="23"
+            x2="24"
+            y2="23"
+            stroke={mainStroke}
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
         </>
       )}
 
       {/* Head Group */}
       <g className={isSleeping ? "pet-body-sleep animate-pulse" : ""}>
         {/* Round ears (No borders) */}
-        <path
-          d="M 23.5 7 C 23.5 4, 24.5 1.5, 25.5 1.5 C 26.5 1.5, 27 4, 27.5 6"
-          fill={mainFill}
-        />
-        <path
-          d="M 30.5 6 C 31 4, 31.5 1.5, 32.5 1.5 C 33.5 1.5, 34.5 4, 34.5 7"
-          fill={mainFill}
-        />
+        <path d="M 23.5 7 C 23.5 4, 24.5 1.5, 25.5 1.5 C 26.5 1.5, 27 4, 27.5 6" fill={mainFill} />
+        <path d="M 30.5 6 C 31 4, 31.5 1.5, 32.5 1.5 C 33.5 1.5, 34.5 4, 34.5 7" fill={mainFill} />
 
         {/* Head Circle or Custom Cropped Cat Face Photo */}
         {faceUrl && isPhotoFace ? (
@@ -696,12 +826,7 @@ function AnimatedKitten({
             />
           </>
         ) : (
-          <circle
-            cx="29"
-            cy="9.5"
-            r="6.5"
-            fill={mainFill}
-          />
+          <circle cx="29" cy="9.5" r="6.5" fill={mainFill} />
         )}
 
         {/* Eyes, Mouth, and Whiskers (Only if not photo face) */}
@@ -709,33 +834,135 @@ function AnimatedKitten({
           <>
             {isSleeping ? (
               <>
-                <path d="M 27 8.5 Q 28 9.5 29 8.5" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" fill="none" />
-                <path d="M 31 8.5 Q 32 9.5 33 8.5" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" fill="none" />
-                <path d="M 29.2 11 Q 30 11.5 30.8 11" stroke="oklch(0.2 0.02 60)" strokeWidth="0.6" strokeLinecap="round" fill="none" />
+                <path
+                  d="M 27 8.5 Q 28 9.5 29 8.5"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.8"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <path
+                  d="M 31 8.5 Q 32 9.5 33 8.5"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.8"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <path
+                  d="M 29.2 11 Q 30 11.5 30.8 11"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                  fill="none"
+                />
 
                 {/* Sleeping Whiskers (Left side) */}
-                <line x1="26" y1="10.2" x2="23.5" y2="9.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="26" y1="10.8" x2="23.5" y2="11.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+                <line
+                  x1="26"
+                  y1="10.2"
+                  x2="23.5"
+                  y2="9.8"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="26"
+                  y1="10.8"
+                  x2="23.5"
+                  y2="11.3"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
 
                 {/* Sleeping Whiskers (Right side) */}
-                <line x1="33" y1="10.2" x2="35.5" y2="9.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="33" y1="10.8" x2="35.5" y2="11.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+                <line
+                  x1="33"
+                  y1="10.2"
+                  x2="35.5"
+                  y2="9.8"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="33"
+                  y1="10.8"
+                  x2="35.5"
+                  y2="11.3"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
               </>
             ) : (
               <>
                 {/* Thin stroke ^ w ^ face */}
-                <path d="M 27 10 L 28 8.5 L 29 10" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                <path d="M 31 10 L 32 8.5 L 33 10" stroke="oklch(0.2 0.02 60)" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                <path d="M 28.5 12 Q 29.25 13 30 12 Q 30.75 13 31.5 12" stroke="oklch(0.2 0.02 60)" strokeWidth="0.6" strokeLinecap="round" fill="none" />
+                <path
+                  d="M 27 10 L 28 8.5 L 29 10"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <path
+                  d="M 31 10 L 32 8.5 L 33 10"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <path
+                  d="M 28.5 12 Q 29.25 13 30 12 Q 30.75 13 31.5 12"
+                  stroke="oklch(0.2 0.02 60)"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                  fill="none"
+                />
                 <circle cx="30" cy="11.2" r="0.5" fill="#ff80ab" />
 
                 {/* Awake Whiskers (Left side) */}
-                <line x1="26" y1="11.2" x2="23.5" y2="10.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="26" y1="11.8" x2="23.5" y2="12.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+                <line
+                  x1="26"
+                  y1="11.2"
+                  x2="23.5"
+                  y2="10.8"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="26"
+                  y1="11.8"
+                  x2="23.5"
+                  y2="12.3"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
 
                 {/* Awake Whiskers (Right side) */}
-                <line x1="33" y1="11.2" x2="35.5" y2="10.8" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="33" y1="11.8" x2="35.5" y2="12.3" stroke="white" strokeWidth="0.6" strokeLinecap="round" />
+                <line
+                  x1="33"
+                  y1="11.2"
+                  x2="35.5"
+                  y2="10.8"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="33"
+                  y1="11.8"
+                  x2="35.5"
+                  y2="12.3"
+                  stroke="white"
+                  strokeWidth="0.6"
+                  strokeLinecap="round"
+                />
               </>
             )}
           </>

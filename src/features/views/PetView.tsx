@@ -20,7 +20,14 @@ type Pet = {
 };
 
 export function PetView({ relationshipId }: { relationshipId: string }) {
-  const { confirm, activeRoamingPetIds, isPetVisible, toggleActiveRoamingPetId, setActiveRoamingPetIds, setIsPetVisible } = useAppStore();
+  const {
+    confirm,
+    activeRoamingPetIds,
+    isPetVisible,
+    toggleActiveRoamingPetId,
+    setActiveRoamingPetIds,
+    setIsPetVisible,
+  } = useAppStore();
   const qc = useQueryClient();
   const [petName, setPetName] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -28,7 +35,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => setIsAddingPet(true)
+    onClick: () => setIsAddingPet(true),
   });
 
   useEffect(() => {
@@ -85,7 +92,12 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
       // 2. Upload pattern photo
       const patternSubpath = `pets/${tempId}/pattern_${Date.now()}`;
-      const { url: patternUrl } = await uploadImage("wall", relationshipId, patternFile, patternSubpath);
+      const { url: patternUrl } = await uploadImage(
+        "wall",
+        relationshipId,
+        patternFile,
+        patternSubpath,
+      );
 
       // 3. Insert cat record
       const { error } = await supabase.from("pets").insert({
@@ -175,7 +187,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
     try {
       const subpath = `pets/${pet.id}/pattern_${Date.now()}`;
       const { url } = await uploadImage("wall", relationshipId, file, subpath);
-      
+
       const existingPhotos = pet.photos || [];
       const newPhotos = [existingPhotos[0] || "", url];
 
@@ -237,8 +249,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       ctx.clip();
 
       const naturalAspect = img.naturalHeight / img.naturalWidth;
-      const img_left = (128 + cropOffsetX) - (256 * cropScale) / 2;
-      const img_top = (128 + cropOffsetY) - (256 * naturalAspect * cropScale) / 2;
+      const img_left = 128 + cropOffsetX - (256 * cropScale) / 2;
+      const img_top = 128 + cropOffsetY - (256 * naturalAspect * cropScale) / 2;
 
       const canvas_img_left = (img_left - 48) * 1.25;
       const canvas_img_top = (img_top - 48) * 1.25;
@@ -284,7 +296,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           toast.success("Cat face photo updated!");
           qc.invalidateQueries({ queryKey: ["pets", relationshipId] });
           qc.invalidateQueries({ queryKey: ["active-roaming-pet"] });
-          
+
           setCroppingTarget(null);
           setCroppingFileSrc(null);
         } catch (err: any) {
@@ -308,7 +320,6 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32 select-none relative">
-      
       {/* ── Cat Sanctuary Card ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] text-center space-y-3 relative overflow-hidden">
         <div className="absolute -top-12 -left-12 w-24 h-24 rounded-full bg-yellow-200/20 blur-xl" />
@@ -318,7 +329,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           <Cat size={28} />
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mt-0.5">Welcome your cats. Upload their face and pattern coat photos to have them roam!</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Welcome your cats. Upload their face and pattern coat photos to have them roam!
+          </p>
         </div>
       </section>
 
@@ -331,7 +344,10 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         {loadingPets ? (
           <ul className="space-y-4 animate-pulse">
             {[1, 2].map((i) => (
-              <li key={i} className="flex flex-col gap-3 rounded-2xl bg-white/50 p-4 border border-white/20">
+              <li
+                key={i}
+                className="flex flex-col gap-3 rounded-2xl bg-white/50 p-4 border border-white/20"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-foreground/10 shrink-0" />
                   <div className="flex-1 space-y-1.5">
@@ -351,17 +367,24 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             ))}
           </ul>
         ) : pets.length === 0 ? (
-          <div className="text-xs italic text-muted-foreground text-center py-4">No cats welcomed yet. Welcome your first cat!</div>
+          <div className="text-xs italic text-muted-foreground text-center py-4">
+            No cats welcomed yet. Welcome your first cat!
+          </div>
         ) : (
           <ul className="space-y-4">
             {pets.map((p) => {
-              const ageInDays = p.birthday ? differenceInDays(new Date(), new Date(p.birthday)) : null;
+              const ageInDays = p.birthday
+                ? differenceInDays(new Date(), new Date(p.birthday))
+                : null;
               const hasFace = p.photos && p.photos.length > 0 && !!p.photos[0];
               const isActive = activeRoamingPetIds.includes(p.id);
               const isCurrentlyVisible = isActive && isPetVisible;
 
               return (
-                <li key={p.id} className="flex flex-col gap-3 rounded-2xl border border-white/40 bg-white/30 p-3.5 shadow-[0_2px_8px_-4px_rgba(80,110,160,0.1)]">
+                <li
+                  key={p.id}
+                  className="flex flex-col gap-3 rounded-2xl border border-white/40 bg-white/30 p-3.5 shadow-[0_2px_8px_-4px_rgba(80,110,160,0.1)]"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative w-11 h-11 rounded-full bg-white/60 border border-white/50 flex items-center justify-center text-foreground/45 shadow-inner overflow-hidden select-none pointer-events-none">
@@ -370,8 +393,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                         ) : (
                           <Cat size={18} />
                         )}
-                        <label 
-                          onClick={(e) => e.stopPropagation()} 
+                        <label
+                          onClick={(e) => e.stopPropagation()}
                           className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-auto"
                         >
                           <Camera size={12} className="text-white" />
@@ -387,17 +410,19 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                         <div className="text-sm font-semibold text-foreground/95 flex items-center gap-1.5">
                           {p.name}
                           {isCurrentlyVisible && (
-                            <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Roaming</span>
+                            <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                              Roaming
+                            </span>
                           )}
                           {isActive && !isPetVisible && (
-                            <span className="text-[8px] bg-slate-500/20 text-slate-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Hidden</span>
+                            <span className="text-[8px] bg-slate-500/20 text-slate-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                              Hidden
+                            </span>
                           )}
                         </div>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-2">
                           <span>Cat</span>
-                          {ageInDays !== null && (
-                            <span>• {ageInDays} days with us</span>
-                          )}
+                          {ageInDays !== null && <span>• {ageInDays} days with us</span>}
                         </div>
                       </div>
                     </div>
@@ -406,13 +431,15 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       <button
                         onClick={() => handleEyeToggle(p, isActive)}
                         className={`p-1.5 rounded-full border border-white/50 transition-all ${
-                          isCurrentlyVisible 
-                            ? "bg-emerald-500 text-white scale-110 shadow-sm" 
-                            : isActive 
-                            ? "bg-slate-500 text-white scale-110 shadow-sm" 
-                            : "bg-white/50 text-foreground/45 hover:text-foreground"
+                          isCurrentlyVisible
+                            ? "bg-emerald-500 text-white scale-110 shadow-sm"
+                            : isActive
+                              ? "bg-slate-500 text-white scale-110 shadow-sm"
+                              : "bg-white/50 text-foreground/45 hover:text-foreground"
                         }`}
-                        title={isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"}
+                        title={
+                          isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"
+                        }
                       >
                         {isCurrentlyVisible ? <Eye size={12} /> : <EyeOff size={12} />}
                       </button>
@@ -493,7 +520,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Cat size={14} className="text-primary" /> Welcome new cat
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setPetName("");
                   setBirthday("");
@@ -511,7 +538,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
             <div className="space-y-3.5">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Cat Name</label>
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                  Cat Name
+                </label>
                 <input
                   type="text"
                   placeholder="Mocha, Lily, etc..."
@@ -522,7 +551,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">Adopt Date / Birthday (Optional)</label>
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                  Adopt Date / Birthday (Optional)
+                </label>
                 <input
                   type="date"
                   value={birthday}
@@ -535,7 +566,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-white/20 pt-3.5">
                 {/* Required Face Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">Face Image (Required)</span>
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">
+                    Face Image (Required)
+                  </span>
                   <label className="w-16 h-16 rounded-full border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
                     {facePreviewUrl ? (
                       <img src={facePreviewUrl} alt="" className="w-full h-full object-cover" />
@@ -556,7 +589,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
                 {/* Required Pattern Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center border-l border-white/10 pl-2">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">Coat Pattern (Required)</span>
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">
+                    Coat Pattern (Required)
+                  </span>
                   <label className="w-16 h-16 rounded-2xl border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
                     {patternPreviewUrl ? (
                       <img src={patternPreviewUrl} alt="" className="w-full h-full object-cover" />
@@ -593,16 +628,21 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm select-none">
           <div className="w-full max-w-sm rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-full flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Crop Face</h3>
-              <button 
-                onClick={() => { setCroppingTarget(null); setCroppingFileSrc(null); }}
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Crop Face
+              </h3>
+              <button
+                onClick={() => {
+                  setCroppingTarget(null);
+                  setCroppingFileSrc(null);
+                }}
                 className="rounded-full bg-white border border-white/50 p-1 text-foreground/50 hover:text-foreground transition-all"
               >
                 <X size={14} />
               </button>
             </div>
 
-            <div 
+            <div
               className="relative w-64 h-64 overflow-hidden rounded-2xl bg-black/60 border border-white/30 select-none cursor-move flex items-center justify-center shadow-inner"
               onMouseDown={onMouseDown}
               onMouseMove={onMouseMove}
@@ -624,7 +664,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   transform: `translate(-50%, -50%) translate(${cropOffsetX}px, ${cropOffsetY}px) scale(${cropScale})`,
                 }}
               />
-              
+
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-40 h-40 rounded-full border-2 border-dashed border-white ring-[999px] ring-black/50 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]" />
               </div>
@@ -647,7 +687,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             </div>
 
             <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed">
-              Drag the cat picture and slide the zoom slider until your cat's face fits perfectly inside the circle!
+              Drag the cat picture and slide the zoom slider until your cat's face fits perfectly
+              inside the circle!
             </p>
 
             <button

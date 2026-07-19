@@ -51,7 +51,12 @@ export function useNotifications(relationshipId: string | undefined) {
       .channel(channelId)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
         (payload) => {
           qc.invalidateQueries({ queryKey: ["notifications"] });
           qc.invalidateQueries({ queryKey: ["stats"] });
@@ -64,10 +69,12 @@ export function useNotifications(relationshipId: string | undefined) {
           if (!bootstrapped.current) return;
           const kind = (payload.new as { kind?: NotifKind } | null)?.kind;
           if (kind && TOAST_TITLE[kind]) toast(TOAST_TITLE[kind]);
-        }
+        },
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [relationshipId, user, qc]);
 
   const list = q.data ?? [];
@@ -78,8 +85,12 @@ export function useNotifications(relationshipId: string | undefined) {
     unread,
     markAllRead: async () => {
       if (!relationshipId || !user) return;
-      await supabase.from("notifications").update({ read: true })
-        .eq("relationship_id", relationshipId).eq("user_id", user.id).eq("read", false);
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("relationship_id", relationshipId)
+        .eq("user_id", user.id)
+        .eq("read", false);
       qc.invalidateQueries({ queryKey: ["notifications"] });
     },
     markOneRead: async (id: string) => {

@@ -15,7 +15,10 @@ export function useUser() {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });
-    return () => { alive = false; data.subscription.unsubscribe(); };
+    return () => {
+      alive = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
   return { user, loading };
 }

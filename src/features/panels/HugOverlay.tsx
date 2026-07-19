@@ -12,7 +12,12 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
       .channel(channelId)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "hugs", filter: `relationship_id=eq.${relationshipId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "hugs",
+          filter: `relationship_id=eq.${relationshipId}`,
+        },
         (payload) => {
           const id = (payload.new as { id: string }).id;
           setHearts((h) => [...h, { id }]);
@@ -20,7 +25,9 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
         },
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [relationshipId]);
 
   return (
@@ -35,7 +42,11 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
             transition={{ duration: 3, ease: "easeOut" }}
             className="absolute"
           >
-            <Heart size={72} fill="oklch(0.78 0.13 15)" className="text-hug drop-shadow-[0_0_18px_oklch(0.78_0.13_15/0.45)]" />
+            <Heart
+              size={72}
+              fill="oklch(0.78 0.13 15)"
+              className="text-hug drop-shadow-[0_0_18px_oklch(0.78_0.13_15/0.45)]"
+            />
           </motion.div>
         ))}
       </AnimatePresence>

@@ -31,25 +31,29 @@ const PAD_BACKGROUNDS = [
   {
     key: "white",
     label: "White",
-    bgClass: "bg-[#ffffff] bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:16px_16px]",
+    bgClass:
+      "bg-[#ffffff] bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:16px_16px]",
     btnStyle: "bg-white border-slate-300",
   },
   {
     key: "blue",
     label: "Pastel Blue",
-    bgClass: "bg-[#f0f7fc] bg-[radial-gradient(#d0e2f3_1.5px,transparent_1.5px)] [background-size:16px_16px]",
+    bgClass:
+      "bg-[#f0f7fc] bg-[radial-gradient(#d0e2f3_1.5px,transparent_1.5px)] [background-size:16px_16px]",
     btnStyle: "bg-[#f0f7fc] border-sky-300",
   },
   {
     key: "black",
     label: "Pastel Black",
-    bgClass: "bg-[#181a1b] bg-[radial-gradient(#2d3134_1.5px,transparent_1.5px)] [background-size:16px_16px] text-white/90",
+    bgClass:
+      "bg-[#181a1b] bg-[radial-gradient(#2d3134_1.5px,transparent_1.5px)] [background-size:16px_16px] text-white/90",
     btnStyle: "bg-[#181a1b] border-slate-700",
   },
   {
     key: "beige",
     label: "Pastel Beige",
-    bgClass: "bg-[#faf6eb] bg-[radial-gradient(#e6dbca_1.5px,transparent_1.5px)] [background-size:16px_16px]",
+    bgClass:
+      "bg-[#faf6eb] bg-[radial-gradient(#e6dbca_1.5px,transparent_1.5px)] [background-size:16px_16px]",
     btnStyle: "bg-[#faf6eb] border-amber-200",
   },
 ];
@@ -59,7 +63,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const { openSheet, confirm, setActiveStickerPageId, activeStickerPageId } = useAppStore();
   const boardRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  
+
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -70,7 +74,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const [pageSearchQuery, setPageSearchQuery] = useState("");
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => openSheet("add-sticker")
+    onClick: () => openSheet("add-sticker"),
   });
 
   useEffect(() => {
@@ -83,7 +87,12 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   }, []);
 
   // Fetch sticker book pages
-  const { data: pages = [], refetch: refetchPages, isFetched, isLoading: loadingPages } = useQuery({
+  const {
+    data: pages = [],
+    refetch: refetchPages,
+    isFetched,
+    isLoading: loadingPages,
+  } = useQuery({
     queryKey: ["sticker-pages", relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -140,7 +149,8 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   });
 
   const activePage = pages.find((p) => p.id === activePageId) || pages[0];
-  const activeBg = PAD_BACKGROUNDS.find((b) => b.key === activePage?.bg_theme) || PAD_BACKGROUNDS[0];
+  const activeBg =
+    PAD_BACKGROUNDS.find((b) => b.key === activePage?.bg_theme) || PAD_BACKGROUNDS[0];
 
   useEffect(() => {
     if (isFetched && pages.length === 0 && !createPage.isPending) {
@@ -162,7 +172,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
   // Filter stickers belonging to the active page (fallback legacy stickers without page_id to first page)
   const pageStickers = allStickers.filter(
-    (s) => s.page_id === activePage?.id || (!s.page_id && activePage?.id === pages[0]?.id)
+    (s) => s.page_id === activePage?.id || (!s.page_id && activePage?.id === pages[0]?.id),
   );
 
   // Update page background theme
@@ -246,7 +256,6 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
   return (
     <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none mx-auto max-w-md px-4 pt-6">
-      
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
       <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 relative">
         {showPageSearch && (
@@ -274,7 +283,9 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
             {filteredPages.length === 0 ? (
-              <span className="text-[10px] text-muted-foreground/60 italic px-1">No pages match search</span>
+              <span className="text-[10px] text-muted-foreground/60 italic px-1">
+                No pages match search
+              </span>
             ) : (
               filteredPages.map((p) => {
                 const idx = p.originalIndex;
@@ -407,10 +418,10 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                         const rect = card.getBoundingClientRect();
                         let xPct = ((rect.left - sheet.left) / sheet.width) * 100;
                         let yPct = ((rect.top - sheet.top) / sheet.height) * 100;
-                        
+
                         xPct = Math.max(0, Math.min(70, xPct));
                         yPct = Math.max(0, Math.min(80, yPct));
-                        
+
                         updatePosition.mutate({ id: s.id, pos_x: xPct, pos_y: yPct });
                       }
                     }}
@@ -424,7 +435,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                       zIndex: isSelected ? 50 : 10,
                     }}
                   >
-                    <div 
+                    <div
                       className="relative p-2"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -463,7 +474,8 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                               onClick={() => {
                                 confirm({
                                   title: "Delete sticker?",
-                                  message: "Are you sure you want to permanently remove this sticker from your pad?",
+                                  message:
+                                    "Are you sure you want to permanently remove this sticker from your pad?",
                                   onConfirm: () => deleteSticker.mutate(s),
                                 });
                               }}
@@ -521,7 +533,9 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
               className="relative w-full max-w-[280px] rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl z-10 space-y-4"
             >
-              <h3 className="display text-sm font-semibold text-foreground/80">New Sticker Sheet Name</h3>
+              <h3 className="display text-sm font-semibold text-foreground/80">
+                New Sticker Sheet Name
+              </h3>
               <input
                 type="text"
                 autoFocus

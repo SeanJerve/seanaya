@@ -5,28 +5,43 @@ import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAppStore } from "@/features/app/store";
- 
-export function AppHeader({ title, subtitle, relationshipId }: { title: string; subtitle?: string; relationshipId?: string }) {
+
+export function AppHeader({
+  title,
+  subtitle,
+  relationshipId,
+}: {
+  title: string;
+  subtitle?: string;
+  relationshipId?: string;
+}) {
   const { user } = useUser();
   const qc = useQueryClient();
   const { openSheet } = useAppStore();
   const { unread } = useNotifications(relationshipId);
- 
+
   const hug = useMutation({
     mutationFn: async () => {
       if (!relationshipId || !user) throw new Error("Not linked yet");
-      const { error } = await supabase.from("hugs").insert({ relationship_id: relationshipId, sender_id: user.id });
+      const { error } = await supabase
+        .from("hugs")
+        .insert({ relationship_id: relationshipId, sender_id: user.id });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("A hug on its way"); qc.invalidateQueries({ queryKey: ["stats"] }); },
+    onSuccess: () => {
+      toast.success("A hug on its way");
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
- 
+
   return (
     <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-background/40 border-b border-white/30">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Seanaya</div>
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            Seanaya
+          </div>
           <h1 className="display text-lg leading-tight">{title}</h1>
           {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
         </div>

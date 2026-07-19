@@ -16,7 +16,11 @@ const ICON: Record<NotifKind, React.ReactNode> = {
 };
 
 const TAB_FOR: Partial<Record<NotifKind, TabKey>> = {
-  memory: "memories", event: "calendar", note: "wall", trip: "pet", song: "pet",
+  memory: "memories",
+  event: "calendar",
+  note: "wall",
+  trip: "pet",
+  song: "pet",
 };
 
 const TITLE: Record<NotifKind, string> = {
@@ -44,7 +48,12 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
   const { setTab, closeSheet } = useAppStore();
 
   // Auto-mark on view (small grace so the ring is visible for a beat)
-  useEffect(() => { const t = setTimeout(() => { markAllRead(); }, 1200); return () => clearTimeout(t); }, [markAllRead]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      markAllRead();
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [markAllRead]);
 
   return (
     <div className="space-y-3">
@@ -54,7 +63,10 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
         </div>
         {list.length > 0 && (
           <button
-            onClick={() => { markAllRead(); toast.success("Cleared"); }}
+            onClick={() => {
+              markAllRead();
+              toast.success("Cleared");
+            }}
             className="flex items-center gap-1 rounded-full border border-white/50 bg-white/50 px-3 py-1 text-[11px] text-foreground/80 backdrop-blur-xl"
           >
             <CheckCheck size={12} /> Mark all as read
@@ -71,18 +83,28 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
             return (
               <li key={n.id}>
                 <button
-                  onClick={() => { markOneRead(n.id); if (tab) setTab(tab); closeSheet(); }}
+                  onClick={() => {
+                    markOneRead(n.id);
+                    if (tab) setTab(tab);
+                    closeSheet();
+                  }}
                   className={`flex w-full items-start gap-3 rounded-2xl border border-white/40 bg-white/50 px-4 py-3 text-left backdrop-blur-xl transition ${!n.read ? "ring-1 ring-primary/30" : ""}`}
                 >
-                  <span className="mt-0.5 rounded-full bg-white/60 p-1.5 text-foreground/70">{ICON[n.kind]}</span>
+                  <span className="mt-0.5 rounded-full bg-white/60 p-1.5 text-foreground/70">
+                    {ICON[n.kind]}
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm">{TITLE[n.kind]}</div>
-                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{SUB[n.kind]}</div>
+                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {SUB[n.kind]}
+                    </div>
                     <div className="mt-0.5 text-[10px] text-muted-foreground/80">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </div>
                   </div>
-                  {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[color:var(--hug)]" />}
+                  {!n.read && (
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[color:var(--hug)]" />
+                  )}
                 </button>
               </li>
             );

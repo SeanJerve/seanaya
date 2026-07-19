@@ -26,27 +26,33 @@ type State = {
   activeRoamingPetIds: string[];
   isPetVisible: boolean;
 };
- 
+
 const getLocalPetIds = () => {
   if (typeof window === "undefined") return [];
   const val = localStorage.getItem("active_roaming_pet_ids");
   return val ? val.split(",").filter(Boolean) : [];
 };
-const getLocalPetVisible = () => typeof window !== "undefined" ? localStorage.getItem("is_pet_visible") !== "false" : true;
+const getLocalPetVisible = () =>
+  typeof window !== "undefined" ? localStorage.getItem("is_pet_visible") !== "false" : true;
 
-let state: State = { 
-  tab: "home", 
-  sheet: null, 
-  confirmDialog: null, 
+let state: State = {
+  tab: "home",
+  sheet: null,
+  confirmDialog: null,
   activeStickerPageId: null,
   activeRoamingPetIds: getLocalPetIds(),
-  isPetVisible: getLocalPetVisible()
+  isPetVisible: getLocalPetVisible(),
 };
 const listeners = new Set<() => void>();
-const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const subscribe = (fn: () => void) => {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+};
 const emit = () => listeners.forEach((l) => l());
 const getSnapshot = () => state;
- 
+
 export function useAppStore() {
   const s = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return {
@@ -56,12 +62,30 @@ export function useAppStore() {
     activeStickerPageId: s.activeStickerPageId,
     activeRoamingPetIds: s.activeRoamingPetIds,
     isPetVisible: s.isPetVisible,
-    setTab: (t: TabKey) => { state = { ...state, tab: t, sheet: null }; emit(); },
-    openSheet: (k: Exclude<SheetKey, null>) => { state = { ...state, sheet: k }; emit(); },
-    closeSheet: () => { state = { ...state, sheet: null }; emit(); },
-    confirm: (options: ConfirmOptions) => { state = { ...state, confirmDialog: options }; emit(); },
-    closeConfirm: () => { state = { ...state, confirmDialog: null }; emit(); },
-    setActiveStickerPageId: (id: string | null) => { state = { ...state, activeStickerPageId: id }; emit(); },
+    setTab: (t: TabKey) => {
+      state = { ...state, tab: t, sheet: null };
+      emit();
+    },
+    openSheet: (k: Exclude<SheetKey, null>) => {
+      state = { ...state, sheet: k };
+      emit();
+    },
+    closeSheet: () => {
+      state = { ...state, sheet: null };
+      emit();
+    },
+    confirm: (options: ConfirmOptions) => {
+      state = { ...state, confirmDialog: options };
+      emit();
+    },
+    closeConfirm: () => {
+      state = { ...state, confirmDialog: null };
+      emit();
+    },
+    setActiveStickerPageId: (id: string | null) => {
+      state = { ...state, activeStickerPageId: id };
+      emit();
+    },
     toggleActiveRoamingPetId: (id: string) => {
       let ids = [...state.activeRoamingPetIds];
       if (ids.includes(id)) {

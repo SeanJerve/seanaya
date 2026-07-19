@@ -10,17 +10,17 @@ import { DropZone } from "@/lib/DropZone";
 import { uploadImage } from "@/lib/storage";
 import { Upload, X, CloudOff, Palette } from "lucide-react";
 
-const KINDS = ["note","compliment","promise","gratitude","photo"] as const;
+const KINDS = ["note", "compliment", "promise", "gratitude", "photo"] as const;
 const PASTEL_COLORS = [
-  { label: "Butter",   value: "oklch(0.95 0.07 90 / 0.85)" },
-  { label: "Rose",     value: "oklch(0.94 0.06 5 / 0.85)" },
-  { label: "Mint",     value: "oklch(0.94 0.06 160 / 0.85)" },
+  { label: "Butter", value: "oklch(0.95 0.07 90 / 0.85)" },
+  { label: "Rose", value: "oklch(0.94 0.06 5 / 0.85)" },
+  { label: "Mint", value: "oklch(0.94 0.06 160 / 0.85)" },
   { label: "Lavender", value: "oklch(0.93 0.06 290 / 0.85)" },
-  { label: "Peach",    value: "oklch(0.94 0.07 55 / 0.85)" },
-  { label: "Sky",      value: "oklch(0.94 0.05 230 / 0.85)" },
+  { label: "Peach", value: "oklch(0.94 0.07 55 / 0.85)" },
+  { label: "Sky", value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
 
-type Form = { body: string; kind: typeof KINDS[number] };
+type Form = { body: string; kind: (typeof KINDS)[number] };
 
 export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
   const { user } = useUser();
@@ -47,15 +47,18 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
       if (file) {
         const noteId = crypto.randomUUID();
         const up = await uploadImage("wall", relationshipId, file, `notes/${noteId}`);
-        image_url = up.url; image_path = up.path;
+        image_url = up.url;
+        image_path = up.path;
       }
 
       const { error } = await supabase.from("notes").insert({
-        relationship_id: relationshipId, author_id: user.id,
+        relationship_id: relationshipId,
+        author_id: user.id,
         body: form.body || (isPhoto ? "(photo)" : ""),
         kind: isPhoto ? "note" : form.kind, // Fix: Use 'note' instead of 'photo' to satisfy DB check constraints
         color: selectedColor,
-        image_url, image_path,
+        image_url,
+        image_path,
         pos_x: Math.random() * 0.5 + 0.1,
         pos_y: Math.random() * 0.5 + 0.1,
         rotation: (Math.random() - 0.5) * 6,
@@ -83,31 +86,47 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
         {preview ? (
           <div className="relative overflow-hidden rounded-2xl border border-white/50">
             <img src={preview} alt="" className="h-40 w-full object-cover" />
-            <button type="button" onClick={() => { setFile(null); setPreview(null); }}
-              className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"><X size={14} /></button>
+            <button
+              type="button"
+              onClick={() => {
+                setFile(null);
+                setPreview(null);
+              }}
+              className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"
+            >
+              <X size={14} />
+            </button>
           </div>
         ) : (
-          <DropZone onFile={(f) => { 
-            setFile(f); 
-            const reader = new FileReader();
-            reader.onload = () => setPreview(reader.result as string);
-            reader.readAsDataURL(f);
-            setForm((prev) => ({ ...prev, body: prev.body.slice(0, 20) }));
-          }}
-            className="flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground">
-            <Upload size={16} /><span>Upload photo</span>
+          <DropZone
+            onFile={(f) => {
+              setFile(f);
+              const reader = new FileReader();
+              reader.onload = () => setPreview(reader.result as string);
+              reader.readAsDataURL(f);
+              setForm((prev) => ({ ...prev, body: prev.body.slice(0, 20) }));
+            }}
+            className="flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground"
+          >
+            <Upload size={16} />
+            <span>Upload photo</span>
           </DropZone>
         )}
       </FieldWrap>
- 
+
       {!file && (
         <FieldWrap label="Kind">
-          <Select value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as Form["kind"] }))}>
-            {KINDS.filter((k) => k !== "photo").map((k) => <option key={k}>{k}</option>)}
+          <Select
+            value={form.kind}
+            onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as Form["kind"] }))}
+          >
+            {KINDS.filter((k) => k !== "photo").map((k) => (
+              <option key={k}>{k}</option>
+            ))}
           </Select>
         </FieldWrap>
       )}
- 
+
       <FieldWrap label="Choose Pastel Color">
         <div className="flex items-center gap-2 py-1 overflow-x-auto">
           {PASTEL_COLORS.map((c) => (
@@ -123,25 +142,23 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
               style={{ background: c.value }}
               title={c.label}
             >
-              {selectedColor === c.value && (
-                <Palette size={12} className="text-foreground/75" />
-              )}
+              {selectedColor === c.value && <Palette size={12} className="text-foreground/75" />}
             </button>
           ))}
         </div>
       </FieldWrap>
- 
+
       <FieldWrap label={file ? "Caption (optional)" : "Body"}>
         <div className="relative">
           {(() => {
             const limit = file ? 20 : 100;
             return (
               <>
-                <Textarea 
-                  rows={4} 
-                  value={form.body} 
+                <Textarea
+                  rows={4}
+                  value={form.body}
                   onChange={(e) => setForm((f) => ({ ...f, body: e.target.value.slice(0, limit) }))}
-                  placeholder={file ? "A little caption…" : "Say something soft…"} 
+                  placeholder={file ? "A little caption…" : "Say something soft…"}
                   maxLength={limit}
                 />
                 <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">

@@ -19,7 +19,8 @@ export async function hashPin(pin: string): Promise<string> {
 export const pinStorage = {
   getName: () => (typeof window === "undefined" ? null : localStorage.getItem(LS_NAME)),
   setName: (n: string) => localStorage.setItem(LS_NAME, n),
-  getSlot: (): Slot | null => (typeof window === "undefined" ? null : (localStorage.getItem(LS_SLOT) as Slot | null)),
+  getSlot: (): Slot | null =>
+    typeof window === "undefined" ? null : (localStorage.getItem(LS_SLOT) as Slot | null),
   setSlot: (s: Slot) => localStorage.setItem(LS_SLOT, s),
   clearSlot: () => localStorage.removeItem(LS_SLOT),
   getRel: () => (typeof window === "undefined" ? null : localStorage.getItem(LS_REL)),

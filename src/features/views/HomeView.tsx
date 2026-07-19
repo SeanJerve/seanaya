@@ -2,18 +2,41 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  differenceInDays, format, subMonths, startOfMonth, endOfMonth,
-  eachDayOfInterval, isSameDay, getDay, isSameMonth, addMonths,
+  differenceInDays,
+  format,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  getDay,
+  isSameMonth,
+  addMonths,
 } from "date-fns";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
-import { Plus, Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, BookHeart, MapPin, Heart } from "lucide-react";
+import {
+  Plus,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  BookHeart,
+  MapPin,
+  Heart,
+} from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
 import { useUser } from "@/hooks/useUser";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
 
-export function HomeView({ relationshipId, anniversary }: { relationshipId: string; anniversary: string | null }) {
+export function HomeView({
+  relationshipId,
+  anniversary,
+}: {
+  relationshipId: string;
+  anniversary: string | null;
+}) {
   const name = pinStorage.getName() ?? "you";
   const { openSheet, setTab } = useAppStore();
   const { user } = useUser();
@@ -23,17 +46,26 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     enabled: !!user && !!relationshipId,
     queryFn: async () => {
       // 1. Get relationship details to determine partner ID
-      const { data: rel } = await supabase.from("relationships").select("*").eq("id", relationshipId).single();
+      const { data: rel } = await supabase
+        .from("relationships")
+        .select("*")
+        .eq("id", relationshipId)
+        .single();
       if (!rel) return null;
       const partnerId = rel.user_a_id === user!.id ? rel.user_b_id : rel.user_a_id;
       if (!partnerId) return null;
 
       // 2. Fetch partner profile
-      const { data: partnerProfile } = await supabase.from("profiles").select("*").eq("id", partnerId).maybeSingle();
+      const { data: partnerProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", partnerId)
+        .maybeSingle();
       const partnerName = rel.user_a_id === user!.id ? rel.name_b : rel.name_a;
 
       // 3. Fetch latest notification for current user
-      const { data: latestNotif } = await supabase.from("notifications")
+      const { data: latestNotif } = await supabase
+        .from("notifications")
         .select("*")
         .eq("relationship_id", relationshipId)
         .eq("user_id", user!.id)
@@ -43,14 +75,15 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
       if (!latestNotif) {
         // Fallback: If no notifications yet, let's fetch the latest note created by partner
-        const { data: latestNote } = await supabase.from("notes")
+        const { data: latestNote } = await supabase
+          .from("notes")
           .select("*")
           .eq("relationship_id", relationshipId)
           .eq("author_id", partnerId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        
+
         if (latestNote) {
           return {
             partnerName: partnerName || "Partner",
@@ -58,7 +91,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             kind: "note",
             createdAt: latestNote.created_at,
             item: latestNote,
-            text: "pinned a note"
+            text: "pinned a note",
           };
         }
         return null;
@@ -70,27 +103,51 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       let item: any = null;
       let text = "shared something";
       if (latestNotif.kind === "note") {
-        const { data } = await supabase.from("notes").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("notes")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = data?.kind === "photo" ? "shared a polaroid" : "pinned a note";
       } else if (latestNotif.kind === "memory") {
-        const { data } = await supabase.from("memories").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("memories")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = "captured a memory";
       } else if (latestNotif.kind === "trip") {
-        const { data } = await supabase.from("trips").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("trips")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = "pinned a dream place";
       } else if (latestNotif.kind === "event") {
-        const { data } = await supabase.from("events").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("events")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = "created a moment";
       } else if (latestNotif.kind === "song") {
-        const { data } = await supabase.from("songs").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = "shared a song";
       } else if (latestNotif.kind === "hug") {
-        const { data } = await supabase.from("hugs").select("*").eq("id", latestNotif.ref_id).maybeSingle();
+        const { data } = await supabase
+          .from("hugs")
+          .select("*")
+          .eq("id", latestNotif.ref_id)
+          .maybeSingle();
         item = data;
         text = "sent you a hug";
       }
@@ -101,9 +158,9 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
         kind: latestNotif.kind,
         createdAt: latestNotif.created_at,
         item,
-        text
+        text,
       };
-    }
+    },
   });
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [cursor, setCursor] = useState(new Date());
@@ -120,7 +177,7 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
   const longPressProps = useLongPress({
     onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => {}
+    onClick: () => {},
   });
 
   const { data: monthEvents = [] } = useQuery({
@@ -128,8 +185,13 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     queryFn: async () => {
       const s = startOfMonth(cursor).toISOString();
       const e = endOfMonth(cursor).toISOString();
-      const { data } = await supabase.from("events").select("*")
-        .eq("relationship_id", relationshipId).gte("starts_at", s).lte("starts_at", e).order("starts_at");
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("relationship_id", relationshipId)
+        .gte("starts_at", s)
+        .lte("starts_at", e)
+        .order("starts_at");
       return data ?? [];
     },
   });
@@ -138,7 +200,8 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
   const { data: latestNote } = useQuery({
     queryKey: ["latest-note", relationshipId],
     queryFn: async () => {
-      const { data } = await supabase.from("notes")
+      const { data } = await supabase
+        .from("notes")
         .select("id,body,kind,color,image_url")
         .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: false })
@@ -152,14 +215,36 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     queryKey: ["stats", relationshipId],
     queryFn: async () => {
       const [mem, trip, hug, next, recent] = await Promise.all([
-        supabase.from("memories").select("id", { count: "exact", head: true }).eq("relationship_id", relationshipId),
-        supabase.from("trips").select("id", { count: "exact", head: true }).eq("relationship_id", relationshipId),
-        supabase.from("hugs").select("id", { count: "exact", head: true }).eq("relationship_id", relationshipId),
-        supabase.from("events").select("*").eq("relationship_id", relationshipId).gte("starts_at", new Date().toISOString()).order("starts_at").limit(1),
-        supabase.from("memories").select("id,title,memory_date,cover_url").eq("relationship_id", relationshipId).order("created_at", { ascending: false }).limit(3),
+        supabase
+          .from("memories")
+          .select("id", { count: "exact", head: true })
+          .eq("relationship_id", relationshipId),
+        supabase
+          .from("trips")
+          .select("id", { count: "exact", head: true })
+          .eq("relationship_id", relationshipId),
+        supabase
+          .from("hugs")
+          .select("id", { count: "exact", head: true })
+          .eq("relationship_id", relationshipId),
+        supabase
+          .from("events")
+          .select("*")
+          .eq("relationship_id", relationshipId)
+          .gte("starts_at", new Date().toISOString())
+          .order("starts_at")
+          .limit(1),
+        supabase
+          .from("memories")
+          .select("id,title,memory_date,cover_url")
+          .eq("relationship_id", relationshipId)
+          .order("created_at", { ascending: false })
+          .limit(3),
       ]);
       return {
-        memories: mem.count ?? 0, trips: trip.count ?? 0, hugs: hug.count ?? 0,
+        memories: mem.count ?? 0,
+        trips: trip.count ?? 0,
+        hugs: hug.count ?? 0,
         nextEvent: next.data?.[0] ?? null,
         recent: recent.data ?? [],
       };
@@ -176,19 +261,21 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       const sDateEnd = format(endOfMonth(cursor), "yyyy-MM-dd");
 
       const [mems, notes] = await Promise.all([
-        supabase.from("memories")
+        supabase
+          .from("memories")
           .select("id,memory_date,cover_url,title")
           .eq("relationship_id", relationshipId)
           .gte("memory_date", sDateStart)
           .lte("memory_date", sDateEnd)
           .not("cover_url", "is", null),
-        supabase.from("notes")
+        supabase
+          .from("notes")
           .select("id,created_at,image_url,body")
           .eq("relationship_id", relationshipId)
           .eq("kind", "photo")
           .gte("created_at", sStart)
           .lte("created_at", sEnd)
-          .not("image_url", "is", null)
+          .not("image_url", "is", null),
       ]);
 
       const list: { dateStr: string; url: string; title: string }[] = [];
@@ -200,7 +287,11 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       notes.data?.forEach((n) => {
         if (n.created_at && n.image_url) {
           const dStr = format(new Date(n.created_at), "yyyy-MM-dd");
-          list.push({ dateStr: dStr, url: n.image_url, title: n.body !== "(photo)" ? n.body : "Photo Pin" });
+          list.push({
+            dateStr: dStr,
+            url: n.image_url,
+            title: n.body !== "(photo)" ? n.body : "Photo Pin",
+          });
         }
       });
       return list;
@@ -217,20 +308,22 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
     enabled: isMonthsary,
     queryKey: ["monthsary", relationshipId, format(prevMonthStart, "yyyy-MM")],
     queryFn: async () => {
-      const base = supabase.from("memories")
+      const base = supabase
+        .from("memories")
         .select("id,title,memory_date,description,cover_url,featured")
         .eq("relationship_id", relationshipId)
         .gte("memory_date", format(prevMonthStart, "yyyy-MM-dd"))
         .lte("memory_date", format(prevMonthEnd, "yyyy-MM-dd"))
         .order("featured", { ascending: false })
         .order("memory_date", { ascending: false })
-        .limit(1)
+        .limit(1);
       return (await base).data?.[0] ?? null;
     },
   });
 
   const start = new Date((anniversary || "2026-06-19") + "T00:00:00");
-  const months = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+  const months =
+    (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
 
   const [timeTogether, setTimeTogether] = useState<{
     years: number;
@@ -246,14 +339,14 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       const now = new Date();
       let diffMs = now.getTime() - start.getTime();
       if (diffMs < 0) diffMs = 0;
-      
+
       const diffSecs = Math.floor(diffMs / 1000);
       const diffMins = Math.floor(diffSecs / 60);
       const diffHours = Math.floor(diffMins / 60);
       const hours = diffHours % 24;
       const mins = diffMins % 60;
       const secs = diffSecs % 60;
-      
+
       let years = now.getFullYear() - start.getFullYear();
       let months = now.getMonth() - start.getMonth();
       if (months < 0 || (months === 0 && now.getDate() < start.getDate())) {
@@ -263,22 +356,24 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       if (now.getDate() < start.getDate()) {
         months--;
       }
-      
+
       const tempDate = new Date(start);
       tempDate.setFullYear(start.getFullYear() + years);
       tempDate.setMonth(start.getMonth() + months);
-      const remainingDays = Math.floor((now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+      const remainingDays = Math.floor(
+        (now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
       setTimeTogether({
         years,
         months: months >= 0 ? months : 0,
         days: remainingDays >= 0 ? remainingDays : 0,
         hours,
         mins,
-        secs
+        secs,
       });
     };
-    
+
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
@@ -286,8 +381,6 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
   const gridDays = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
   const leading = getDay(startOfMonth(cursor));
-
-
 
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
@@ -301,11 +394,15 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             title="Hold to see space guide"
           >
             <div>
-              <div className="display truncate text-2xl leading-tight font-semibold">Hi, {name}.</div>
-              
+              <div className="display truncate text-2xl leading-tight font-semibold">
+                Hi, {name}.
+              </div>
+
               {timeTogether && (
                 <div className="mt-3.5 space-y-0.5">
-                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">We have been together for:</div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">
+                    We have been together for:
+                  </div>
                   <div className="display text-[15px] font-bold text-primary leading-tight">
                     {timeTogether.years > 0 ? `${timeTogether.years}y ` : ""}
                     {timeTogether.months > 0 ? `${timeTogether.months}m ` : ""}
@@ -348,13 +445,21 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                 <div className="flex items-center gap-1.5">
                   <div className="relative w-5 h-5 rounded-full bg-white/60 dark:bg-black/30 border border-white/40 overflow-hidden flex items-center justify-center shrink-0">
                     {recentAction.partnerAvatar ? (
-                      <img src={recentAction.partnerAvatar} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={recentAction.partnerAvatar}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <span className="text-[9px] font-bold text-foreground/60">{recentAction.partnerName.slice(0, 1).toUpperCase()}</span>
+                      <span className="text-[9px] font-bold text-foreground/60">
+                        {recentAction.partnerName.slice(0, 1).toUpperCase()}
+                      </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1 truncate text-[9px] leading-tight">
-                    <span className="text-foreground/80 font-bold mr-1">{recentAction.partnerName}</span>
+                    <span className="text-foreground/80 font-bold mr-1">
+                      {recentAction.partnerName}
+                    </span>
                     <span className="text-muted-foreground/90 text-[8px]">{recentAction.text}</span>
                   </div>
                 </div>
@@ -363,7 +468,11 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                 <div className="flex-1 min-h-0 flex items-center justify-center">
                   {recentAction.kind === "note" && recentAction.item?.image_url ? (
                     <div className="relative w-full h-full rounded-lg overflow-hidden border border-white/30 shadow-sm">
-                      <img src={recentAction.item.image_url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={recentAction.item.image_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   ) : recentAction.kind === "note" && recentAction.item ? (
                     <div
@@ -377,9 +486,15 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
                   ) : recentAction.kind === "memory" && recentAction.item ? (
                     <div className="relative w-full h-full rounded-lg overflow-hidden border border-white/30 shadow-sm bg-black/5">
                       {recentAction.item.cover_url ? (
-                        <img src={recentAction.item.cover_url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={recentAction.item.cover_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold p-1 text-center line-clamp-2">{recentAction.item.title}</div>
+                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold p-1 text-center line-clamp-2">
+                          {recentAction.item.title}
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -391,8 +506,20 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
               </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-foreground/30 p-4">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-                <span className="text-[9px] uppercase tracking-wider text-center font-semibold text-foreground/45">No activity yet</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+                <span className="text-[9px] uppercase tracking-wider text-center font-semibold text-foreground/45">
+                  No activity yet
+                </span>
               </div>
             )}
           </div>
@@ -408,7 +535,9 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
 
       {/* ── What matters today (now FIRST) ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 space-y-4">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">What matters today</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          What matters today
+        </div>
 
         {/* Next event */}
         <div className="rounded-2xl bg-white/60 p-4">
@@ -424,9 +553,12 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           ) : stats?.nextEvent ? (
             <button onClick={() => setTab("calendar")} className="mt-1 block w-full text-left">
               <div className="display text-lg leading-tight">{stats.nextEvent.title}</div>
-              <div className="text-[11px] text-muted-foreground">{format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}</div>
+              <div className="text-[11px] text-muted-foreground">
+                {format(new Date(stats.nextEvent.starts_at), "EEE, MMM d · h:mm a")}
+              </div>
               <div className="mt-0.5 text-[11px] text-primary">
-                in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))} days
+                in {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))}{" "}
+                days
               </div>
             </button>
           ) : (
@@ -445,12 +577,17 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               <BookHeart size={11} /> Recent memories
             </div>
-            <button onClick={() => setTab("calendar")} className="text-[11px] text-primary">See all</button>
+            <button onClick={() => setTab("calendar")} className="text-[11px] text-primary">
+              See all
+            </button>
           </div>
           {loadingStats ? (
             <div className="mt-2 space-y-1.5 animate-pulse">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5"
+                >
                   <div className="h-9 w-9 shrink-0 rounded-lg bg-foreground/10" />
                   <div className="flex-1 space-y-1.5">
                     <div className="h-3 w-28 bg-foreground/10 rounded" />
@@ -462,10 +599,20 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
           ) : stats?.recent.length ? (
             <ul className="mt-2 space-y-1.5">
               {stats.recent.map((m) => (
-                <li key={m.id} className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5">
+                <li
+                  key={m.id}
+                  className="flex items-center gap-3 rounded-xl bg-white/50 px-2.5 py-1.5"
+                >
                   {m.cover_url ? (
-                    <img src={m.cover_url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
-                  ) : <span className="h-9 w-9 shrink-0 rounded-lg bg-white/70" />}
+                    <img
+                      src={m.cover_url}
+                      alt=""
+                      loading="lazy"
+                      className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span className="h-9 w-9 shrink-0 rounded-lg bg-white/70" />
+                  )}
                   <span className="min-w-0 flex-1 truncate text-sm">{m.title}</span>
                   <span className="shrink-0 text-[10px] text-muted-foreground">
                     {m.memory_date ? format(new Date(m.memory_date), "MMM d") : ""}
@@ -487,18 +634,36 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
       {/* ── Calendar (now SECOND) ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
         <div className="flex items-center justify-between">
-          <button onClick={() => setCursor(subMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronLeft size={16} /></button>
-          <button onClick={() => setTab("calendar")} className="display text-lg">{format(cursor, "MMMM yyyy")}</button>
-          <button onClick={() => setCursor(addMonths(cursor, 1))} className="rounded-full p-1.5 hover:bg-black/5"><ChevronRight size={16} /></button>
+          <button
+            onClick={() => setCursor(subMonths(cursor, 1))}
+            className="rounded-full p-1.5 hover:bg-black/5"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setTab("calendar")} className="display text-lg">
+            {format(cursor, "MMMM yyyy")}
+          </button>
+          <button
+            onClick={() => setCursor(addMonths(cursor, 1))}
+            className="rounded-full p-1.5 hover:bg-black/5"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
         <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-          {["S","M","T","W","T","F","S"].map((d, i) => <div key={i}>{d}</div>)}
+          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+            <div key={i}>{d}</div>
+          ))}
         </div>
         <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
-          {Array.from({ length: leading }).map((_, i) => <div key={`b${i}`} />)}
+          {Array.from({ length: leading }).map((_, i) => (
+            <div key={`b${i}`} />
+          ))}
           {gridDays.map((d) => {
             const hasEvent = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
-            const dayPhoto = monthPhotos.find((p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d));
+            const dayPhoto = monthPhotos.find(
+              (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d),
+            );
             const isToday = isSameDay(d, today);
             return (
               <div
@@ -509,14 +674,22 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
               >
                 {dayPhoto?.url && (
                   <>
-                    <img src={dayPhoto.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    <img
+                      src={dayPhoto.url}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                     <div className="absolute inset-0 bg-white/15 border border-white/40 rounded-full" />
                   </>
                 )}
-                <span className={`relative z-10 text-xs font-medium ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : ""}`}>
+                <span
+                  className={`relative z-10 text-xs font-medium ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : ""}`}
+                >
                   {d.getDate()}
                 </span>
-                {hasEvent && <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug z-10" />}
+                {hasEvent && (
+                  <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug z-10" />
+                )}
               </div>
             );
           })}
@@ -530,18 +703,34 @@ export function HomeView({ relationshipId, anniversary }: { relationshipId: stri
               <Sparkles size={12} /> Monthsary {months != null ? `· ${months} months` : ""}
             </div>
             <div className="display mt-1 text-xl leading-tight">A little rewind</div>
-            <p className="mt-1 text-xs text-muted-foreground">From last month, replayed for today.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              From last month, replayed for today.
+            </p>
           </div>
           {monthsaryMemory ? (
             <div className="border-t border-white/40 bg-white/30 p-4">
               {monthsaryMemory.cover_url && (
-                <button onClick={() => setLightbox(monthsaryMemory.cover_url)} className="mb-3 block w-full">
-                  <img src={monthsaryMemory.cover_url} alt="" className="h-40 w-full rounded-2xl object-cover" />
+                <button
+                  onClick={() => setLightbox(monthsaryMemory.cover_url)}
+                  className="mb-3 block w-full"
+                >
+                  <img
+                    src={monthsaryMemory.cover_url}
+                    alt=""
+                    className="h-40 w-full rounded-2xl object-cover"
+                  />
                 </button>
               )}
-              <div className="text-xs text-muted-foreground">{monthsaryMemory.memory_date && format(new Date(monthsaryMemory.memory_date), "MMM d, yyyy")}</div>
+              <div className="text-xs text-muted-foreground">
+                {monthsaryMemory.memory_date &&
+                  format(new Date(monthsaryMemory.memory_date), "MMM d, yyyy")}
+              </div>
               <div className="display text-lg leading-tight">{monthsaryMemory.title}</div>
-              {monthsaryMemory.description && <p className="mt-1 text-sm text-foreground/80 line-clamp-3">{monthsaryMemory.description}</p>}
+              {monthsaryMemory.description && (
+                <p className="mt-1 text-sm text-foreground/80 line-clamp-3">
+                  {monthsaryMemory.description}
+                </p>
+              )}
             </div>
           ) : (
             <div className="border-t border-white/40 bg-white/30 p-4 text-xs italic text-muted-foreground">

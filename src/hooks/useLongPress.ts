@@ -3,7 +3,7 @@ import { useRef, useEffect } from "react";
 export function useLongPress({
   onLongPress,
   onClick,
-  ms = 600
+  ms = 600,
 }: {
   onLongPress: () => void;
   onClick: () => void;
@@ -46,6 +46,6 @@ export function useLongPress({
     onTouchStart: start,
     onMouseUp: stop,
     onTouchEnd: stop,
-    onMouseLeave: cancel
+    onMouseLeave: cancel,
   };
 }
