@@ -425,17 +425,17 @@ export function HomeView({
               {greatestUnit && (
                 <div className="mt-3 flex flex-col justify-end">
                   <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold mb-0.5">
-                    Together for:
+                    We've been together for:
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="display text-2.5xl font-black text-primary leading-none tracking-tight">
                       {greatestUnit.value}
                     </span>
-                    <span className="text-[10px] font-extrabold text-primary/75 uppercase tracking-wider">
+                    <span className="display text-[10px] font-extrabold text-primary/75 uppercase tracking-wider">
                       {greatestUnit.label}
                     </span>
                   </div>
-                  <div className="text-xs font-bold text-foreground/60 leading-none mt-1.5 tabular-nums tracking-wide">
+                  <div className="display text-xs font-bold text-foreground/60 leading-none mt-1.5 tabular-nums tracking-wide">
                     {greatestUnit.subText}
                   </div>
                 </div>
