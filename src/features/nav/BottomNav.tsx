@@ -239,11 +239,16 @@ function RoamingPet({
     if (isManuallySleeping) return; // Keep sleep peace
     const msgs = SPEECH_MESSAGES[tab] || ["Mrow!"];
     const randomMsg = msgs[Math.floor(Math.random() * msgs.length)];
-    setBubbleText(randomMsg);
+    
+    // Replace "Mocha" or "Lily" default names with the actual name of the current pet
+    const petName = pet.name || "I";
+    const formattedMsg = randomMsg.replace(/mocha/gi, petName).replace(/lily/gi, petName);
+    
+    setBubbleText(formattedMsg);
     setBubbleVisible(true);
     const timer = setTimeout(() => setBubbleVisible(false), 3500);
     return () => clearTimeout(timer);
-  }, [tab, isManuallySleeping]);
+  }, [tab, isManuallySleeping, pet.name]);
 
   useEffect(() => {
     let tickCount = 0;
