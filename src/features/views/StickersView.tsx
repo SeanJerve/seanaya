@@ -510,7 +510,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             isOpen={showLongPressInfo}
             onClose={() => setShowLongPressInfo(false)}
             title="Add Sticker"
-            description="Tap to open our sticker drawer. You can select from dozens of cute emoji-like stickers and place them on your current sticker pad to decorate it."
+            description="Tap to open our sticker drawer. You can select from the custom stickers we've created and place them on your current sticker pad to decorate it."
           />
         </>
       )}

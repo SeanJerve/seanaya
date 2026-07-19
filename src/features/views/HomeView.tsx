@@ -403,10 +403,10 @@ export function HomeView({
                   <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">
                     We have been together for:
                   </div>
-                  <div className="display text-[15px] font-bold text-primary leading-tight">
+                  <div className="display text-[15px] font-bold text-primary leading-tight tabular-nums">
                     {timeTogether.years > 0 ? `${timeTogether.years}y ` : ""}
                     {timeTogether.months > 0 ? `${timeTogether.months}m ` : ""}
-                    {`${timeTogether.days}d ${timeTogether.hours}h ${timeTogether.mins}m ${timeTogether.secs}s`}
+                    {`${timeTogether.days}d ${String(timeTogether.hours).padStart(2, "0")}h ${String(timeTogether.mins).padStart(2, "0")}m ${String(timeTogether.secs).padStart(2, "0")}s`}
                   </div>
                 </div>
               )}
@@ -695,50 +695,6 @@ export function HomeView({
           })}
         </div>
       </section>
-
-      {isMonthsary && (
-        <section className="overflow-hidden rounded-3xl border border-white/50 bg-gradient-to-br from-white/70 to-primary/10 backdrop-blur-xl">
-          <div className="p-5">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-primary">
-              <Sparkles size={12} /> Monthsary {months != null ? `· ${months} months` : ""}
-            </div>
-            <div className="display mt-1 text-xl leading-tight">A little rewind</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              From last month, replayed for today.
-            </p>
-          </div>
-          {monthsaryMemory ? (
-            <div className="border-t border-white/40 bg-white/30 p-4">
-              {monthsaryMemory.cover_url && (
-                <button
-                  onClick={() => setLightbox(monthsaryMemory.cover_url)}
-                  className="mb-3 block w-full"
-                >
-                  <img
-                    src={monthsaryMemory.cover_url}
-                    alt=""
-                    className="h-40 w-full rounded-2xl object-cover"
-                  />
-                </button>
-              )}
-              <div className="text-xs text-muted-foreground">
-                {monthsaryMemory.memory_date &&
-                  format(new Date(monthsaryMemory.memory_date), "MMM d, yyyy")}
-              </div>
-              <div className="display text-lg leading-tight">{monthsaryMemory.title}</div>
-              {monthsaryMemory.description && (
-                <p className="mt-1 text-sm text-foreground/80 line-clamp-3">
-                  {monthsaryMemory.description}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="border-t border-white/40 bg-white/30 p-4 text-xs italic text-muted-foreground">
-              No memory from last month yet.
-            </div>
-          )}
-        </section>
-      )}
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
     </div>

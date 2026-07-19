@@ -19,12 +19,14 @@ import {
   Pencil,
   Upload,
   Search,
+  HelpCircle,
 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/storage";
 import { motion, AnimatePresence } from "framer-motion";
+import { LongPressModal } from "@/components/ui/LongPressModal";
 
 type AlbumPage = {
   id: string;
@@ -78,6 +80,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [photoOutline, setPhotoOutline] = useState("#ffffff");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [showLongPressInfo, setShowLongPressInfo] = useState(false);
 
   // Custom Photo preview & crop states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -221,6 +224,15 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  useEffect(() => {
+    const key = "intro-dismissed-album";
+    const val = localStorage.getItem(key);
+    if (!val) {
+      setShowLongPressInfo(true);
+      localStorage.setItem(key, "true");
+    }
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -641,6 +653,13 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
             {/* Plus and Trash controls side-by-side on the right */}
             <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setShowLongPressInfo(true)}
+                className="p-1 rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
+                title="View Album Guide"
+              >
+                <HelpCircle size={14} />
+              </button>
               <button
                 onClick={() => {
                   setShowPageSearch(!showPageSearch);
@@ -1407,6 +1426,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     <div className="min-h-screen pb-32 relative select-none overflow-x-hidden">
       {!isOpen ? renderClosedBook() : renderOpenBook()}
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+      <LongPressModal
+        isOpen={showLongPressInfo}
+        onClose={() => setShowLongPressInfo(false)}
+        title="Memory Album"
+        description="Welcome to our shared memory album! Here, we can add pictures, write notes, save special moments, and decorate the pages using the custom stickers we created together."
+      />
 
       {/* ── Rename Page Modal (Glassmorphic, styled exactly like StickersView) ── */}
       <AnimatePresence>
