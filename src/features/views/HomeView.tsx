@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -382,6 +382,30 @@ export function HomeView({
   const gridDays = eachDayOfInterval({ start: startOfMonth(cursor), end: endOfMonth(cursor) });
   const leading = getDay(startOfMonth(cursor));
 
+  const greatestUnit = useMemo(() => {
+    if (!timeTogether) return null;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    if (timeTogether.years > 0) {
+      return {
+        value: timeTogether.years,
+        label: timeTogether.years === 1 ? "Year" : "Years",
+        subText: `${timeTogether.months}m ${timeTogether.days}d ${pad(timeTogether.hours)}h ${pad(timeTogether.mins)}m ${pad(timeTogether.secs)}s`,
+      };
+    }
+    if (timeTogether.months > 0) {
+      return {
+        value: timeTogether.months,
+        label: timeTogether.months === 1 ? "Month" : "Months",
+        subText: `${timeTogether.days}d ${pad(timeTogether.hours)}h ${pad(timeTogether.mins)}m ${pad(timeTogether.secs)}s`,
+      };
+    }
+    return {
+      value: timeTogether.days,
+      label: timeTogether.days === 1 ? "Day" : "Days",
+      subText: `${pad(timeTogether.hours)}h ${pad(timeTogether.mins)}m ${pad(timeTogether.secs)}s`,
+    };
+  }, [timeTogether]);
+
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
       {/* ── Greeting strip with wall preview ── */}
@@ -398,15 +422,21 @@ export function HomeView({
                 Hi, {name}.
               </div>
 
-              {timeTogether && (
-                <div className="mt-3.5 space-y-0.5">
-                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">
-                    We have been together for:
+              {greatestUnit && (
+                <div className="mt-3 flex flex-col justify-end">
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold mb-0.5">
+                    Together for:
                   </div>
-                  <div className="display text-[15px] font-bold text-primary leading-tight tabular-nums">
-                    {timeTogether.years > 0 ? `${timeTogether.years}y ` : ""}
-                    {timeTogether.months > 0 ? `${timeTogether.months}m ` : ""}
-                    {`${timeTogether.days}d ${String(timeTogether.hours).padStart(2, "0")}h ${String(timeTogether.mins).padStart(2, "0")}m ${String(timeTogether.secs).padStart(2, "0")}s`}
+                  <div className="flex items-baseline gap-1">
+                    <span className="display text-2.5xl font-black text-primary leading-none tracking-tight">
+                      {greatestUnit.value}
+                    </span>
+                    <span className="text-[10px] font-extrabold text-primary/75 uppercase tracking-wider">
+                      {greatestUnit.label}
+                    </span>
+                  </div>
+                  <div className="text-xs font-bold text-foreground/60 leading-none mt-1.5 tabular-nums tracking-wide">
+                    {greatestUnit.subText}
                   </div>
                 </div>
               )}
