@@ -37,7 +37,7 @@ export function DropZone({
       <input
         type="file"
         accept={accept}
-        className="hidden"
+        className="sr-only"
         disabled={disabled}
         onChange={(e) => {
           const f = e.target.files?.[0];

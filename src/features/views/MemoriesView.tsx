@@ -1305,7 +1305,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         <input
                           type="file"
                           accept="image/*"
-                          className="hidden"
+                          className="sr-only"
                           onChange={handleFileChange}
                         />
                       </label>

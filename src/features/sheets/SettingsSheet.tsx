@@ -161,7 +161,7 @@ export function SettingsSheet({
               type="file"
               accept="image/*"
               id="profile-pic-upload"
-              className="hidden"
+              className="sr-only"
               onChange={handleAvatarUpload}
               disabled={uploadingAvatar}
             />

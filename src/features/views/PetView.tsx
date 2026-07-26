@@ -402,7 +402,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                             type="file"
                             accept="image/*"
                             onChange={(e) => handleFaceFileChange(e, p)}
-                            className="hidden"
+                            className="sr-only"
                           />
                         </label>
                       </div>
@@ -471,7 +471,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                           type="file"
                           accept="image/*"
                           onChange={(e) => handleFaceFileChange(e, p)}
-                          className="hidden"
+                          className="sr-only"
                         />
                       </label>
                     </div>
@@ -485,7 +485,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                           type="file"
                           accept="image/*"
                           onChange={(e) => handlePatternUpload(e, p)}
-                          className="hidden"
+                          className="sr-only"
                         />
                       </label>
                     </div>
@@ -582,7 +582,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       type="file"
                       accept="image/*"
                       onChange={handleNewFaceFileSelect}
-                      className="hidden"
+                      className="sr-only"
                     />
                   </label>
                 </div>
@@ -605,7 +605,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       type="file"
                       accept="image/*"
                       onChange={handleNewPatternFileSelect}
-                      className="hidden"
+                      className="sr-only"
                     />
                   </label>
                 </div>
