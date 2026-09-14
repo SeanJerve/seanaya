@@ -8,6 +8,7 @@ import { PinKeypad } from "./PinKeypad";
 
 type Stage =
   | "loading"
+  | "error"
   | "setup-name" // no space yet — first user (creator)
   | "setup-pin"
   | "setup-confirm"
@@ -206,6 +207,8 @@ function BackgroundSparkles() {
  */
 export function PinGate({ children }: { children: React.ReactNode }) {
   const [stage, setStage] = useState<Stage>("loading");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [space, setSpace] = useState<SpaceState | null>(null);
   const [name, setName] = useState(pinStorage.getName() ?? "");
   const [pin, setPin] = useState("");
@@ -233,7 +236,11 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
 
   const refreshSpace = async (): Promise<SpaceState | null> => {
-    const { data } = await supabase.rpc("get_space_state");
+    const { data, error } = await supabase.rpc("get_space_state");
+    if (error) {
+      console.error("[PinGate] refreshSpace error:", error);
+      return null;
+    }
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return null;
     const s: SpaceState = row as SpaceState;
@@ -242,49 +249,79 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     return s;
   };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // Verify if session is valid in Supabase
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData?.user) {
-          // Stale local token detected (e.g., database was reset), clear it
-          await supabase.auth.signOut();
-          const { error } = await supabase.auth.signInAnonymously();
-          if (error) {
-            console.error("Sign in anonymously failed:", error);
-            toast.error(`Could not open your space: ${error.message}`);
-            return;
-          }
+  const initApp = async () => {
+    setStage("loading");
+    setErrorMsg(null);
+    try {
+      // Verify if session is valid in Supabase
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        // Clear any stale local auth state if invalid
+        await supabase.auth.signOut().catch(() => {});
+        const { error: anonError } = await supabase.auth.signInAnonymously();
+        if (anonError) {
+          console.error("Sign in anonymously failed:", anonError);
+          setErrorMsg("Waking up space database...");
+          setStage("error");
+          return;
         }
-        const s = await refreshSpace();
-        const urlInvite = new URLSearchParams(window.location.search).get("invite");
-        const urlReset = new URLSearchParams(window.location.search).get("reset");
-        const urlDate = new URLSearchParams(window.location.search).get("date");
-
-        if (!s) {
-          setStage("setup-name");
-        } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
-          setResetSlot(urlReset as Slot);
-          setDateInput(urlDate);
-          setStage("forgot-newpin");
-        } else if (s.has_a && s.has_b) {
-          setStage("unlock");
-        } else if (s.has_a && !s.has_b) {
-          if (urlInvite) {
-            setStage("partner-name");
-          } else {
-            setStage("unlock");
-          }
-        } else {
-          setStage("setup-name");
-        }
-      } catch (err: any) {
-        console.error("Initialization error:", err);
-        toast.error(`Connection error: ${err.message || String(err)}`);
       }
-    })();
-  }, []);
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_space_state");
+      if (rpcError) {
+        console.error("get_space_state error:", rpcError);
+        setErrorMsg("Connecting to your space...");
+        setStage("error");
+        return;
+      }
+
+      const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      const s: SpaceState | null = (row as SpaceState) ?? null;
+      if (s) {
+        setSpace(s);
+        pinStorage.setRel(s.id);
+      }
+
+      const urlInvite = new URLSearchParams(window.location.search).get("invite");
+      const urlReset = new URLSearchParams(window.location.search).get("reset");
+      const urlDate = new URLSearchParams(window.location.search).get("date");
+
+      if (!s) {
+        setStage("setup-name");
+      } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
+        setResetSlot(urlReset as Slot);
+        setDateInput(urlDate);
+        setStage("forgot-newpin");
+      } else if (s.has_a && s.has_b) {
+        setStage("unlock");
+      } else if (s.has_a && !s.has_b) {
+        if (urlInvite) {
+          setStage("partner-name");
+        } else {
+          setStage("unlock");
+        }
+      } else {
+        setStage("setup-name");
+      }
+    } catch (err: any) {
+      console.error("Initialization error:", err);
+      setErrorMsg(err.message || "Connection error");
+      setStage("error");
+    }
+  };
+
+  useEffect(() => {
+    initApp();
+  }, [retryCount]);
+
+  // Auto-retry when in error stage every 4 seconds
+  useEffect(() => {
+    if (stage !== "error") return;
+    const timer = setTimeout(() => {
+      setRetryCount((c) => c + 1);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [stage, retryCount]);
 
   // Cycle compliment words on Page 2
   useEffect(() => {
@@ -747,7 +784,35 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <AnimatePresence mode="wait">
         {stage === "loading" && (
           <Screen key="loading">
-            <div className="text-sm text-muted-foreground">Warming your space...</div>
+            <div className="text-sm text-muted-foreground animate-pulse">Warming your space...</div>
+          </Screen>
+        )}
+
+        {stage === "error" && (
+          <Screen key="error">
+            <Title
+              kicker="Gentle pause"
+              title="Waking your space"
+              sub={
+                errorMsg
+                  ? `${errorMsg} Reconnecting automatically…`
+                  : "Connecting to your space. Reconnecting automatically…"
+              }
+            />
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <button
+                onClick={() => initApp()}
+                className="rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm font-medium"
+              >
+                Retry now
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-4"
+              >
+                Reload page
+              </button>
+            </div>
           </Screen>
         )}
 

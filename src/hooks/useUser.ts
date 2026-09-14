@@ -7,11 +7,18 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!alive) return;
-      setUser(data.user);
-      setLoading(false);
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!alive) return;
+        setUser(data.user);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("[useUser] getUser error:", err);
+        if (!alive) return;
+        setLoading(false);
+      });
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });

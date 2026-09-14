@@ -37,7 +37,7 @@ export function SeanayaApp() {
 }
 
 function Inner() {
-  const { data: rel, isLoading } = useRelationship();
+  const { data: rel, isLoading, isError, refetch } = useRelationship();
   const { tab, sheet } = useAppStore();
   const qc = useQueryClient();
 
@@ -182,13 +182,36 @@ function Inner() {
     };
   }, [currentRelId, qc]);
 
-  if (isLoading || !rel) {
+  if (isLoading) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center"
         style={{ background: "var(--gradient-sky)" }}
       >
-        <div className="text-sm text-muted-foreground">Preparing your space…</div>
+        <div className="text-sm text-muted-foreground animate-pulse">Preparing your space…</div>
+      </div>
+    );
+  }
+
+  if (isError || !rel) {
+    return (
+      <div
+        className="fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
+        style={{ background: "var(--gradient-sky)" }}
+      >
+        <div className="rounded-3xl border border-white/50 bg-white/40 backdrop-blur-xl p-8 max-w-sm flex flex-col items-center shadow-soft">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Seanaya</div>
+          <h2 className="display mt-2 text-2xl">Waking your space</h2>
+          <p className="mt-2 text-xs text-muted-foreground">
+            The database took a moment to respond. Tap below to reconnect.
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-7 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm font-medium"
+          >
+            Retry now
+          </button>
+        </div>
       </div>
     );
   }
