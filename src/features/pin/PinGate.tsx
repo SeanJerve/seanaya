@@ -5,6 +5,7 @@ import { Play, Download, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
+import { useAppStore } from "@/features/app/store";
 
 type Stage =
   | "loading"
@@ -376,8 +377,18 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    const lilyImages = ["/lily1.png", "/lily2.png", "/lily3.png", "/lily4.png"];
-    const loadedImages = lilyImages.map((src) => {
+    const stickerSources = [
+      "/stickers/sticker_0_dbf609.png",
+      "/stickers/sticker_1_25567c.png",
+      "/stickers/sticker_2_fb4f58.png",
+      "/stickers/sticker_3_311950.png",
+      "/stickers/sticker_4_8591e5.png",
+      "/stickers/sticker_5_6523c4.png",
+      "/stickers/sticker_6_b7873e.png",
+      "/stickers/sticker_7_b6c6c2.png",
+      "/stickers/sticker_8_5c6d55.png",
+    ];
+    const loadedImages = stickerSources.map((src) => {
       const img = new Image();
       img.src = src;
       return img;
@@ -679,6 +690,14 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       pinStorage.setSlot(slot);
       const label = slot === "a" ? space.name_a || "you" : space.name_b || "you";
       pinStorage.setName(label);
+
+      // Trigger 3rd monthsary wrapped story once after password unlock
+      const seenKey = `seanaya_3rd_monthsary_seen_${slot}`;
+      const hasSeen = localStorage.getItem(seenKey) === "true";
+      if (!hasSeen) {
+        useAppStore.openMonthsary();
+      }
+
       setStage("unlocked");
     } catch (e: any) {
       console.error(e);
@@ -879,7 +898,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               animate="visible"
               className="display text-4xl leading-tight text-foreground mt-4 flex flex-wrap justify-center"
             >
-              {"Happy 1st Monthsary, Aya!".split(" ").map((word, wordIdx) => (
+              {"Happy 3rd Monthsary, Aya!".split(" ").map((word, wordIdx) => (
                 <span key={wordIdx} className="inline-block whitespace-nowrap mr-2">
                   {Array.from(word).map((char, charIdx) => (
                     <motion.span key={charIdx} variants={letterVariants} className="inline-block">
@@ -904,13 +923,13 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 className="absolute w-52 h-52 bg-[radial-gradient(circle,rgba(255,255,255,0.75)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
               />
 
-              {/* Floating Bouquet wrapper */}
+              {/* Floating Couple Sticker wrapper */}
               <motion.img
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                src="/main-lily.png"
-                alt="White Lily Bouquet"
-                className="relative w-64 h-64 object-contain"
+                src="/couple-sticker.png"
+                alt="Sean & Aya Sticker"
+                className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-[0_12px_28px_rgba(14,165,233,0.22)]"
               />
 
               {/* Twinkling star 1 */}
@@ -1136,7 +1155,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "unlock" && (
           <Screen key="unlock">
-            <Title kicker="Seanaya" title="Enter your PIN" sub="Either PIN opens your space" />
+            <Title
+              kicker="Happy 3rd Monthsary, Aya!"
+              title="Enter your PIN"
+            />
             <div className="mt-10">
               <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>

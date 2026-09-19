@@ -18,6 +18,8 @@ export type ConfirmOptions = {
   onConfirm: () => void;
 };
 
+import { pinStorage } from "@/features/pin/pin-utils";
+
 type State = {
   tab: TabKey;
   sheet: SheetKey;
@@ -25,6 +27,7 @@ type State = {
   activeStickerPageId: string | null;
   activeRoamingPetIds: string[];
   isPetVisible: boolean;
+  isMonthsaryOpen: boolean;
 };
 
 const getLocalPetIds = () => {
@@ -42,6 +45,7 @@ let state: State = {
   activeStickerPageId: null,
   activeRoamingPetIds: getLocalPetIds(),
   isPetVisible: getLocalPetVisible(),
+  isMonthsaryOpen: false, // Opens after password unlock once
 };
 const listeners = new Set<() => void>();
 const subscribe = (fn: () => void) => {
@@ -62,6 +66,22 @@ export function useAppStore() {
     activeStickerPageId: s.activeStickerPageId,
     activeRoamingPetIds: s.activeRoamingPetIds,
     isPetVisible: s.isPetVisible,
+    isMonthsaryOpen: s.isMonthsaryOpen,
+    openMonthsary: () => {
+      state = { ...state, isMonthsaryOpen: true };
+      emit();
+    },
+    closeMonthsary: () => {
+      if (typeof window !== "undefined") {
+        const slot = pinStorage.getSlot();
+        if (slot) {
+          localStorage.setItem(`seanaya_3rd_monthsary_seen_${slot}`, "true");
+        }
+        localStorage.setItem("seanaya_3rd_monthsary_seen", "true");
+      }
+      state = { ...state, isMonthsaryOpen: false };
+      emit();
+    },
     setTab: (t: TabKey) => {
       state = { ...state, tab: t, sheet: null };
       emit();
@@ -109,3 +129,30 @@ export function useAppStore() {
     },
   };
 }
+
+useAppStore.getState = getSnapshot;
+useAppStore.openMonthsary = () => {
+  state = { ...state, isMonthsaryOpen: true };
+  emit();
+};
+useAppStore.closeMonthsary = () => {
+  if (typeof window !== "undefined") {
+    const slot = pinStorage.getSlot();
+    if (slot) {
+      localStorage.setItem(`seanaya_3rd_monthsary_seen_${slot}`, "true");
+    }
+    localStorage.setItem("seanaya_3rd_monthsary_seen", "true");
+  }
+  state = { ...state, isMonthsaryOpen: false };
+  emit();
+};
+
+if (typeof window !== "undefined") {
+  (window as any).resetMonthsary = () => {
+    localStorage.removeItem("seanaya_3rd_monthsary_seen");
+    localStorage.removeItem("seanaya_3rd_monthsary_seen_a");
+    localStorage.removeItem("seanaya_3rd_monthsary_seen_b");
+    console.log("[Seanaya] 3rd monthsary flags reset! Refresh or re-enter PIN to experience it again.");
+  };
+}
+

@@ -23,6 +23,7 @@ import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
 import { AddStickerSheet } from "@/features/sheets/AddStickerSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { MonthsaryWrapped } from "@/features/monthsary/MonthsaryWrapped";
 import { bootTheme } from "@/lib/theme";
 
 export function SeanayaApp() {
@@ -38,7 +39,7 @@ export function SeanayaApp() {
 
 function Inner() {
   const { data: rel, isLoading, isError, refetch } = useRelationship();
-  const { tab, sheet } = useAppStore();
+  const { tab, sheet, isMonthsaryOpen } = useAppStore();
   const qc = useQueryClient();
 
   const currentRelId = rel?.id;
@@ -182,6 +183,17 @@ function Inner() {
     };
   }, [currentRelId, qc]);
 
+  const fallbackRelId = typeof window !== "undefined" ? localStorage.getItem("seanaya.rel_id") : null;
+  const activeRelId = rel?.id || fallbackRelId || "";
+
+  if (isMonthsaryOpen && activeRelId) {
+    return (
+      <div className="min-h-[100dvh] w-full seanaya-bg">
+        <MonthsaryWrapped relationshipId={activeRelId} />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div
@@ -272,6 +284,7 @@ function Inner() {
 
       <HugOverlay relationshipId={relId} />
       <ConfirmDialog />
+      <MonthsaryWrapped relationshipId={relId} />
     </div>
   );
 }
