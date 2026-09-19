@@ -26,6 +26,7 @@ import {
   BookHeart,
   Eye,
   EyeOff,
+  Play,
 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
@@ -42,12 +43,24 @@ type Memory = {
   category: string;
   location: string | null;
   cover_url: string | null;
+  tags?: string[] | null;
   created_at: string;
+};
+
+export const isWrappedMemory = (m?: Memory | null) => {
+  if (!m) return false;
+  return (
+    m.tags?.includes("wrapped") ||
+    m.tags?.includes("monthsary") ||
+    m.category === "wrapped" ||
+    m.title?.toLowerCase().includes("3rd monthsary") ||
+    m.title?.toLowerCase().includes("monthsary wrapped")
+  );
 };
 
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [cursor, setCursor] = useState(new Date());
-  const { openSheet, confirm } = useAppStore();
+  const { openSheet, confirm, openMonthsary } = useAppStore();
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
   const [isFullscreenTimeline, setIsFullscreenTimeline] = useState(false);
@@ -123,7 +136,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       ((
         await supabase
           .from("memories")
-          .select("id,title,description,memory_date,category,location,cover_url,created_at")
+          .select("id,title,description,memory_date,category,location,cover_url,tags,created_at")
           .eq("relationship_id", relationshipId)
           .order("memory_date", { ascending: false })
           .order("created_at", { ascending: true })
@@ -413,8 +426,18 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                       return (
                         <div key={m.id} className="flex flex-col items-center relative">
                           <button
-                            onClick={() => setActiveMemory(m)}
-                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-[0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 ${sizeClass}`}
+                            onClick={() => {
+                              if (isWrappedMemory(m)) {
+                                openMonthsary();
+                              } else {
+                                setActiveMemory(m);
+                              }
+                            }}
+                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-[0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 ${sizeClass} ${
+                              isWrappedMemory(m)
+                                ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
+                                : ""
+                            }`}
                           >
                             {m.cover_url && (
                               <>
@@ -455,6 +478,12 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 className={`relative z-10 text-foreground/75 ${m.cover_url ? "drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]" : ""}`}
                               >
                                 {m.cover_url ? null : <Tag size={12} />}
+                              </div>
+                            )}
+
+                            {isWrappedMemory(m) && (
+                              <div className="absolute bottom-1 right-1 z-20 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md border border-white/80">
+                                <Play size={8} fill="currentColor" className="ml-0.5" />
                               </div>
                             )}
                           </button>
@@ -842,10 +871,19 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                             <button
                               key={m.id}
                               onClick={() => {
-                                setIsFullscreenTimeline(false);
-                                setActiveMemory(m);
+                                if (isWrappedMemory(m)) {
+                                  setIsFullscreenTimeline(false);
+                                  openMonthsary();
+                                } else {
+                                  setIsFullscreenTimeline(false);
+                                  setActiveMemory(m);
+                                }
                               }}
-                              className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-md transition-all hover:scale-105 ${sizeClass}`}
+                              className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-md transition-all hover:scale-105 ${sizeClass} ${
+                                isWrappedMemory(m)
+                                  ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
+                                  : ""
+                              }`}
                             >
                               {m.cover_url && (
                                 <img
@@ -874,6 +912,12 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 </div>
                               ) : (
                                 <Tag size={12} className="relative z-10 text-foreground/75" />
+                              )}
+
+                              {isWrappedMemory(m) && (
+                                <div className="absolute bottom-1 right-1 z-20 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md border border-white/80">
+                                  <Play size={8} fill="currentColor" className="ml-0.5" />
+                                </div>
                               )}
                             </button>
                           );
@@ -951,6 +995,20 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   )}
                 </div>
               </div>
+
+              {/* Play Wrapped Story button */}
+              {isWrappedMemory(activeMemory) && (
+                <button
+                  onClick={() => {
+                    setActiveMemory(null);
+                    openMonthsary();
+                  }}
+                  className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold transition-all text-center shadow-[0_4px_16px_rgba(14,165,233,0.35)] flex items-center justify-center gap-2 hover:bg-primary/95 active:scale-95"
+                >
+                  <Play size={13} fill="currentColor" />
+                  Play 3rd Monthsary Wrapped
+                </button>
+              )}
 
               {activeMemory.description ? (
                 <div className="text-sm text-foreground/80 leading-relaxed max-h-48 overflow-y-auto pr-1">

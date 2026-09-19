@@ -408,26 +408,28 @@ export function HomeView({
 
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32">
-      {/* ── 3rd Monthsary Story Banner ── */}
-      <section
-        onClick={openMonthsary}
-        className="cursor-pointer relative overflow-hidden rounded-3xl border border-white/50 bg-white/50 backdrop-blur-xl px-4 py-3.5 shadow-sm hover:bg-white/60 transition-all active:scale-[0.98] group"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="display text-sm font-bold text-foreground flex items-center gap-1.5">
-              <span>Happy 3rd Monthsary, Aya</span>
-              <Heart size={13} className="text-primary fill-primary shrink-0" />
+      {/* ── 3rd Monthsary Story Banner (shown on monthsary day) ── */}
+      {isMonthsary && (
+        <section
+          onClick={openMonthsary}
+          className="cursor-pointer relative overflow-hidden rounded-3xl border border-white/50 bg-white/50 backdrop-blur-xl px-4 py-3.5 shadow-sm hover:bg-white/60 transition-all active:scale-[0.98] group"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="display text-sm font-bold text-foreground flex items-center gap-1.5">
+                <span>Happy 3rd Monthsary, Aya</span>
+                <Heart size={13} className="text-primary fill-primary shrink-0" />
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                Tap to view our 3-month story
+              </div>
             </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">
-              Tap to view our 3-month story
+            <div className="text-[11px] font-medium text-foreground/80 bg-white/60 px-3 py-1 rounded-full border border-white/40 shadow-2xs">
+              View
             </div>
           </div>
-          <div className="text-[11px] font-medium text-foreground/80 bg-white/60 px-3 py-1 rounded-full border border-white/40 shadow-2xs">
-            View
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Greeting strip with wall preview ── */}
       <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] overflow-hidden">

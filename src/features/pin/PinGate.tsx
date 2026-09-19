@@ -691,10 +691,11 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       const label = slot === "a" ? space.name_a || "you" : space.name_b || "you";
       pinStorage.setName(label);
 
-      // Trigger 3rd monthsary wrapped story once after password unlock
+      // Trigger 3rd monthsary wrapped story once after password unlock on monthsary day
+      const isMonthsary = new Date().getDate() === 19;
       const seenKey = `seanaya_3rd_monthsary_seen_${slot}`;
       const hasSeen = localStorage.getItem(seenKey) === "true";
-      if (!hasSeen) {
+      if (isMonthsary && !hasSeen) {
         useAppStore.openMonthsary();
       }
 
