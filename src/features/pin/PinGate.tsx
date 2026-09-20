@@ -691,14 +691,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       const label = slot === "a" ? space.name_a || "you" : space.name_b || "you";
       pinStorage.setName(label);
 
-      // Trigger 3rd monthsary wrapped story once after password unlock on monthsary day
-      const isMonthsary = new Date().getDate() === 19;
-      const seenKey = `seanaya_3rd_monthsary_seen_${slot}`;
-      const hasSeen = localStorage.getItem(seenKey) === "true";
-      if (isMonthsary && !hasSeen) {
-        useAppStore.openMonthsary();
-      }
-
       setStage("unlocked");
     } catch (e: any) {
       console.error(e);
@@ -1157,7 +1149,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "unlock" && (
           <Screen key="unlock">
             <Title
-              kicker="Happy 3rd Monthsary, Aya!"
+              kicker="Seanaya"
               title="Enter your PIN"
             />
             <div className="mt-10">
