@@ -53,6 +53,14 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [patternFile, setPatternFile] = useState<File | null>(null);
   const [patternPreviewUrl, setPatternPreviewUrl] = useState<string | null>(null);
 
+  // Revoke object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
+      if (patternPreviewUrl) URL.revokeObjectURL(patternPreviewUrl);
+    };
+  }, [facePreviewUrl, patternPreviewUrl]);
+
   // Cropper states (handles "new" cat face or an existing Pet face update)
   const [croppingTarget, setCroppingTarget] = useState<"new" | Pet | null>(null);
   const [croppingFileSrc, setCroppingFileSrc] = useState<string | null>(null);
@@ -175,6 +183,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setPatternFile(file);
+    if (patternPreviewUrl) URL.revokeObjectURL(patternPreviewUrl);
     setPatternPreviewUrl(URL.createObjectURL(file));
   };
 
@@ -271,6 +280,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         // If target is "new", we save to state without uploading yet
         if (croppingTarget === "new") {
           setFaceFile(file);
+          if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
           setFacePreviewUrl(URL.createObjectURL(blob));
           setCroppingTarget(null);
           setCroppingFileSrc(null);

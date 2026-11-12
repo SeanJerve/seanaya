@@ -46,15 +46,17 @@ export function useDraft<T extends object>(
   enabled = true,
 ) {
   const loaded = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     if (!enabled || loaded.current) return;
     loaded.current = true;
     drafts.get<T>(key).then((v) => {
-      if (v) setState({ ...state, ...v });
+      if (v) setState({ ...stateRef.current, ...v });
       setHydrated(true);
     });
-  }, [key, enabled]);
+  }, [key, enabled, setState]);
 
   useEffect(() => {
     if (!enabled || !hydrated) return;

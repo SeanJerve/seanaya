@@ -98,6 +98,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       const { data, error } = await supabase
         .from("sticker_pages")
         .select("*")
+        .eq("relationship_id", relationshipId)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as StickerPage[];
@@ -321,12 +322,13 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                   <button
                     key={b.key}
                     onClick={() => updatePageBg.mutate(b.key)}
-                    className={`h-5 w-5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${
+                    className={`h-6 w-6 rounded-full border shadow-2xs transition-all hover:scale-110 active:scale-90 touch-manipulation ${
                       activePage.bg_theme === b.key
                         ? "ring-2 ring-primary ring-offset-1 scale-110"
                         : "border-white/50"
                     } ${b.btnStyle}`}
                     title={`Pad: ${b.label}`}
+                    aria-label={`Pad: ${b.label}`}
                   />
                 ))}
               </div>
@@ -338,17 +340,19 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                   setShowPageSearch(!showPageSearch);
                   if (showPageSearch) setPageSearchQuery("");
                 }}
-                className={`p-1.5 rounded-full active:scale-95 transition-all ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/50 hover:text-foreground"}`}
+                className={`w-7 h-7 flex items-center justify-center rounded-full active:scale-90 transition-all touch-manipulation ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/50 hover:text-foreground hover:bg-white/40"}`}
                 title="Search Page"
+                aria-label="Search Page"
               >
-                <Search size={14} />
+                <Search size={15} />
               </button>
               <button
                 onClick={() => setNewPageOpen(true)}
-                className="p-1.5 rounded-full hover:bg-white/40 text-foreground/50 hover:text-foreground active:scale-95 transition-all"
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/40 text-foreground/50 hover:text-foreground active:scale-90 transition-all touch-manipulation"
                 title="New Page"
+                aria-label="New Page"
               >
-                <PlusCircle size={14} />
+                <PlusCircle size={15} />
               </button>
               {pages.length > 1 && (
                 <button
@@ -359,10 +363,11 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                       onConfirm: () => deletePage.mutate(activePage.id),
                     });
                   }}
-                  className="p-1.5 rounded-full hover:bg-red-50/50 text-red-500/80 hover:text-red-600 active:scale-95 transition-all"
+                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-red-500/80 hover:text-red-600 active:scale-90 transition-all touch-manipulation"
                   title="Delete Page"
+                  aria-label="Delete Page"
                 >
-                  <Trash size={13} />
+                  <Trash size={14} />
                 </button>
               )}
             </div>
@@ -404,11 +409,11 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
                 return (
                   <motion.div
-                    key={`${s.id}-${px.toFixed(3)}-${py.toFixed(3)}`}
+                    key={s.id}
                     drag
                     dragConstraints={sheetRef}
                     dragMomentum={false}
-                    dragElastic={0}
+                    dragElastic={0.1}
                     onDragEnd={(event) => {
                       if (!sheetRef.current) return;
                       const sheet = sheetRef.current.getBoundingClientRect();

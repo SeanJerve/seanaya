@@ -109,6 +109,9 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     onSuccess: () => {
       toast.success("Memory deleted");
       qc.invalidateQueries({ queryKey: ["memories", relationshipId] });
+      qc.invalidateQueries({ queryKey: ["photos-cal"] });
+      qc.invalidateQueries({ queryKey: ["photos-cal-home"] });
+      qc.invalidateQueries({ queryKey: ["stats", relationshipId] });
       setActiveMemory(null);
     },
     onError: (e: any) => toast.error(e?.message || String(e)),
@@ -119,29 +122,31 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     queryFn: async () => {
       const s = startOfMonth(cursor).toISOString();
       const e = endOfMonth(cursor).toISOString();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("relationship_id", relationshipId)
         .gte("starts_at", s)
         .lte("starts_at", e)
         .order("starts_at");
+      if (error) throw error;
       return data ?? [];
     },
   });
 
   const { data: memories = [], isLoading: loadingMemories } = useQuery({
     queryKey: ["memories", relationshipId],
-    queryFn: async () =>
-      ((
-        await supabase
-          .from("memories")
-          .select("id,title,description,memory_date,category,location,cover_url,tags,created_at")
-          .eq("relationship_id", relationshipId)
-          .order("memory_date", { ascending: false })
-          .order("created_at", { ascending: true })
-          .limit(100)
-      ).data ?? []) as Memory[],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("memories")
+        .select("id,title,description,memory_date,category,location,cover_url,tags,created_at")
+        .eq("relationship_id", relationshipId)
+        .order("memory_date", { ascending: false })
+        .order("created_at", { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as Memory[];
+    },
   });
 
   // Group memories by date
@@ -516,16 +521,18 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCursor(subMonths(cursor, 1))}
-            className="rounded-full p-1.5 hover:bg-black/5"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all touch-manipulation text-foreground/80"
+            aria-label="Previous month"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={18} />
           </button>
-          <div className="display text-lg">{format(cursor, "MMMM yyyy")}</div>
+          <div className="display text-lg font-semibold">{format(cursor, "MMMM yyyy")}</div>
           <button
             onClick={() => setCursor(addMonths(cursor, 1))}
-            className="rounded-full p-1.5 hover:bg-black/5"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all touch-manipulation text-foreground/80"
+            aria-label="Next month"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
 
@@ -652,7 +659,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                 />
                 {matchingDateGroups.length > 0 && (
-                  <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
+                  <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-foreground/60 select-none">
                     <span>
                       {activeSearchIndex + 1}/{matchingDateGroups.length}
                     </span>
@@ -662,17 +669,19 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                           (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
                         )
                       }
-                      className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                      className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
+                      aria-label="Previous search result"
                     >
-                      <ChevronLeft size={9} />
+                      <ChevronLeft size={12} />
                     </button>
                     <button
                       onClick={() =>
                         setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
                       }
-                      className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                      className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
+                      aria-label="Next search result"
                     >
-                      <ChevronRight size={9} />
+                      <ChevronRight size={12} />
                     </button>
                   </div>
                 )}
@@ -681,17 +690,19 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
             <button
               onClick={() => setIsFullscreenTimeline(true)}
-              className="p-1 rounded-full hover:bg-black/5 text-foreground/60 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-foreground/60 active:scale-90 transition-all touch-manipulation"
               title="Full screen view"
+              aria-label="Full screen view"
             >
-              <Maximize2 size={14} />
+              <Maximize2 size={15} />
             </button>
             <button
               onClick={() => setIsTimelineOpen(!isTimelineOpen)}
-              className="p-1 rounded-full hover:bg-black/5 text-foreground/60 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-foreground/60 active:scale-90 transition-all touch-manipulation"
               title={isTimelineOpen ? "Hide Timeline" : "Show Timeline"}
+              aria-label={isTimelineOpen ? "Hide Timeline" : "Show Timeline"}
             >
-              {isTimelineOpen ? <Eye size={14} /> : <EyeOff size={14} className="opacity-50" />}
+              {isTimelineOpen ? <Eye size={15} /> : <EyeOff size={15} className="opacity-50" />}
             </button>
           </div>
         </div>
@@ -784,7 +795,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                   />
                   {matchingDateGroups.length > 0 && (
-                    <div className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-foreground/50 select-none">
+                    <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-foreground/60 select-none">
                       <span>
                         {activeSearchIndex + 1}/{matchingDateGroups.length}
                       </span>
@@ -794,24 +805,27 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                             (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
                           )
                         }
-                        className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                        className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
+                        aria-label="Previous result"
                       >
-                        <ChevronLeft size={9} />
+                        <ChevronLeft size={12} />
                       </button>
                       <button
                         onClick={() =>
                           setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
                         }
-                        className="p-0.5 hover:bg-black/5 rounded text-foreground/75"
+                        className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
+                        aria-label="Next result"
                       >
-                        <ChevronRight size={9} />
+                        <ChevronRight size={12} />
                       </button>
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => setIsFullscreenTimeline(false)}
-                  className="p-1.5 rounded-full bg-white/60 border border-white/50 text-foreground/60 hover:text-foreground transition-all shadow-sm"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white/60 border border-white/50 text-foreground/60 hover:text-foreground active:scale-90 transition-all shadow-sm touch-manipulation"
+                  aria-label="Exit fullscreen"
                 >
                   <Minimize2 size={16} />
                 </button>

@@ -130,18 +130,36 @@ export function processImageDataBG(
 
   // Seed with all border pixels matching bg color
   for (let x = 0; x < w; x++) {
-    if (colorDiff(data[(0 * w + x) * 4], data[(0 * w + x) * 4 + 1], data[(0 * w + x) * 4 + 2]) < tolerance) {
+    if (
+      colorDiff(data[(0 * w + x) * 4], data[(0 * w + x) * 4 + 1], data[(0 * w + x) * 4 + 2]) <
+      tolerance
+    ) {
       push(x, 0);
     }
-    if (colorDiff(data[((h - 1) * w + x) * 4], data[((h - 1) * w + x) * 4 + 1], data[((h - 1) * w + x) * 4 + 2]) < tolerance) {
+    if (
+      colorDiff(
+        data[((h - 1) * w + x) * 4],
+        data[((h - 1) * w + x) * 4 + 1],
+        data[((h - 1) * w + x) * 4 + 2],
+      ) < tolerance
+    ) {
       push(x, h - 1);
     }
   }
   for (let y = 0; y < h; y++) {
-    if (colorDiff(data[(y * w + 0) * 4], data[(y * w + 0) * 4 + 1], data[(y * w + 0) * 4 + 2]) < tolerance) {
+    if (
+      colorDiff(data[(y * w + 0) * 4], data[(y * w + 0) * 4 + 1], data[(y * w + 0) * 4 + 2]) <
+      tolerance
+    ) {
       push(0, y);
     }
-    if (colorDiff(data[(y * w + (w - 1)) * 4], data[(y * w + (w - 1)) * 4 + 1], data[(y * w + (w - 1)) * 4 + 2]) < tolerance) {
+    if (
+      colorDiff(
+        data[(y * w + (w - 1)) * 4],
+        data[(y * w + (w - 1)) * 4 + 1],
+        data[(y * w + (w - 1)) * 4 + 2],
+      ) < tolerance
+    ) {
       push(w - 1, y);
     }
   }

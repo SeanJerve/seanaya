@@ -20,6 +20,7 @@ import {
   Upload,
   Search,
   HelpCircle,
+  Camera,
 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { Lightbox } from "@/lib/Lightbox";
@@ -97,7 +98,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
   const pageRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
-  const { confirm } = useAppStore();
+  const { confirm, setTab } = useAppStore();
 
   // Fetch album pages
   const {
@@ -576,6 +577,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </span>
         </div>
       </motion.div>
+
+      {/* Quick jump to LDR Photo Booth */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setTab("photobooth");
+        }}
+        className="absolute bottom-6 flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 backdrop-blur-xl border border-white/60 text-foreground text-xs font-semibold shadow-soft hover:bg-white/90 active:scale-95 transition z-20"
+      >
+        <Camera size={14} className="text-pink-500" />
+        <span>Open LDR Photo Booth</span>
+      </button>
     </div>
   );
 
@@ -610,10 +623,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             {/* Arrow icon only back button */}
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded-full bg-white/40 border border-white/30 text-foreground/65 hover:text-foreground active:scale-95 transition-all shadow-sm shrink-0 flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-white/50 border border-white/40 text-foreground/70 hover:text-foreground active:scale-90 transition-all shadow-2xs shrink-0 flex items-center justify-center touch-manipulation"
               title="Go Back"
+              aria-label="Go Back"
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft size={16} />
             </button>
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
@@ -655,28 +669,31 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setShowLongPressInfo(true)}
-                className="p-1 rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-90 transition-all touch-manipulation"
                 title="View Album Guide"
+                aria-label="Album Guide"
               >
-                <HelpCircle size={14} />
+                <HelpCircle size={15} />
               </button>
               <button
                 onClick={() => {
                   setShowPageSearch(!showPageSearch);
                   if (showPageSearch) setPageSearchQuery("");
                 }}
-                className={`p-1 rounded-full active:scale-95 transition-all ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/60 hover:text-foreground"}`}
+                className={`w-7 h-7 flex items-center justify-center rounded-full active:scale-90 transition-all touch-manipulation ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/60 hover:text-foreground hover:bg-white/40"}`}
                 title="Search Page"
+                aria-label="Search Page"
               >
-                <Search size={14} />
+                <Search size={15} />
               </button>
 
               <button
                 onClick={() => addPage.mutate()}
-                className="p-1 rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-95 transition-all"
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-90 transition-all touch-manipulation"
                 title="Add Page"
+                aria-label="Add Page"
               >
-                <Plus size={14} />
+                <Plus size={15} />
               </button>
 
               {pages.length > 1 && (
@@ -691,10 +708,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       },
                     });
                   }}
-                  className="p-1 rounded-full hover:bg-red-50 text-red-500 active:scale-95 transition-all"
+                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-red-500 active:scale-90 transition-all touch-manipulation"
                   title="Delete Page"
+                  aria-label="Delete Page"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={15} />
                 </button>
               )}
             </div>

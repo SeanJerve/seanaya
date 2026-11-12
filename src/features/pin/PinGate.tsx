@@ -380,7 +380,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const stickerSources = [
       "/stickers/sticker_0_dbf609.png",
       "/stickers/sticker_1_25567c.png",
-      "/stickers/sticker_2_fb4f58.png",
+      "/couple-sticker.png",
       "/stickers/sticker_3_311950.png",
       "/stickers/sticker_4_8591e5.png",
       "/stickers/sticker_5_6523c4.png",
@@ -1148,10 +1148,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "unlock" && (
           <Screen key="unlock">
-            <Title
-              kicker="Seanaya"
-              title="Enter your PIN"
-            />
+            <Title kicker="Seanaya" title="Enter your PIN" />
             <div className="mt-10">
               <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>

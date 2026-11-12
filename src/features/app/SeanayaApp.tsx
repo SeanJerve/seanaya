@@ -12,6 +12,7 @@ import { MemoriesView } from "@/features/views/MemoriesView";
 import { WallView } from "@/features/views/WallView";
 import { StickersView } from "@/features/views/StickersView";
 import { PetView } from "@/features/views/PetView";
+import { PhotoBoothView } from "@/features/photobooth/PhotoBoothView";
 import { Sheet } from "./Sheet";
 import { AddMemorySheet } from "@/features/sheets/AddMemorySheet";
 import { AddEventSheet } from "@/features/sheets/AddEventSheet";
@@ -183,7 +184,8 @@ function Inner() {
     };
   }, [currentRelId, qc]);
 
-  const fallbackRelId = typeof window !== "undefined" ? localStorage.getItem("seanaya.rel_id") : null;
+  const fallbackRelId =
+    typeof window !== "undefined" ? localStorage.getItem("seanaya.rel_id") : null;
   const activeRelId = rel?.id || fallbackRelId || "";
 
   if (isMonthsaryOpen && activeRelId) {
@@ -212,7 +214,9 @@ function Inner() {
         style={{ background: "var(--gradient-sky)" }}
       >
         <div className="rounded-3xl border border-white/50 bg-white/40 backdrop-blur-xl p-8 max-w-sm flex flex-col items-center shadow-soft">
-          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Seanaya</div>
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            Seanaya
+          </div>
           <h2 className="display mt-2 text-2xl">Waking your space</h2>
           <p className="mt-2 text-xs text-muted-foreground">
             The database took a moment to respond. Tap below to reconnect.
@@ -239,12 +243,13 @@ function Inner() {
       wall: "Love Wall",
       stickers: "Stickers",
       pet: "Pet Room",
+      photobooth: "Photo Booth",
     } as const
   )[tab];
 
   return (
     <div className="min-h-[100dvh] w-full seanaya-bg">
-      <AppHeader title={headerTitle} relationshipId={relId} />
+      {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
 
       <main>
         {tab === "home" && <HomeView relationshipId={relId} anniversary={rel.anniversary} />}
@@ -253,9 +258,10 @@ function Inner() {
         {tab === "wall" && <WallView relationshipId={relId} />}
         {tab === "stickers" && <StickersView relationshipId={relId} />}
         {tab === "pet" && <PetView relationshipId={relId} />}
+        {tab === "photobooth" && <PhotoBoothView relationshipId={relId} />}
       </main>
 
-      <BottomNav relationshipId={relId} />
+      {tab !== "photobooth" && <BottomNav relationshipId={relId} />}
 
       <Sheet open={sheet === "add-memory"} title="New memory">
         <AddMemorySheet relationshipId={relId} />

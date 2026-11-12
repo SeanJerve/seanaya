@@ -161,7 +161,9 @@ export function AddStickerSheet({
   };
 
   // Canvas touch & mouse interaction (Magic Wand, Restore Brush, Eraser Brush)
-  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getCanvasCoords = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const previewCanvas = previewCanvasRef.current;
     const workingCanvas = workingCanvasRef.current;
     if (!previewCanvas || !workingCanvas) return null;
@@ -322,12 +324,7 @@ export function AddStickerSheet({
             Smart background removal & custom touch-up tools
           </span>
           {/* Use sr-only instead of hidden for iOS Safari mobile compatibility */}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="sr-only"
-          />
+          <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
         </label>
       ) : (
         <div className="space-y-4">
@@ -506,7 +503,9 @@ export function AddStickerSheet({
                       style={{ background: c.value }}
                       title={c.label}
                     >
-                      {outlineColor === c.value && <Check size={12} className="text-foreground/80" />}
+                      {outlineColor === c.value && (
+                        <Check size={12} className="text-foreground/80" />
+                      )}
                     </button>
                   ))}
                 </div>

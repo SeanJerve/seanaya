@@ -9,7 +9,7 @@ export function useLongPress({
   onClick: () => void;
   ms?: number;
 }) {
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressTriggered = useRef(false);
 
   const start = (e: React.MouseEvent | React.TouchEvent) => {

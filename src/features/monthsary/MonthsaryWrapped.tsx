@@ -3,14 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
-import {
-  X,
-  Heart,
-  RotateCcw,
-  ChevronRight,
-  Camera,
-  Layers,
-} from "lucide-react";
+import { X, Heart, RotateCcw, ChevronRight, Camera, Layers } from "lucide-react";
 
 type Pet = {
   id: string;
@@ -45,7 +38,7 @@ const SLIDE_DURATION_MS = 7500;
 const STICKER_SOURCES = [
   "/stickers/sticker_0_dbf609.png",
   "/stickers/sticker_1_25567c.png",
-  "/stickers/sticker_2_fb4f58.png",
+  "/couple-sticker.png",
   "/stickers/sticker_3_311950.png",
   "/stickers/sticker_4_8591e5.png",
   "/stickers/sticker_5_6523c4.png",
@@ -67,7 +60,6 @@ if (typeof window !== "undefined") {
   const coupleImg = new Image();
   coupleImg.src = "/couple-sticker.png";
 }
-
 
 const sentenceVariants = {
   hidden: { opacity: 1 },
@@ -247,7 +239,6 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
 
     const particles: {
       x: number;
@@ -595,9 +586,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
                     3 months together
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    since June 19, 2026
-                  </p>
+                  <p className="text-xs text-muted-foreground">since June 19, 2026</p>
                 </div>
 
                 {/* Days Counter Card */}
@@ -711,7 +700,8 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
 
                 {/* Subtitle card */}
                 <div className="w-full rounded-2xl border border-white/60 bg-white/55 backdrop-blur-xl p-3.5 text-center text-xs text-foreground/80 leading-relaxed shadow-2xs">
-                  From our 1st & 2nd monthsary to my 22nd birthday with your sweet donut cake effort, thank you for always making me smile.
+                  From our 1st & 2nd monthsary to my 22nd birthday with your sweet donut cake
+                  effort, thank you for always making me smile.
                 </div>
               </motion.div>
             )}
@@ -744,11 +734,22 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                         { top: "5%", left: "40%", rotate: 8, size: "w-14 h-14 sm:w-16 sm:h-16" },
                         { top: "7%", right: "6%", rotate: -12, size: "w-14 h-14 sm:w-16 sm:h-16" },
                         { top: "37%", left: "6%", rotate: 10, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { top: "33%", left: "37%", rotate: -4, size: "w-16 h-16 sm:w-20 sm:h-20", scale: 1.15 },
+                        {
+                          top: "33%",
+                          left: "37%",
+                          rotate: -4,
+                          size: "w-16 h-16 sm:w-20 sm:h-20",
+                          scale: 1.15,
+                        },
                         { top: "36%", right: "6%", rotate: -8, size: "w-14 h-14 sm:w-16 sm:h-16" },
                         { bottom: "7%", left: "8%", rotate: -7, size: "w-14 h-14 sm:w-16 sm:h-16" },
                         { bottom: "5%", left: "40%", rotate: 6, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { bottom: "7%", right: "8%", rotate: 11, size: "w-14 h-14 sm:w-16 sm:h-16" },
+                        {
+                          bottom: "7%",
+                          right: "8%",
+                          rotate: 11,
+                          size: "w-14 h-14 sm:w-16 sm:h-16",
+                        },
                       ];
                       const pos = positions[idx % positions.length];
                       return (
@@ -765,7 +766,11 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                           transition={{
                             delay: 0.05 * idx,
                             opacity: { duration: 0.25 },
-                            rotate: { duration: 3 + (idx % 3) * 0.4, repeat: Infinity, ease: "easeInOut" },
+                            rotate: {
+                              duration: 3 + (idx % 3) * 0.4,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                            },
                           }}
                           style={{
                             position: "absolute",
@@ -801,18 +806,19 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
                     Our 3 cats
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Mallows, Daichi, and Mingg
-                  </p>
+                  <p className="text-xs text-muted-foreground">Mallows, Daichi, and Mingg</p>
                 </div>
 
                 {/* Cats Cards */}
                 <div className="grid grid-cols-3 gap-2.5 w-full py-1">
-                  {(stats?.pets.length ? stats.pets : [
-                    { id: "1", name: "Mallows", photos: [], species: "cat", created_at: "" },
-                    { id: "2", name: "Daichi", photos: [], species: "cat", created_at: "" },
-                    { id: "3", name: "Mingg", photos: [], species: "cat", created_at: "" },
-                  ]).map((pet, idx) => (
+                  {(stats?.pets.length
+                    ? stats.pets
+                    : [
+                        { id: "1", name: "Mallows", photos: [], species: "cat", created_at: "" },
+                        { id: "2", name: "Daichi", photos: [], species: "cat", created_at: "" },
+                        { id: "3", name: "Mingg", photos: [], species: "cat", created_at: "" },
+                      ]
+                  ).map((pet, idx) => (
                     <motion.div
                       key={pet.id}
                       initial={{ opacity: 0, y: 12 }}
@@ -903,9 +909,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                       <div className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">
                         Cats
                       </div>
-                      <div className="text-base font-black text-primary mt-0.5">
-                        3
-                      </div>
+                      <div className="text-base font-black text-primary mt-0.5">3</div>
                     </div>
                   </div>
 
@@ -913,11 +917,12 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   <div className="rounded-2xl bg-white/60 border border-white/50 p-4 text-foreground/90 text-xs leading-relaxed space-y-2 shadow-2xs">
                     <p className="font-bold text-foreground">Dearest Aya,</p>
                     <p className="text-foreground/80">
-                      Happy 3rd Monthsary! Thank you for 3 wonderful months of joy, sweetness, and comfort. Even through any distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, more stickers, and a lifetime together. I love you so much!
+                      Happy 3rd Monthsary! Thank you for 3 wonderful months of joy, sweetness, and
+                      comfort. Even through any distance, you always make me feel like the happiest
+                      boy. Here's to endless more months, more memories, more stickers, and a
+                      lifetime together. I love you so much!
                     </p>
-                    <p className="text-right font-bold text-primary pt-0.5">
-                      — Forever yours, Sj
-                    </p>
+                    <p className="text-right font-bold text-primary pt-0.5">— Forever yours, Sj</p>
                   </div>
                 </div>
 

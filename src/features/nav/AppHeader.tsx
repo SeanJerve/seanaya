@@ -47,30 +47,36 @@ export function AppHeader({
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => hug.mutate()}
-            className="rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
+            onClick={() => {
+              if (typeof navigator !== "undefined" && navigator.vibrate) {
+                navigator.vibrate([30, 70]);
+              }
+              hug.mutate();
+            }}
+            className="btn-press w-9 h-9 rounded-full border border-white/50 bg-white/60 dark:bg-black/30 backdrop-blur-xl flex items-center justify-center transition active:scale-90 hover:bg-white/80 shadow-xs"
             aria-label="Send a hug"
+            title="Send a warm hug"
           >
-            <Heart size={16} className="text-[color:var(--hug)]" />
+            <Heart size={17} className="text-[color:var(--hug)] fill-[color:var(--hug)]/30" />
           </button>
           <button
             onClick={() => openSheet("notifications")}
-            className="relative rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
+            className="btn-press relative w-9 h-9 rounded-full border border-white/50 bg-white/60 dark:bg-black/30 backdrop-blur-xl flex items-center justify-center transition active:scale-95 hover:bg-white/80 shadow-xs"
             aria-label="Notifications"
           >
-            <Bell size={16} className="text-foreground/70" />
+            <Bell size={17} className="text-foreground/75" />
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-[color:var(--hug)] px-1 text-[9px] font-semibold text-white text-center leading-4">
+              <span className="absolute -right-0.5 -top-0.5 min-w-[17px] h-[17px] rounded-full bg-[color:var(--hug)] px-1 text-[9px] font-bold text-white flex items-center justify-center leading-none shadow-sm animate-pulse">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
           </button>
           <button
             onClick={() => openSheet("settings")}
-            className="rounded-full border border-white/50 bg-white/50 p-2 backdrop-blur-xl transition active:scale-95"
+            className="btn-press w-9 h-9 rounded-full border border-white/50 bg-white/60 dark:bg-black/30 backdrop-blur-xl flex items-center justify-center transition active:scale-95 hover:bg-white/80 shadow-xs"
             aria-label="Settings"
           >
-            <Settings size={16} className="text-foreground/70" />
+            <Settings size={17} className="text-foreground/75" />
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type TabKey = "home" | "calendar" | "memories" | "wall" | "stickers" | "pet";
+export type TabKey = "home" | "calendar" | "memories" | "wall" | "stickers" | "pet" | "photobooth";
 export type SheetKey =
   | "add-memory"
   | "add-event"
@@ -147,12 +147,19 @@ useAppStore.closeMonthsary = () => {
   emit();
 };
 
+declare global {
+  interface Window {
+    resetMonthsary?: () => void;
+  }
+}
+
 if (typeof window !== "undefined") {
-  (window as any).resetMonthsary = () => {
+  window.resetMonthsary = () => {
     localStorage.removeItem("seanaya_3rd_monthsary_seen");
     localStorage.removeItem("seanaya_3rd_monthsary_seen_a");
     localStorage.removeItem("seanaya_3rd_monthsary_seen_b");
-    console.log("[Seanaya] 3rd monthsary flags reset! Refresh or re-enter PIN to experience it again.");
+    console.log(
+      "[Seanaya] 3rd monthsary flags reset! Refresh or re-enter PIN to experience it again.",
+    );
   };
 }
-

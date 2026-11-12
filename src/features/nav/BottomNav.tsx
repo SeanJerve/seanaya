@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Calendar, BookHeart, PinIcon, Star, Cat } from "lucide-react";
+import { Home, Calendar, BookHeart, PinIcon, Star, Cat, Camera } from "lucide-react";
 import { useAppStore, type TabKey } from "@/features/app/store";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
     dotKinds: ["event", "memory"],
   },
   { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["album_item"] },
+  { key: "photobooth", icon: <Camera size={22} strokeWidth={1.6} /> },
   { key: "wall", icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
   { key: "stickers", icon: <Star size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
   { key: "pet", icon: <Cat size={22} strokeWidth={1.6} />, dotKinds: ["pet"] },
@@ -46,6 +47,11 @@ const SPEECH_MESSAGES: Record<string, string[]> = {
     "Mocha loves these outlines!",
   ],
   pet: ["Mrow! Let's name more pets!", "Adopt more cute kittens!", "Welcome to the pet sanctuary!"],
+  photobooth: [
+    "Say cheese together across the miles!",
+    "You two look so sweet in this photo booth!",
+    "Let's snap a cute 4-cut photostrip!",
+  ],
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -177,8 +183,13 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
             return (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
-                className="relative flex flex-1 items-center justify-center rounded-full py-3"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.vibrate) {
+                    navigator.vibrate(12);
+                  }
+                  setTab(t.key);
+                }}
+                className="relative flex flex-1 items-center justify-center rounded-full py-3 min-h-[44px] active:scale-90 transition-transform touch-manipulation"
                 aria-label={t.key}
               >
                 {active && (
@@ -239,11 +250,11 @@ function RoamingPet({
     if (isManuallySleeping) return; // Keep sleep peace
     const msgs = SPEECH_MESSAGES[tab] || ["Mrow!"];
     const randomMsg = msgs[Math.floor(Math.random() * msgs.length)];
-    
+
     // Replace "Mocha" or "Lily" default names with the actual name of the current pet
     const petName = pet.name || "I";
     const formattedMsg = randomMsg.replace(/mocha/gi, petName).replace(/lily/gi, petName);
-    
+
     setBubbleText(formattedMsg);
     setBubbleVisible(true);
     const timer = setTimeout(() => setBubbleVisible(false), 3500);
@@ -319,7 +330,7 @@ function RoamingPet({
           if (speed === "slow") step = 0.15;
           if (speed === "fast") step = 0.52;
 
-          let newX = x + direction * step;
+          const newX = x + direction * step;
           if (newX >= 86) {
             setDirection(-1);
             return 86;

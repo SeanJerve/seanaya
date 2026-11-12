@@ -9,7 +9,7 @@ export async function uploadImage(
   file: File | Blob,
   subpath: string,
 ) {
-  const name = (file as any).name || "image.png";
+  const name = file instanceof File ? file.name : "image.png";
   const ext = (name.split(".").pop() || "png").toLowerCase();
   const path = `${relationshipId}/${subpath}.${ext}`;
   const contentType = file.type || "image/png";

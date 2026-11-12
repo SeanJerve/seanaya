@@ -101,17 +101,17 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
   const { data: notes = [] } = useQuery({
     queryKey: ["notes", relationshipId],
-    queryFn: async () =>
-      ((
-        await supabase
-          .from("notes")
-          .select(
-            "id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at,author_id",
-          )
-          .eq("relationship_id", relationshipId)
-          .order("created_at", { ascending: true })
-      ) // Newer notes are painted last (drawn on top)
-      .data ?? []) as Note[],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notes")
+        .select(
+          "id,body,kind,color,pinned,image_url,image_path,rotation,pos_x,pos_y,created_at,author_id",
+        )
+        .eq("relationship_id", relationshipId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Note[];
+    },
   });
 
   // Calculate available months dynamically based on note dates
@@ -296,7 +296,11 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
           </div>
         ) : (
           /* Draggable absolute bulletin board space (borderless, overflow-visible to support bleeding) */
-          <div ref={boardRef} className="relative w-full h-[620px] overflow-visible select-none">
+          <div
+            ref={boardRef}
+            onClick={() => setSelectedNoteId(null)}
+            className="relative w-full h-[620px] overflow-visible select-none"
+          >
             {/* Background grid line just for fun */}
             <div
               className="absolute inset-0 opacity-[0.02] pointer-events-none"
@@ -317,12 +321,10 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
               return (
                 <motion.div
-                  // Force React to remount this element on position coordinate updates,
-                  // clearing Framer Motion's internal drag offset transform instantly!
-                  key={`${n.id}-${px.toFixed(3)}-${py.toFixed(3)}`}
+                  key={n.id}
                   drag
                   dragConstraints={boardRef}
-                  dragElastic={0}
+                  dragElastic={0.15}
                   dragMomentum={false}
                   onDragEnd={(event) => {
                     if (!boardRef.current) return;
@@ -392,10 +394,10 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                               setEnlargedNote(n);
                               setSelectedNoteId(null);
                             }}
-                            className="p-1.5 rounded-full hover:bg-white text-foreground/75 hover:text-foreground transition-all"
+                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white text-foreground/75 hover:text-foreground transition-all active:scale-95"
                             title="Enlarge note"
                           >
-                            <Eye size={12} />
+                            <Eye size={14} />
                           </button>
                           <button
                             onClick={() => {
@@ -407,10 +409,10 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                               });
                               setSelectedNoteId(null);
                             }}
-                            className="p-1.5 rounded-full bg-red-50 border border-red-200/50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                            className="w-8 h-8 rounded-full flex items-center justify-center bg-red-50 border border-red-200/50 text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-95"
                             title="Delete note"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                           </button>
                         </motion.div>
                       )}
