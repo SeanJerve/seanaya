@@ -18,9 +18,9 @@ export const ART = {
   albumSky: "/art/album-sky.webp",
   clayHeart: "/art/clay-heart.png",
   cloudBand: "/art/cloud-band.webp",
-  lilyOpen: "/lily2.png",
-  lilyWatercolor: "/lily1.png",
-  lilyStem: "/main-lily.png",
+  lilyOpen: "/lily2.webp",
+  lilyWatercolor: "/lily1.webp",
+  lilyStem: "/main-lily.webp",
 } as const;
 
 /** Which chibi portrait represents a given person. Aya gets hers; everyone else gets Sean's. */

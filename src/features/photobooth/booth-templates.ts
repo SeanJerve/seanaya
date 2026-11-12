@@ -176,7 +176,7 @@ export async function renderBooth({
 
   if (st.lily) {
     try {
-      const lily = await loadImage("/lily2.png");
+      const lily = await loadImage("/lily2.webp");
       const size = layout === "strip" ? 150 : layout === "grid" ? 210 : 170;
       ctx.save();
       ctx.globalAlpha = 0.95;

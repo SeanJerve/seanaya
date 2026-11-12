@@ -358,7 +358,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           </ul>
         ) : pets.length === 0 ? (
           <div className="flex flex-col items-center pt-6 text-center">
-            <img src="/art/cats-cloud.webp" alt="" aria-hidden className="w-[220px] select-none" />
+            <img src="/art/cats-cloud.webp" alt="" aria-hidden className="w-[220px] select-none [mask-image:radial-gradient(ellipse_70%_65%_at_50%_55%,#000_60%,transparent_100%)]" />
             <div className="mt-3 font-serif text-[22px] font-semibold text-sn-navy">No cats here yet</div>
           </div>
         ) : (
@@ -485,7 +485,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       {/* ── Welcome Cat FAB bottom right ── */}
       <button
         {...longPressProps}
-        className="fixed bottom-24 right-5 z-20 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
+        className="sn-fab-dock sn-pill h-12 px-5 text-[15px]"
       >
         <Plus size={16} /> Welcome Cat
       </button>

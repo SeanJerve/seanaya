@@ -204,7 +204,9 @@
 /* Primary dashboard paper card */
 @utility sn-card {
   position: relative;
-  background: var(--paper-blush);
+  background:
+    url("/art/paper-grain.png") 0 0 / 220px 220px repeat,
+    var(--paper-blush);
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow-panel);
   border-radius: 28px;
@@ -213,7 +215,9 @@
 }
 
 @utility sn-card-lavender {
-  background: var(--paper-lavender);
+  background:
+    url("/art/paper-grain.png") 0 0 / 220px 220px repeat,
+    var(--paper-lavender);
 }
 
 /*
@@ -502,4 +506,55 @@
 }
 .seanaya-bg {
   background: var(--gradient-sky);
+}
+
+/*
+ * Floating page action, docked to the navbar: just right of the dock on wide
+ * screens (vertically centred with it), above the dock's right end on phones.
+ */
+@utility sn-fab-dock {
+  position: fixed;
+  z-index: 40;
+  right: 1rem;
+  bottom: calc(max(0.875rem, env(safe-area-inset-bottom)) + 76px);
+  @media (width >= 64rem) {
+    right: auto;
+    left: calc(50% + 252px);
+    bottom: calc(max(0.875rem, env(safe-area-inset-bottom)) + 11px);
+  }
+}
+
+/* Background life: drifting petals and clouds (transform-only, GPU friendly) */
+@keyframes sn-petal-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8%,
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(var(--sway, 60px), 112vh, 0) rotate(var(--spin, 260deg));
+    opacity: 0;
+  }
+}
+@keyframes sn-cloud-drift {
+  from {
+    transform: translate3d(-3vw, 0, 0);
+  }
+  to {
+    transform: translate3d(3vw, 0, 0);
+  }
+}
+@utility sn-petal {
+  position: absolute;
+  top: 0;
+  will-change: transform, opacity;
+  animation: sn-petal-fall var(--dur, 24s) linear var(--delay, 0s) infinite;
+}
+@utility sn-cloud {
+  position: absolute;
+  will-change: transform;
+  animation: sn-cloud-drift var(--dur, 40s) ease-in-out infinite alternate;
 }

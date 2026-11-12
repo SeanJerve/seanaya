@@ -562,7 +562,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         <div className="absolute inset-y-0 left-0 w-[22px] bg-[linear-gradient(90deg,rgba(31,42,92,0.18),rgba(31,42,92,0.04))]" />
         <div className="absolute inset-y-0 left-[22px] w-px bg-white/40" />
         <img
-          src="/lily1.png"
+          src="/lily1.webp"
           alt=""
           aria-hidden
           className="pointer-events-none absolute -bottom-10 -right-12 w-[240px] rotate-[-14deg] opacity-95 transition-transform duration-500 group-hover:rotate-[-10deg]"

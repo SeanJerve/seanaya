@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
@@ -34,7 +35,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     console.error(error);
@@ -46,12 +47,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something didn't load. Try again in a moment.
         </p>
-        <div className="mt-4 p-4 bg-black/10 rounded-lg text-left overflow-auto max-h-60">
-          <p className="font-bold text-red-500 text-xs">{error.message}</p>
-          <pre className="text-[10px] text-muted-foreground mt-2 whitespace-pre-wrap">
-            {error.stack}
-          </pre>
-        </div>
+        {/* Technical details only while developing; never shown on the live site */}
+        {import.meta.env.DEV && (
+          <div className="mt-4 p-4 bg-black/10 rounded-lg text-left overflow-auto max-h-60">
+            <p className="font-bold text-red-500 text-xs">
+              {error instanceof Error ? error.message : String(error)}
+            </p>
+            <pre className="text-[11px] text-muted-foreground mt-2 whitespace-pre-wrap">
+              {error instanceof Error ? error.stack : null}
+            </pre>
+          </div>
+        )}
         <div className="mt-6 flex justify-center gap-2">
           <button
             onClick={() => {

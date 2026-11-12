@@ -1,4 +1,5 @@
 import { Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
@@ -90,7 +91,13 @@ export function AppHeader({
         {actions}
       </div>
       <div className="mx-auto flex max-w-[592px] items-start justify-between gap-4 lg:max-w-[1138px]">
-        <div className="min-w-0 pt-1">
+        <motion.div
+          key={title}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+          className="min-w-0 pt-1"
+        >
           <h1 className="flex items-center gap-2.5 font-serif text-[28px] font-semibold leading-[1.1] tracking-[-0.01em] text-sn-navy sm:text-[34px] lg:text-[40px]">
             <span className="truncate">{heading}</span>
           </h1>
@@ -99,7 +106,7 @@ export function AppHeader({
               <span className="truncate">{sub}</span>
             </p>
           )}
-        </div>
+        </motion.div>
 
         <div className="hidden sm:block">{actions}</div>
       </div>

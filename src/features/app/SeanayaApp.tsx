@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { motion, MotionConfig } from "framer-motion";
 import { PinGate } from "@/features/pin/PinGate";
 import { useRelationship } from "@/hooks/useRelationship";
 import { useAppStore } from "./store";
@@ -7,12 +8,15 @@ import { BottomNav } from "@/features/nav/BottomNav";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { HomeView } from "@/features/views/HomeView";
-import { CalendarView } from "@/features/views/CalendarView";
-import { MemoriesView } from "@/features/views/MemoriesView";
-import { WallView } from "@/features/views/WallView";
-import { StickersView } from "@/features/views/StickersView";
-import { PetView } from "@/features/views/PetView";
-import { PhotoBoothView } from "@/features/photobooth/PhotoBoothView";
+// Secondary sections load on first visit, keeping the first paint light.
+const CalendarView = lazy(() => import("@/features/views/CalendarView").then((m) => ({ default: m.CalendarView })));
+const MemoriesView = lazy(() => import("@/features/views/MemoriesView").then((m) => ({ default: m.MemoriesView })));
+const WallView = lazy(() => import("@/features/views/WallView").then((m) => ({ default: m.WallView })));
+const StickersView = lazy(() => import("@/features/views/StickersView").then((m) => ({ default: m.StickersView })));
+const PetView = lazy(() => import("@/features/views/PetView").then((m) => ({ default: m.PetView })));
+const PhotoBoothView = lazy(() =>
+  import("@/features/photobooth/PhotoBoothView").then((m) => ({ default: m.PhotoBoothView })),
+);
 import { Sheet } from "./Sheet";
 import { AddMemorySheet } from "@/features/sheets/AddMemorySheet";
 import { AddEventSheet } from "@/features/sheets/AddEventSheet";
@@ -28,10 +32,31 @@ import { MonthsaryWrapped } from "@/features/monthsary/MonthsaryWrapped";
 import { bootTheme } from "@/lib/theme";
 import { ART, Sparkle } from "@/components/seanaya/art";
 
-/** Fixed page scenery: a band of clouds along the bottom, one lily and a few sparkles. */
+const PETALS = [
+  { left: "8%", size: 26, img: 1, dur: 26, delay: -4, sway: "80px", spin: "300deg", mobile: true },
+  { left: "22%", size: 18, img: 2, dur: 31, delay: -19, sway: "-60px", spin: "-220deg", mobile: false },
+  { left: "41%", size: 22, img: 3, dur: 28, delay: -11, sway: "70px", spin: "260deg", mobile: true },
+  { left: "63%", size: 16, img: 1, dur: 34, delay: -26, sway: "-50px", spin: "200deg", mobile: false },
+  { left: "78%", size: 24, img: 2, dur: 29, delay: -8, sway: "50px", spin: "-280deg", mobile: true },
+  { left: "92%", size: 18, img: 3, dur: 33, delay: -16, sway: "-70px", spin: "240deg", mobile: false },
+];
+
+/** Fixed page scenery: clouds, a lily, drifting petals and a few sparkles. */
 function SkyBackdrop() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden">
+      <img
+        src="/art/cloud-puff.webp"
+        alt=""
+        className="sn-cloud -left-24 top-[18%] w-[420px] opacity-60"
+        style={{ ["--dur" as string]: "46s" }}
+      />
+      <img
+        src="/art/cloud-puff.webp"
+        alt=""
+        className="sn-cloud -right-28 top-[48%] hidden w-[360px] opacity-50 md:block"
+        style={{ ["--dur" as string]: "38s" }}
+      />
       <div
         className="absolute inset-x-0 bottom-0 h-[110px] opacity-95"
         style={{
@@ -46,6 +71,22 @@ function SkyBackdrop() {
         alt=""
         className="absolute -top-[46px] right-[max(338px,calc(50%-412px))] hidden w-[230px] -rotate-[18deg] opacity-95 xl:block"
       />
+      {PETALS.map((p, i) => (
+        <img
+          key={i}
+          src={`/art/petal-${p.img}.png`}
+          alt=""
+          className={`sn-petal ${p.mobile ? "" : "hidden md:block"}`}
+          style={{
+            left: p.left,
+            width: p.size,
+            ["--dur" as string]: `${p.dur}s`,
+            ["--delay" as string]: `${p.delay}s`,
+            ["--sway" as string]: p.sway,
+            ["--spin" as string]: p.spin,
+          }}
+        />
+      ))}
       <Sparkle className="absolute left-[78%] top-[38px] hidden h-7 w-7 text-white/90 lg:block" />
       <Sparkle className="absolute left-[53%] top-[34px] hidden h-3.5 w-3.5 text-white/80 lg:block" />
       <Sparkle className="absolute bottom-[34px] left-[32%] h-5 w-5 text-white/90" />
@@ -226,6 +267,7 @@ function Inner() {
   const fallbackRelId =
     typeof window !== "undefined" ? localStorage.getItem("seanaya.rel_id") : null;
   const isUrlPreview =
+    import.meta.env.DEV &&
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("preview") === "true";
 
@@ -315,6 +357,14 @@ function Inner() {
         {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
 
         <main className="flex-1">
+          <MotionConfig reducedMotion="user">
+          <Suspense fallback={<div className="h-[60vh]" />}>
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          >
           {tab === "home" && <HomeView relationshipId={relId} anniversary={effectiveRel?.anniversary ?? null} />}
           {tab === "calendar" && <CalendarView relationshipId={relId} />}
           {tab === "memories" && <MemoriesView relationshipId={relId} />}
@@ -322,6 +372,9 @@ function Inner() {
           {tab === "stickers" && <StickersView relationshipId={relId} />}
           {tab === "pet" && <PetView relationshipId={relId} />}
           {tab === "photobooth" && <PhotoBoothView relationshipId={relId} />}
+          </motion.div>
+          </Suspense>
+          </MotionConfig>
         </main>
       </div>
       </div>

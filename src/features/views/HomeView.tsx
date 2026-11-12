@@ -151,9 +151,9 @@ export function HomeView({
         </button>
       )}
 
-      <div className="grid gap-[18px] lg:grid-cols-[minmax(0,1.225fr)_minmax(0,1fr)]">
+      <div className="grid gap-y-12 pt-4 lg:grid-cols-[minmax(0,1.225fr)_minmax(0,1fr)] lg:gap-x-16 lg:gap-y-14 lg:pt-8">
         {/* ───── Postcard: the two of you ───── */}
-        <section className="sn-card @container flex flex-col justify-between gap-5 px-5 pb-5 pt-6 sm:px-6 sm:pb-[18px]">
+        <section className="@container flex flex-col justify-between gap-6">
           <div className="relative grid grid-cols-2 items-center gap-4 @min-[570px]:flex @min-[570px]:justify-between">
             <Person side="left" name={me} city={myCity} portrait={chibiFor(me)} />
             <div
@@ -202,7 +202,7 @@ export function HomeView({
         {/* ───── Studio ───── */}
         <section
           onClick={() => setTab("photobooth")}
-          className="sn-card sn-card-lavender group flex cursor-pointer flex-col px-5 pb-5 pt-5 sm:px-[26px] sm:pb-6 sm:pt-[22px]"
+          className="group flex cursor-pointer flex-col"
         >
           <h2 className="sn-label">Studio</h2>
           <div className="relative mt-4 flex flex-1 items-start gap-5">
@@ -229,7 +229,7 @@ export function HomeView({
         {/* ───── Together ───── */}
         <section
           {...longPressProps}
-          className="sn-card relative flex flex-col justify-center overflow-hidden px-6 py-6 sm:px-[34px] sm:py-7"
+          className="relative flex flex-col justify-center"
         >
           <h2 className="sn-label">Together</h2>
           <div className="relative z-10 mt-3 flex items-baseline gap-3">
@@ -249,7 +249,7 @@ export function HomeView({
             src={ART.lilyOpen}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute -bottom-14 -right-8 w-[190px] rotate-[-28deg] select-none"
+            className="pointer-events-none absolute -bottom-6 right-0 hidden w-[150px] rotate-[-24deg] select-none sm:block"
           />
         </section>
 
@@ -257,7 +257,7 @@ export function HomeView({
         <section
           onClick={openMonthsary}
           title="Open our monthsary story"
-          className="sn-card @container flex cursor-pointer flex-col justify-center px-5 py-6 transition-shadow hover:shadow-[0_26px_48px_-26px_rgba(80,98,172,0.55)] sm:px-[30px]"
+          className="@container flex cursor-pointer flex-col justify-center"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="sn-label">Monthly milestone</h2>
@@ -303,15 +303,15 @@ export function HomeView({
         </section>
 
         {/* ───── Upcoming moments ───── */}
-        <section className="sn-card px-5 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-[22px] lg:col-span-2">
+        <section className="lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="sn-label">Upcoming moments</h2>
-            <button onClick={() => setTab("calendar")} className="sn-pill h-9 px-4 text-[14px]">
+            <button onClick={() => setTab("calendar")} className="sn-pill relative z-10 h-9 px-4 text-[14px]">
               Calendar
               <ArrowRight size={16} strokeWidth={2} />
             </button>
           </div>
-          <div className="relative mt-4 overflow-hidden rounded-[22px] border border-white/80 bg-[linear-gradient(90deg,#fdeef4,#fbf2f7_55%,#f3f0fb)] p-4 sm:pr-[220px]">
+          <div className="relative mt-5 sm:pr-[190px]">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex h-[64px] w-[72px] shrink-0 flex-col items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#fde4ee,#f8d0df)] shadow-[0_8px_16px_-10px_rgba(201,69,122,0.55)]">
                 <span className="text-[13px] font-semibold uppercase leading-none tracking-[0.04em] text-[#cf4c80]">
@@ -336,7 +336,7 @@ export function HomeView({
               src={ART.bouquet}
               alt=""
               aria-hidden
-              className="pointer-events-none absolute -bottom-6 right-2 hidden w-[200px] select-none sm:block"
+              className="pointer-events-none absolute -bottom-8 right-2 hidden w-[160px] select-none [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_55%,transparent_100%)] sm:block"
             />
           </div>
         </section>

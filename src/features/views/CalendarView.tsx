@@ -31,6 +31,7 @@ import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
+import { LevelPath, LEVEL_ROW } from "./LevelPath";
 import { Lightbox } from "@/lib/Lightbox";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -249,34 +250,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const leading = getDay(startOfMonth(cursor));
   const today = new Date();
 
-  // Timeline S-curve drawing coordinates
-  const rowHeight = 185;
-  const cx_0 = containerWidth / 6;
-  const cx_1 = containerWidth / 2;
-  const cx_2 = (containerWidth * 5) / 6;
-
-  const points = useMemo(() => {
-    return groupedMemories.map((_, i) => {
-      const rem = i % 4;
-      let x = cx_1;
-      if (rem === 0) x = cx_0;
-      else if (rem === 2) x = cx_2;
-      return { x, y: i * rowHeight + 85 };
-    });
-  }, [groupedMemories, containerWidth]);
-
-  const pathD = useMemo(() => {
-    if (points.length === 0) return "";
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const cp1y = prev.y + rowHeight / 2;
-      const cp2y = curr.y - rowHeight / 2;
-      d += ` C ${prev.x} ${cp1y}, ${curr.x} ${cp2y}, ${curr.x} ${curr.y}`;
-    }
-    return d;
-  }, [points]);
+  const rowHeight = LEVEL_ROW;
 
   const matchingDateGroups = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -362,7 +336,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         </div>
       ) : groupedMemories.length === 0 ? (
         <div className="mt-4 flex flex-col items-center justify-center px-6 pb-8 pt-4 text-center">
-          <img src="/lily2.png" alt="" aria-hidden className="w-[132px] -rotate-12 select-none" />
+          <img src="/lily2.webp" alt="" aria-hidden className="w-[132px] -rotate-12 select-none" />
           <div className="mt-2 font-serif text-[21px] font-semibold text-sn-navy">
             The first page is still blank
           </div>
@@ -372,33 +346,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
         </div>
       ) : (
         <>
-          {/* Connector Path */}
-          {points.length > 1 && (
-            <svg className="absolute inset-x-5 top-0 bottom-0 w-[calc(100%-2.5rem)] h-full pointer-events-none z-0">
-              <defs>
-                <filter id="timeline-glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-              <path
-                d={pathD}
-                fill="none"
-                stroke="oklch(0.68 0.09 240 / 0.12)"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <path
-                d={pathD}
-                fill="none"
-                stroke="oklch(0.68 0.09 240 / 0.35)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray="8 8"
-                filter="url(#timeline-glow)"
-              />
-            </svg>
-          )}
+          <LevelPath count={groupedMemories.length} />
 
           {/* Bubbles Grid */}
           <div
@@ -414,7 +362,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 <div
                   key={group.date || `mem-${idx}`}
                   id={`bubble-${group.date || ""}`}
-                  className={`flex flex-col items-center justify-center ${colClass}`}
+                  className={`flex flex-col items-center justify-start pt-[30px] ${colClass}`}
                   style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                 >
                   <div className="flex items-center justify-center -space-x-3.5">
@@ -438,7 +386,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 setActiveMemory(m);
                               }
                             }}
-                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-[0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 ${sizeClass} ${
+                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-[3px] border-white bg-[#f4f6fe] shadow-[0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 ${sizeClass} ${
                               isWrappedMemory(m)
                                 ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
                                 : ""
@@ -462,13 +410,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                               >
                                 {formattedMDate ? (
                                   <>
-                                    <span className="text-[8px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
+                                    <span className="text-[10px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
                                       {format(formattedMDate, "MMM")}
                                     </span>
                                     <span className="display text-xl font-bold mt-0.5 leading-none">
                                       {format(formattedMDate, "d")}
                                     </span>
-                                    <span className="text-[7px] text-foreground/70 mt-0.5 leading-none">
+                                    <span className="text-[9.5px] text-foreground/70 mt-0.5 leading-none">
                                       {format(formattedMDate, "yyyy")}
                                     </span>
                                   </>
@@ -709,7 +657,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* Consistent Stacked Floating Action Buttons at bottom right */}
-      <div className="fixed bottom-24 right-5 z-40 flex flex-col gap-2.5 items-end justify-end pointer-events-none">
+      <div className="sn-fab-dock flex flex-col-reverse gap-2.5 items-end justify-end pointer-events-none lg:items-start">
         <AnimatePresence mode="wait">
           {!isExpanded ? (
             <motion.button
@@ -723,7 +671,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               <Plus size={16} /> Add
             </motion.button>
           ) : (
-            <div className="flex flex-col gap-2.5 items-end">
+            <div className="flex flex-col gap-2.5 items-end lg:items-start">
               <motion.button
                 key="add-moment-btn"
                 initial={{ opacity: 0, y: 15, scale: 0.8 }}
@@ -835,25 +783,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               className="relative w-full flex-1"
               style={{ minHeight: `${groupedMemories.length * rowHeight + 100}px` }}
             >
-              {points.length > 1 && (
-                <svg className="absolute inset-x-5 top-0 bottom-0 w-[calc(100%-2.5rem)] h-full pointer-events-none z-0">
-                  <path
-                    d={pathD}
-                    fill="none"
-                    stroke="oklch(0.68 0.09 240 / 0.12)"
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d={pathD}
-                    fill="none"
-                    stroke="oklch(0.68 0.09 240 / 0.35)"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeDasharray="8 8"
-                  />
-                </svg>
-              )}
+              <LevelPath count={groupedMemories.length} />
 
               <div
                 className="relative z-10 grid grid-cols-3"
@@ -868,7 +798,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     <div
                       key={group.date || `fs-mem-${idx}`}
                       id={`fullscreen-bubble-${group.date || ""}`}
-                      className={`flex flex-col items-center justify-center ${colClass}`}
+                      className={`flex flex-col items-center justify-start pt-[30px] ${colClass}`}
                       style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                     >
                       <div className="flex items-center justify-center -space-x-3.5">
@@ -891,7 +821,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                   setActiveMemory(m);
                                 }
                               }}
-                              className={`group relative rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-white/20 backdrop-blur-[2px] shadow-md transition-all hover:scale-105 ${sizeClass} ${
+                              className={`group relative rounded-full flex items-center justify-center overflow-hidden border-[3px] border-white bg-[#f4f6fe] shadow-md transition-all hover:scale-105 ${sizeClass} ${
                                 isWrappedMemory(m)
                                   ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
                                   : ""
@@ -908,13 +838,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 <div className="relative z-10 flex flex-col items-center text-foreground font-bold">
                                   {formattedMDate ? (
                                     <>
-                                      <span className="text-[8px] uppercase">
+                                      <span className="text-[10px] uppercase">
                                         {format(formattedMDate, "MMM")}
                                       </span>
                                       <span className="text-xl leading-none mt-0.5">
                                         {format(formattedMDate, "d")}
                                       </span>
-                                      <span className="text-[7px] opacity-70 mt-0.5">
+                                      <span className="text-[9.5px] opacity-70 mt-0.5">
                                         {format(formattedMDate, "yyyy")}
                                       </span>
                                     </>

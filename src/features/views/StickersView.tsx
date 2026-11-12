@@ -516,7 +516,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         <>
           <button
             {...longPressProps}
-            className="fixed bottom-24 right-5 z-40 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
+            className="sn-fab-dock sn-pill h-12 px-5 text-[15px]"
           >
             <Plus size={16} /> Add sticker
           </button>

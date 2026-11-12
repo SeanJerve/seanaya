@@ -251,7 +251,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   };
 
   const initApp = async () => {
+    // Local development only: production builds ignore ?preview=true.
     const urlPreview =
+      import.meta.env.DEV &&
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).get("preview");
     if (urlPreview === "true") {
@@ -391,7 +393,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
     const stickerSources = [
       "/stickers/sticker_0_dbf609.png",
       "/stickers/sticker_1_25567c.png",
-      "/couple-sticker.png",
+      "/couple-sticker.webp",
       "/stickers/sticker_3_311950.png",
       "/stickers/sticker_4_8591e5.png",
       "/stickers/sticker_5_6523c4.png",
@@ -931,7 +933,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.img
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                src="/couple-sticker.png"
+                src="/couple-sticker.webp"
                 alt="Sean & Aya Sticker"
                 className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-[0_12px_28px_rgba(14,165,233,0.22)]"
               />

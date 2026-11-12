@@ -38,7 +38,7 @@ const SLIDE_DURATION_MS = 7500;
 const STICKER_SOURCES = [
   "/stickers/sticker_0_dbf609.png",
   "/stickers/sticker_1_25567c.png",
-  "/couple-sticker.png",
+  "/couple-sticker.webp",
   "/stickers/sticker_3_311950.png",
   "/stickers/sticker_4_8591e5.png",
   "/stickers/sticker_5_6523c4.png",
@@ -58,7 +58,7 @@ const PRELOADED_STICKER_IMAGES: HTMLImageElement[] =
 
 if (typeof window !== "undefined") {
   const coupleImg = new Image();
-  coupleImg.src = "/couple-sticker.png";
+  coupleImg.src = "/couple-sticker.webp";
 }
 
 const sentenceVariants = {
@@ -544,7 +544,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   <motion.img
                     animate={{ y: [0, -9, 0] }}
                     transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-                    src="/couple-sticker.png"
+                    src="/couple-sticker.webp"
                     alt="Sean & Aya Sticker"
                     className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-[0_12px_28px_rgba(14,165,233,0.22)]"
                   />

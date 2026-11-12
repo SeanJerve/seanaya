@@ -127,7 +127,7 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
                 className="absolute top-1/2"
               >
                 <img
-                  src="/main-lily.png"
+                  src="/main-lily.webp"
                   alt="lily petal"
                   style={{ width: p.size, height: p.size }}
                   className="object-contain drop-shadow-[0_4px_12px_rgba(244,114,182,0.3)] opacity-90"

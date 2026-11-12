@@ -277,7 +277,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
 
         {nothing ? (
           <div className="sn-card mx-auto my-6 flex max-w-[460px] flex-col items-center px-8 pb-9 pt-6 text-center">
-            <img src="/lily1.png" alt="" aria-hidden className="w-[120px] -rotate-6 select-none" />
+            <img src="/lily1.webp" alt="" aria-hidden className="w-[120px] -rotate-6 select-none" />
             <div className="mt-2 font-serif text-[22px] font-semibold text-sn-navy">Nothing pinned this month</div>
             <p className="mt-1.5 text-[14.5px] leading-relaxed text-sn-muted">
               Drop a photo here or leave a new note for each other.
@@ -417,7 +417,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       {/* FAB */}
       <button
         {...longPressProps}
-        className="fixed bottom-24 right-5 z-40 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
+        className="sn-fab-dock sn-pill h-12 px-5 text-[15px]"
       >
         <Plus size={16} /> New note
       </button>

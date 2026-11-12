@@ -72,8 +72,8 @@ export const PHOTO_FILTERS: { id: string; name: string; cssFilter: string }[] = 
 ];
 
 export const BOOTH_STICKERS = [
-  { id: "lily", src: "/main-lily.png", label: "White Lily" },
-  { id: "couple", src: "/couple-sticker.png", label: "Sean & Aya" },
+  { id: "lily", src: "/main-lily.webp", label: "White Lily" },
+  { id: "couple", src: "/couple-sticker.webp", label: "Sean & Aya" },
   { id: "sticker_0", src: "/stickers/sticker_0_dbf609.png", label: "Sweet Kiss" },
   { id: "sticker_1", src: "/stickers/sticker_1_25567c.png", label: "Cute Hug" },
   { id: "sticker_3", src: "/stickers/sticker_3_311950.png", label: "Star Sparkle" },
