@@ -941,7 +941,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
 
                   <button
                     onClick={closeMonthsary}
-                    className="flex-[2] rounded-full bg-primary text-primary-foreground py-2.5 px-4 text-xs font-bold hover:opacity-95 active:scale-95 transition flex items-center justify-center shadow-soft"
+                    className="sn-pill flex-[2] h-11 px-4 text-[14.5px]"
                   >
                     Continue
                   </button>

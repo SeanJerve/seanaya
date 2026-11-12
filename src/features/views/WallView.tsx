@@ -251,47 +251,37 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   type="button"
                   disabled={!canPrev}
                   onClick={() => setSelectedMonth(availableMonths[idx + 1])}
-                  className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
-                    canPrev
-                      ? "text-foreground hover:bg-white/60 cursor-pointer"
-                      : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
-                  }`}
+                  className="sn-pill sn-icon-btn h-10 w-10"
                   title="Previous month"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={18} strokeWidth={2} />
                 </button>
-                <h1 className="display text-3xl font-semibold text-foreground/90 capitalize leading-none pt-1">
+                <h2 className="font-serif text-[26px] font-semibold capitalize leading-none text-sn-navy">
                   {monthLabel}
-                </h1>
+                </h2>
                 <button
                   type="button"
                   disabled={!canNext}
                   onClick={() => setSelectedMonth(availableMonths[idx - 1])}
-                  className={`p-1.5 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm transition-all active:scale-95 ${
-                    canNext
-                      ? "text-foreground hover:bg-white/60 cursor-pointer"
-                      : "text-muted-foreground/40 opacity-40 cursor-not-allowed"
-                  }`}
+                  className="sn-pill sn-icon-btn h-10 w-10"
                   title="Next month"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={18} strokeWidth={2} />
                 </button>
               </div>
-              <div className="text-[11px] font-semibold text-muted-foreground">
-                {filteredNotes.length} items
+              <div className="text-[14px] text-sn-muted">
+                {filteredNotes.length} {filteredNotes.length === 1 ? "note" : "notes"}
               </div>
             </div>
           );
         })()}
 
         {nothing ? (
-          <div
-            className="rounded-3xl border border-dashed border-foreground/20 p-12 text-center my-6"
-            style={{ background: "oklch(0.97 0.02 70 / 0.5)" }}
-          >
-            <div className="display text-xl text-foreground/60">This month's board is empty.</div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Drop a photo or click "New note" to begin pinning.
+          <div className="sn-card mx-auto my-6 flex max-w-[460px] flex-col items-center px-8 pb-9 pt-6 text-center">
+            <img src="/lily1.png" alt="" aria-hidden className="w-[120px] -rotate-6 select-none" />
+            <div className="mt-2 font-serif text-[22px] font-semibold text-sn-navy">Nothing pinned this month</div>
+            <p className="mt-1.5 text-[14.5px] leading-relaxed text-sn-muted">
+              Drop a photo here or leave a new note for each other.
             </p>
           </div>
         ) : (
@@ -428,7 +418,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
       {/* FAB */}
       <button
         {...longPressProps}
-        className="fixed bottom-24 right-5 z-40 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+        className="fixed bottom-24 right-5 z-40 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
       >
         <Plus size={16} /> New note
       </button>

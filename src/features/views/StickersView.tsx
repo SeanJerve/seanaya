@@ -8,6 +8,7 @@ import { Plus, Trash2, LayoutGrid, Eye, PlusCircle, Trash, Search, X } from "luc
 import { Lightbox } from "@/lib/Lightbox";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
+import { useUser } from "@/hooks/useUser";
 
 type StickerPage = {
   id: string;
@@ -153,11 +154,21 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   const activeBg =
     PAD_BACKGROUNDS.find((b) => b.key === activePage?.bg_theme) || PAD_BACKGROUNDS[0];
 
+  // First visit: make one starting page. Only once, only when signed in, and quietly —
+  // retrying on every render used to spam row-level-security errors.
+  const { user } = useUser();
+  const autoCreated = useRef(false);
   useEffect(() => {
-    if (isFetched && pages.length === 0 && !createPage.isPending) {
-      createPage.mutate("Main Page");
-    }
-  }, [pages, isFetched]);
+    if (!isFetched || pages.length > 0 || autoCreated.current || !user || !relationshipId) return;
+    autoCreated.current = true;
+    supabase
+      .from("sticker_pages")
+      .insert({ relationship_id: relationshipId, name: "Main Page", bg_theme: "white" })
+      .then(({ error }) => {
+        if (!error) refetchPages();
+        else console.warn("[stickers] could not create first page:", error.message);
+      });
+  }, [isFetched, pages.length, user, relationshipId, refetchPages]);
 
   useEffect(() => {
     if (activePage?.id && activePage.id !== activeStickerPageId) {
@@ -506,7 +517,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         <>
           <button
             {...longPressProps}
-            className="fixed bottom-24 right-5 z-40 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+            className="fixed bottom-24 right-5 z-40 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
           >
             <Plus size={16} /> Add sticker
           </button>
@@ -547,20 +558,20 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                 placeholder="e.g. Doodles, Cute Cats"
                 value={newPageName}
                 onChange={(e) => setNewPageName(e.target.value)}
-                className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
+                className="w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
               />
               <div className="flex gap-2 text-xs font-semibold pt-1">
                 <button
                   type="button"
                   onClick={() => setNewPageOpen(false)}
-                  className="flex-1 py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/75 active:scale-95 transition-all"
+                  className="sn-ghost flex-1 h-11 text-[14.5px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newPageName.trim() || createPage.isPending}
-                  className="flex-1 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white active:scale-95 transition-all shadow-md"
+                  className="sn-pill flex-1 h-11 text-[14.5px]"
                 >
                   Create
                 </button>

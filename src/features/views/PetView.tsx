@@ -510,7 +510,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       {/* ── Welcome Cat FAB bottom right ── */}
       <button
         {...longPressProps}
-        className="fixed bottom-24 right-5 z-20 flex items-center gap-2 rounded-full border border-white/50 bg-white/70 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_10px_30px_-10px_rgba(80,110,160,0.4)] hover:bg-white/80 active:scale-95 transition-all"
+        className="fixed bottom-24 right-5 z-20 sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
       >
         <Plus size={16} /> Welcome Cat
       </button>
@@ -556,7 +556,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   placeholder="Mocha, Lily, etc..."
                   value={petName}
                   onChange={(e) => setPetName(e.target.value)}
-                  className="font-sans w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
+                  className="font-sans w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
                 />
               </div>
 
@@ -704,7 +704,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             <button
               onClick={saveCroppedFace}
               disabled={isUploading}
-              className="w-full py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold active:scale-95 transition-all shadow-md disabled:opacity-50"
+              className="sn-pill w-full h-12 text-[15px]"
             >
               {isUploading ? "Processing..." : "Save Face Image"}
             </button>

@@ -10,7 +10,6 @@ import {
   Play,
   SkipBack,
   SkipForward,
-  Heart,
   type LucideIcon,
 } from "lucide-react";
 import { useAppStore, type TabKey } from "@/features/app/store";
@@ -47,7 +46,7 @@ export function DesktopSidebar({ className = "" }: { className?: string }) {
 
   const togglePlay = () => {
     setIsPlaying((prev) => {
-      if (!prev) toast.success(`Playing "${track.title}" on Seanaya FM ♡`);
+      if (!prev) toast.success(`Playing "${track.title}" on Seanaya FM`);
       return !prev;
     });
   };
@@ -77,7 +76,6 @@ export function DesktopSidebar({ className = "" }: { className?: string }) {
           </div>
           <div className="mt-2 flex items-center gap-1 text-[12px] tracking-[0.05em] text-sn-muted">
             our little archive
-            <Heart size={11} strokeWidth={1.8} className="text-[#7d8dcc]" />
           </div>
         </div>
 

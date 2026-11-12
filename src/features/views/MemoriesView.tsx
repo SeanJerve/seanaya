@@ -584,17 +584,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         </div>
       </motion.div>
 
-      {/* Quick jump to LDR Photo Booth */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setTab("photobooth");
-        }}
-        className="sn-pill absolute bottom-24 z-20 h-11 px-5 text-[14px] font-semibold"
-      >
-        <Camera size={17} strokeWidth={1.7} className="text-[#5b6aa6]" />
-        <span>Open LDR Photo Booth</span>
-      </button>
     </div>
   );
 
@@ -1482,20 +1471,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 placeholder="e.g. Summer Vacation, My Love"
                 value={renameNameText}
                 onChange={(e) => setRenameNameText(e.target.value)}
-                className="w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary transition-all shadow-inner"
+                className="w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
               />
               <div className="flex gap-2 text-xs font-semibold pt-1">
                 <button
                   type="button"
                   onClick={() => setRenameModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/75 active:scale-95 transition-all"
+                  className="sn-ghost flex-1 h-11 text-[14.5px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!renameNameText.trim() || renamePage.isPending}
-                  className="flex-1 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white active:scale-95 transition-all shadow-md"
+                  className="sn-pill flex-1 h-11 text-[14.5px]"
                 >
                   Save
                 </button>

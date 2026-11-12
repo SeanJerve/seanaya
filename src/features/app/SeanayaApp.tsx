@@ -196,6 +196,18 @@ function Inner() {
         {
           event: "*",
           schema: "public",
+          table: "member_locations",
+          filter: `relationship_id=eq.${currentRelId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["member-locations"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
           table: "hugs",
           filter: `relationship_id=eq.${currentRelId}`,
         },

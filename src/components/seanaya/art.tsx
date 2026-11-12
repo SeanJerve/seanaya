@@ -16,6 +16,7 @@ export const ART = {
   polaroidDusk: "/art/polaroid-dusk.webp",
   bouquet: "/art/lily-bouquet.webp",
   albumSky: "/art/album-sky.webp",
+  clayHeart: "/art/clay-heart.png",
   cloudBand: "/art/cloud-band.webp",
   lilyOpen: "/lily2.png",
   lilyWatercolor: "/lily1.png",
@@ -192,17 +193,15 @@ export function LogoMark({ className = "" }: { className?: string }) {
   );
 }
 
-/** Today marker for the planner calendar: a plump pink heart. */
+/** Today marker: a pastel clay heart. */
 export function TodayHeart({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden className={`pointer-events-none ${className}`}>
-      <defs>
-        <linearGradient id="sn-today" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fde3ee" />
-          <stop offset="1" stopColor="#f7bfd6" />
-        </linearGradient>
-      </defs>
-      <path d={HEART} fill="url(#sn-today)" stroke="#f3a9c7" strokeWidth="0.6" strokeLinejoin="round" />
-    </svg>
+    <img
+      src={ART.clayHeart}
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={`pointer-events-none select-none ${className}`}
+    />
   );
 }

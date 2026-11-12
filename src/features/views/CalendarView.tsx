@@ -575,7 +575,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 {isToday && (
-                  <div className="absolute inset-0 rounded-full bg-[linear-gradient(180deg,#fde3ee,#f7bfd6)] shadow-[0_4px_10px_-4px_rgba(236,122,164,0.6)]" />
+                  <img src="/art/clay-heart.png" alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[118%] w-[118%] max-w-none -translate-x-1/2 -translate-y-[46%] select-none" />
                 )}
 
                 {!dayPhoto && !isToday && (
@@ -719,7 +719,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => setIsExpanded(true)}
-              className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-primary text-white px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.5),0_4px_12px_rgba(0,0,0,0.12)] hover:bg-primary/95 active:scale-95 transition-all font-semibold"
+              className="pointer-events-auto sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
             >
               <Plus size={16} /> Add
             </motion.button>
@@ -734,7 +734,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   openSheet("add-event");
                   setIsExpanded(false);
                 }}
-                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/80 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.45),0_4px_12px_rgba(0,0,0,0.1)] hover:bg-white/90 active:scale-95 transition-all font-semibold"
+                className="pointer-events-auto sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
               >
                 <Plus size={16} /> Add Moment
               </motion.button>
@@ -747,7 +747,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   openSheet("add-memory");
                   setIsExpanded(false);
                 }}
-                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/80 backdrop-blur-2xl px-5 py-3 text-sm shadow-[0_15px_30px_-5px_rgba(80,110,160,0.45),0_4px_12px_rgba(0,0,0,0.1)] hover:bg-white/90 active:scale-95 transition-all font-semibold"
+                className="pointer-events-auto sn-pill h-12 px-5 text-[15px] shadow-[0_14px_30px_-12px_rgba(60,90,200,0.7)]"
               >
                 <Plus size={16} /> Add Memory
               </motion.button>
@@ -757,7 +757,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={() => setIsExpanded(false)}
-                className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-4 py-2 text-xs text-foreground/60 hover:text-foreground active:scale-95 transition-all shadow-md"
+                className="pointer-events-auto sn-ghost h-10 px-4 text-[14px]"
               >
                 <X size={12} /> Cancel
               </motion.button>
@@ -1016,7 +1016,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     setActiveMemory(null);
                     openMonthsary();
                   }}
-                  className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold transition-all text-center shadow-[0_4px_16px_rgba(14,165,233,0.35)] flex items-center justify-center gap-2 hover:bg-primary/95 active:scale-95"
+                  className="sn-pill w-full h-12 text-[15px]"
                 >
                   <Play size={13} fill="currentColor" />
                   Play 3rd Monthsary Wrapped

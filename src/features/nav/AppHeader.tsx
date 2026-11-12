@@ -1,11 +1,10 @@
-import { Heart, Bell, Search } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { useNotifications } from "@/hooks/useNotifications";
 import { useAppStore } from "@/features/app/store";
-import { pinStorage } from "@/features/pin/pin-utils";
+import { useCoupleNames } from "@/hooks/useCouple";
 import { chibiFor } from "@/components/seanaya/art";
 
 const SUBTITLES: Record<string, string> = {
@@ -29,8 +28,7 @@ export function AppHeader({
   const { user } = useUser();
   const qc = useQueryClient();
   const { openSheet } = useAppStore();
-  const { unread } = useNotifications(relationshipId);
-  const userName = pinStorage.getName() ?? "Sean";
+  const { me: userName, partner } = useCoupleNames();
 
   const hug = useMutation({
     mutationFn: async () => {
@@ -41,7 +39,7 @@ export function AppHeader({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("A warm hug is on its way ♡");
+      toast.success(`Hug sent to ${partner}`);
       qc.invalidateQueries({ queryKey: ["stats"] });
     },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
@@ -51,42 +49,20 @@ export function AppHeader({
   const heading = isHome ? `Welcome back, ${userName}.` : title;
   const sub = subtitle ?? SUBTITLES[title];
 
-  const round =
-    "relative grid h-11 w-11 sm:h-[52px] sm:w-[52px] place-items-center rounded-full border border-white/95 transition active:scale-95 shadow-[var(--shadow-pill)]";
 
   const actions = (
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-      <button
-        onClick={() => openSheet("add-memory")}
-        className={`${round} bg-[#f6f6fe] text-sn-navy hover:bg-white`}
-        aria-label="Add a memory"
-        title="Add a memory"
-      >
-        <Search size={21} strokeWidth={1.7} />
-      </button>
-
       <button
         onClick={() => {
           if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([30, 70]);
           hug.mutate();
         }}
         disabled={hug.isPending}
-        className={`${round} bg-[#fbe6ef] hover:bg-[#fadbe8]`}
+        className="sn-pill sn-icon-btn h-11 w-11 sm:h-[52px] sm:w-[52px]"
         aria-label="Send a hug"
         title="Send a warm hug"
       >
-        <Heart size={21} strokeWidth={1.4} className="fill-[#f27fb0] text-[#e8639b]" />
-      </button>
-
-      <button
-        onClick={() => openSheet("notifications")}
-        className={`${round} bg-[#f6f6fe] text-sn-navy hover:bg-white`}
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-      >
-        <Bell size={21} strokeWidth={1.7} />
-        {unread > 0 && (
-          <span className="absolute right-[9px] top-[8px] h-[11px] w-[11px] rounded-full border-2 border-white bg-[#f2557e] sm:right-[11px] sm:top-[10px]" />
-        )}
+        <Heart size={21} strokeWidth={1.9} />
       </button>
 
       <button
@@ -117,15 +93,10 @@ export function AppHeader({
         <div className="min-w-0 pt-1 sm:pl-2 lg:pl-10">
           <h1 className="flex items-center gap-2.5 font-serif text-[28px] font-semibold leading-[1.1] tracking-[-0.01em] text-sn-navy sm:text-[34px] lg:text-[40px]">
             <span className="truncate">{heading}</span>
-            <Heart
-              strokeWidth={1.5}
-              className="h-6 w-6 shrink-0 fill-[#dfe5fb] text-[#6f86d6] lg:h-[30px] lg:w-[30px]"
-            />
           </h1>
           {sub && (
             <p className="sn-hand mt-1.5 flex items-center gap-2 text-[19px] leading-tight text-[#646d93] sm:text-[22px] lg:text-[25px]">
               <span className="truncate">{sub}</span>
-              <Heart size={18} strokeWidth={1.6} className="shrink-0 text-[#7a87bd]" />
             </p>
           )}
         </div>

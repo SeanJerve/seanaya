@@ -385,7 +385,7 @@ export function AddStickerSheet({
                 onClick={() => setActiveTool("wand")}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
                   activeTool === "wand"
-                    ? "bg-primary text-white shadow-sm"
+                    ? "sn-pill"
                     : "text-muted-foreground hover:bg-white/60"
                 }`}
                 title="Tap any background spot to erase it"
@@ -397,7 +397,7 @@ export function AddStickerSheet({
                 onClick={() => setActiveTool("restore")}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
                   activeTool === "restore"
-                    ? "bg-primary text-white shadow-sm"
+                    ? "sn-pill"
                     : "text-muted-foreground hover:bg-white/60"
                 }`}
                 title="Draw over broken areas to restore original photo"
@@ -409,7 +409,7 @@ export function AddStickerSheet({
                 onClick={() => setActiveTool("erase")}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
                   activeTool === "erase"
-                    ? "bg-primary text-white shadow-sm"
+                    ? "sn-pill"
                     : "text-muted-foreground hover:bg-white/60"
                 }`}
                 title="Draw manually to erase background"
