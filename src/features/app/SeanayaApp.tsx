@@ -384,7 +384,7 @@ function Inner() {
       <Sheet open={sheet === "add-memory"} title="New memory">
         <AddMemorySheet relationshipId={relId} />
       </Sheet>
-      <Sheet open={sheet === "add-event"} title="New event">
+      <Sheet open={sheet === "add-event"} title="New moment">
         <AddEventSheet relationshipId={relId} />
       </Sheet>
       <Sheet open={sheet === "add-note"} title="New note">

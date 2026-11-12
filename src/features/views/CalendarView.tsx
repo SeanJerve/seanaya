@@ -465,7 +465,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   return (
     <div ref={containerRef} className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-32 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0">
       {/* Calendar section */}
-      <section className="sn-card p-5 sm:p-6 lg:col-start-1">
+      <section className="sn-glass p-5 sm:p-6 lg:col-start-1">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCursor(subMonths(cursor, 1))}
@@ -546,7 +546,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* Events list */}
-      <section className="sn-card p-5 sm:p-6 lg:col-start-1">
+      <section className="sn-glass p-5 sm:p-6 lg:col-start-1">
         <h2 className="sn-label mb-4">Moment list</h2>
         {events.length === 0 ? (
           <div className="text-[15px] text-sn-muted">No moments this month</div>
@@ -586,7 +586,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* Collapsible Memories Timeline Section */}
-      <section className="sn-card relative overflow-hidden p-5 sm:p-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <section className="sn-glass relative overflow-hidden p-5 sm:p-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="sn-label">Timeline</h2>
