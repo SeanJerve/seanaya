@@ -187,7 +187,8 @@ export function RoamingPet({
   const v = parseVariant(pet.variant ?? null);
   const face = v.faceMode === "photo" && pet.photos?.[0] ? pet.photos[0] : null;
   const coatPhoto = v.patternMode === "photo" && pet.photos?.[1] ? pet.photos[1] : null;
-  const coat = COATS[v.patternColor] ?? COATS.orange;
+  const sampled = usePhotoCoat(coatPhoto ?? face);
+  const coat = sampled ?? COATS[v.patternColor] ?? COATS.orange;
 
   const align = x < 16 ? "left" : x > 84 ? "right" : "center";
 
@@ -335,8 +336,8 @@ function ChibiCat({
       {/* back legs */}
       {!sitting && (
         <>
-          <rect className={moving ? "sn-leg-a" : ""} x="17" y="35" width="5.5" height="10" rx="2.75" fill={shade} style={{ transformOrigin: "19.75px 36px" }} />
-          <rect className={moving ? "sn-leg-b" : ""} x="35" y="35" width="5.5" height="10" rx="2.75" fill={shade} style={{ transformOrigin: "37.75px 36px" }} />
+          <rect className={moving ? "sn-leg" : ""} x="17" y="35" width="5.5" height="10" rx="2.75" fill={shade} style={{ transformOrigin: "19.75px 36px", animationDelay: `calc(var(--gait) * -0)` }} />
+          <rect className={moving ? "sn-leg" : ""} x="35" y="35" width="5.5" height="10" rx="2.75" fill={shade} style={{ transformOrigin: "37.75px 36px", animationDelay: `calc(var(--gait) * -0.75)` }} />
         </>
       )}
 
@@ -363,13 +364,14 @@ function ChibiCat({
         </>
       ) : (
         <>
-          <rect className={moving ? "sn-leg-b" : ""} x="21" y="35" width="5.5" height="10" rx="2.75" fill={fur} stroke={shade} strokeWidth="0.7" style={{ transformOrigin: "23.75px 36px" }} />
-          <rect className={moving ? "sn-leg-a" : ""} x="39" y="35" width="5.5" height="10" rx="2.75" fill={fur} stroke={shade} strokeWidth="0.7" style={{ transformOrigin: "41.75px 36px" }} />
+          <rect className={moving ? "sn-leg" : ""} x="21" y="35" width="5.5" height="10" rx="2.75" fill={fur} stroke={shade} strokeWidth="0.7" style={{ transformOrigin: "23.75px 36px", animationDelay: `calc(var(--gait) * -0.5)` }} />
+          <rect className={moving ? "sn-leg" : ""} x="39" y="35" width="5.5" height="10" rx="2.75" fill={fur} stroke={shade} strokeWidth="0.7" style={{ transformOrigin: "41.75px 36px", animationDelay: `calc(var(--gait) * -0.25)` }} />
         </>
       )}
 
       {/* head */}
-      <g className={moving ? "sn-bob" : ""} transform={sitting ? "translate(33 17)" : "translate(46 20)"}>
+      <g transform={sitting ? "translate(33 17)" : "translate(46 20)"}>
+      <g className={moving ? "sn-bob" : ""}>
         <path d="M-9 -5 L-7.5 -14.5 L-1.5 -9 Z" fill={body} stroke={shade} strokeWidth="0.8" strokeLinejoin="round" />
         <path d="M-7.2 -7.5 L-6.6 -12.2 L-3.6 -9.2 Z" fill="#f6b8c8" />
         <path d="M2 -9 L8 -14.5 L9.4 -5 Z" fill={body} stroke={shade} strokeWidth="0.8" strokeLinejoin="round" />
@@ -397,8 +399,47 @@ function ChibiCat({
           </>
         )}
       </g>
+      </g>
     </svg>
   );
+}
+
+/** Sample a photo's average colour and build a coat palette from it. */
+function usePhotoCoat(url: string | null): [string, string, string, string] | null {
+  const [coat, setCoat] = useState<[string, string, string, string] | null>(null);
+  useEffect(() => {
+    if (!url) return setCoat(null);
+    let alive = true;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = c.height = 24;
+        const ctx = c.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+        // centre crop: the fur, not the background
+        const s = Math.min(img.width, img.height) * 0.6;
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 24, 24);
+        const d = ctx.getImageData(0, 0, 24, 24).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+        }
+        const base = [r / n, g / n, b / n];
+        const mix = (k: number, t: number) =>
+          "#" + base.map((v) => Math.round(Math.max(0, Math.min(255, v + (t - v) * k))).toString(16).padStart(2, "0")).join("");
+        if (alive) setCoat([mix(0.08, 255), mix(0.22, 0), mix(0.4, 0), mix(0.45, 255)]);
+      } catch {
+        /* CORS-blocked image: keep the default coat */
+      }
+    };
+    img.src = url;
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  return coat;
 }
 
 function CoatPattern({ id, href }: { id: string; href: string }) {

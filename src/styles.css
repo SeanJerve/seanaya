@@ -626,3 +626,12 @@
 .sn-tail { animation: sn-tail var(--wag, 0.9s) ease-in-out infinite; }
 .sn-breathe { animation: sn-breathe 2.6s ease-in-out infinite; }
 .sn-zzz { animation: sn-zzz 2.2s linear infinite; }
+/* Four-beat walk: swing forward with a small lift, then plant and push back */
+@keyframes sn-step {
+  0% { transform: rotate(18deg) translateY(0); }
+  25% { transform: rotate(0deg) translateY(-1.6px); }
+  50% { transform: rotate(-18deg) translateY(0); }
+  75% { transform: rotate(0deg) translateY(0); }
+  100% { transform: rotate(18deg) translateY(0); }
+}
+.sn-leg { animation: sn-step var(--gait, 0.5s) linear infinite; }
