@@ -81,7 +81,7 @@ export function AppHeader({
   );
 
   return (
-    <header className="relative z-20 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5 xl:pl-[22px] xl:pr-6 xl:pt-[22px]">
+    <header className="relative z-20 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-6 sm:pt-6">
       {/* Phone: wordmark + actions on their own row */}
       <div className="mb-4 flex items-center justify-between sm:hidden">
         <span className="font-serif text-[19px] font-medium tracking-[0.16em] text-[#38457c]">
@@ -89,8 +89,8 @@ export function AppHeader({
         </span>
         {actions}
       </div>
-      <div className="mx-auto flex max-w-[640px] items-start justify-between gap-4 lg:max-w-[1186px] xl:mx-0 xl:max-w-none">
-        <div className="min-w-0 pt-1 sm:pl-2 lg:pl-10">
+      <div className="mx-auto flex max-w-[592px] items-start justify-between gap-4 lg:max-w-[1138px]">
+        <div className="min-w-0 pt-1">
           <h1 className="flex items-center gap-2.5 font-serif text-[28px] font-semibold leading-[1.1] tracking-[-0.01em] text-sn-navy sm:text-[34px] lg:text-[40px]">
             <span className="truncate">{heading}</span>
           </h1>

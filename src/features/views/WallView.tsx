@@ -94,7 +94,6 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
     const key = "intro-dismissed-wall";
     const val = localStorage.getItem(key);
     if (!val) {
-      setShowLongPressInfo(true);
       localStorage.setItem(key, "true");
     }
   }, []);

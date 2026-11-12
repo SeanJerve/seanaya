@@ -4,7 +4,6 @@ import { useRelationship } from "@/hooks/useRelationship";
 import { useAppStore } from "./store";
 import { AppHeader } from "@/features/nav/AppHeader";
 import { BottomNav } from "@/features/nav/BottomNav";
-import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { HomeView } from "@/features/views/HomeView";
@@ -311,8 +310,6 @@ function Inner() {
       {tab !== "photobooth" && <SkyBackdrop />}
 
       <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-[1500px]">
-      {/* Sidebar on wide screens; the floating dock carries navigation elsewhere */}
-      {tab !== "photobooth" && <DesktopSidebar className="hidden xl:flex" />}
 
       <div className="relative flex min-w-0 flex-1 flex-col">
         {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}

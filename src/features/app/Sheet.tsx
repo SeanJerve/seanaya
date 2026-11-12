@@ -40,7 +40,7 @@ export function Sheet({
               wide ? { duration: 0.22, ease: [0.2, 0, 0, 1] } : { type: "spring", stiffness: 340, damping: 34 }
             }
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[28px] border border-white/90 bg-[var(--paper-blush)] shadow-[0_-20px_60px_-24px_rgba(70,88,168,0.5)] backdrop-blur-2xl sm:rounded-[28px] sm:shadow-[var(--shadow-panel)]"
+            className="flex max-h-[88vh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[28px] border border-white/90 [background:var(--paper-blush)] shadow-[0_-20px_60px_-24px_rgba(70,88,168,0.5)] backdrop-blur-2xl sm:rounded-[28px] sm:shadow-[var(--shadow-panel)]"
           >
             <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#d9dcf0] sm:hidden" />
             <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-3 sm:pt-6">

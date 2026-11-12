@@ -1,15 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useRelationship } from "./useRelationship";
-import {
-  KNOWN_CITIES,
-  calculateDistanceKm,
-  getPartnerCity,
-  resolveCity,
-  setUserCity,
-} from "@/lib/location-service";
+import { KNOWN_CITIES, calculateDistanceKm, setUserCity } from "@/lib/location-service";
 
 /** Short names read as initials: "Sj" → "SJ". */
 export function displayName(raw: string | null | undefined, fallback: string) {
@@ -92,44 +86,42 @@ async function shareSpot(relationshipId: string, slot: Slot, spot: Spot) {
     .then(() => undefined, () => undefined);
 }
 
+export type LocationStatus = "locating" | "ok" | "denied" | "unsupported";
+
 /**
- * Where each of you is today. Your spot comes from the device once a day
- * (or a manual pick); your partner's comes from what their device shared.
+ * Where each of you is right now. Your spot always comes from this device's location
+ * (the browser asks for permission); your partner's from what their device shared.
+ * Nothing here is editable by hand.
  */
 export function useCoupleLocations(relationshipId: string) {
-  const qc = useQueryClient();
   const { slot, partnerSlot } = useCoupleNames();
-  const [mine, setMine] = useState<Spot>(() => {
+  const [mine, setMine] = useState<Spot | null>(() => {
     const s = readMySpot();
-    if (s) return { city: s.city, lat: s.lat, lng: s.lng };
-    const c = resolveCity("Bacolod");
-    return { city: c.name, lat: c.lat, lng: c.lng };
+    return s ? { city: s.city, lat: s.lat, lng: s.lng } : null;
   });
+  const [status, setStatus] = useState<LocationStatus>(mine ? "ok" : "locating");
 
-  const locateMe = (onDone?: (ok: boolean) => void) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return onDone?.(false);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setStatus("unsupported");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         const spot = { city: nearestCity(lat, lng).name, lat, lng };
         saveMySpot(spot);
         setMine(spot);
+        setStatus("ok");
         if (relationshipId) shareSpot(relationshipId, slot, spot);
-        onDone?.(true);
       },
-      () => onDone?.(false),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60 * 60_000 },
+      (err) => setStatus(err.code === err.PERMISSION_DENIED ? "denied" : mine ? "ok" : "unsupported"),
+      { enableHighAccuracy: false, timeout: 15_000, maximumAge: 30 * 60_000 },
     );
-  };
-
-  // Refresh from the device once per day.
-  useEffect(() => {
-    if (readMySpot()?.date === today()) return;
-    locateMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [relationshipId, slot]);
 
-  const { data: sharedPartner } = useQuery({
+  const { data: partner } = useQuery({
     queryKey: ["member-locations", relationshipId, partnerSlot],
     enabled: !!relationshipId,
     retry: false,
@@ -145,32 +137,11 @@ export function useCoupleLocations(relationshipId: string) {
     },
   });
 
-  const [partnerManual, setPartnerManual] = useState(() => getPartnerCity());
-  const partner: Spot = useMemo(() => {
-    if (sharedPartner) return sharedPartner;
-    const c = resolveCity(partnerManual);
-    return { city: c.name, lat: c.lat, lng: c.lng };
-  }, [sharedPartner, partnerManual]);
-
-  const setMyCity = (city: string) => {
-    const c = resolveCity(city);
-    const spot = { city: c.name, lat: c.lat, lng: c.lng };
-    saveMySpot(spot);
-    setMine(spot);
-    if (relationshipId) {
-      shareSpot(relationshipId, slot, spot).then(() =>
-        qc.invalidateQueries({ queryKey: ["member-locations"] }),
-      );
-    }
-  };
-
   return {
     mine,
-    partner,
-    partnerIsShared: !!sharedPartner,
-    distanceKm: calculateDistanceKm(mine.lat, mine.lng, partner.lat, partner.lng),
-    setMyCity,
-    setPartnerManual,
-    locateMe,
+    status,
+    partner: partner ?? null,
+    distanceKm:
+      mine && partner ? calculateDistanceKm(mine.lat, mine.lng, partner.lat, partner.lng) : null,
   };
 }

@@ -81,7 +81,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     const key = "intro-dismissed-calendar";
     const val = localStorage.getItem(key);
     if (!val) {
-      setShowLongPressInfo(true);
       localStorage.setItem(key, "true");
     }
   }, []);
@@ -516,7 +515,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   );
 
   return (
-    <div ref={containerRef} className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-32 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0 xl:mx-0 xl:max-w-none xl:pl-[22px] xl:pr-9">
+    <div ref={containerRef} className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-32 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0">
       {/* Calendar section */}
       <section className="sn-card p-5 sm:p-6 lg:col-start-1">
         <div className="flex items-center justify-between">
@@ -558,7 +557,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
             return (
               <div
                 key={d.toISOString()}
-                className={`relative aspect-square flex items-center justify-center rounded-full overflow-hidden transition-transform
+                className={`relative aspect-square flex items-center justify-center rounded-full transition-transform ${dayPhoto && !isToday ? "overflow-hidden" : ""}
                   ${!inMonth ? "opacity-30" : ""}
                   ${isToday ? "" : "hover:scale-105"}`}
                 title={dayPhoto?.title ?? undefined}
@@ -575,7 +574,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 {isToday && (
-                  <img src="/art/clay-heart.png" alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[118%] w-[118%] max-w-none -translate-x-1/2 -translate-y-[46%] select-none" />
+                  <img src="/art/clay-heart.png" alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[130%] w-[130%] max-w-none -translate-x-1/2 -translate-y-[46%] select-none drop-shadow-[0_4px_8px_rgba(236,122,164,0.35)]" />
                 )}
 
                 {!dayPhoto && !isToday && (
@@ -602,7 +601,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       <section className="sn-card p-5 sm:p-6 lg:col-start-1">
         <h2 className="sn-label mb-4">Moment list</h2>
         {events.length === 0 ? (
-          <div className="font-serif text-[17px] italic text-sn-muted">A quiet month so far. Add a moment to look forward to.</div>
+          <div className="text-[15px] text-sn-muted">No moments this month</div>
         ) : (
           <ul className="space-y-2">
             {events.map((e) => (

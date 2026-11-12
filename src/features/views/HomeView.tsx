@@ -3,16 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addMonths, differenceInDays, format } from "date-fns";
 import { useAppStore } from "@/features/app/store";
-import { Plus, Heart, SquarePen, MapPin, ArrowRight, X, Check, Pencil, LocateFixed } from "lucide-react";
+import { Plus, Heart, SquarePen, MapPin, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/hooks/useUser";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useCoupleLocations, useCoupleNames } from "@/hooks/useCouple";
 import { LongPressModal } from "@/components/ui/LongPressModal";
-import { setPartnerCity } from "@/lib/location-service";
 import { ART, Bow, ChibiTile, HeartRibbon, Polaroid, chibiFor } from "@/components/seanaya/art";
-
-const QUICK_CITIES = ["Bacolod", "Manila", "Tokyo", "Cebu City", "Iloilo City", "Davao City", "Baguio", "Dumaguete"];
 
 const ordinal = (n: number) => {
   const s = ["th", "st", "nd", "rd"];
@@ -32,28 +29,9 @@ export function HomeView({
   const qc = useQueryClient();
   const { me, partner } = useCoupleNames();
   const loc = useCoupleLocations(relationshipId);
-
-  // ── Location editor ──
-  const [editing, setEditing] = useState(false);
-  const [myDraft, setMyDraft] = useState(loc.mine.city);
-  const [partnerDraft, setPartnerDraft] = useState(loc.partner.city);
-  const [locating, setLocating] = useState(false);
-  useEffect(() => {
-    if (editing) {
-      setMyDraft(loc.mine.city);
-      setPartnerDraft(loc.partner.city);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing]);
-
-  const saveLocations = () => {
-    if (myDraft.trim()) loc.setMyCity(myDraft.trim());
-    if (!loc.partnerIsShared && partnerDraft.trim()) {
-      setPartnerCity(partnerDraft.trim());
-      loc.setPartnerManual(partnerDraft.trim());
-    }
-    setEditing(false);
-  };
+  const myCity =
+    loc.mine?.city ?? (loc.status === "denied" ? "Location off" : loc.status === "unsupported" ? "Location unavailable" : "Locating…");
+  const partnerCity = loc.partner?.city ?? "Not shared yet";
 
   // ── Next scheduled moment ──
   const { data: nextEvent } = useQuery({
@@ -151,14 +129,13 @@ export function HomeView({
   const [showGuide, setShowGuide] = useState(false);
   useEffect(() => {
     if (!localStorage.getItem("intro-dismissed-home")) {
-      setShowGuide(true);
       localStorage.setItem("intro-dismissed-home", "true");
     }
   }, []);
   const longPressProps = useLongPress({ onLongPress: () => setShowGuide(true), onClick: () => {} });
 
   return (
-    <div className="relative mx-auto w-full max-w-[640px] px-4 pb-32 pt-5 sm:px-6 lg:max-w-[1186px] lg:pt-4 xl:mx-0 xl:max-w-none xl:pl-[22px] xl:pr-9">
+    <div className="relative mx-auto w-full max-w-[640px] px-4 pb-32 pt-5 sm:px-6 lg:max-w-[1186px] lg:pt-4">
       {isMonthsaryToday && (
         <button
           onClick={openMonthsary}
@@ -176,127 +153,50 @@ export function HomeView({
 
       <div className="grid gap-[18px] lg:grid-cols-[minmax(0,1.225fr)_minmax(0,1fr)]">
         {/* ───── Postcard: the two of you ───── */}
-        <section className="sn-card @container flex flex-col px-5 pb-5 pt-5 sm:px-6 sm:pb-[18px] sm:pt-6">
-          {editing && (
-            <button
-              onClick={() => setEditing(false)}
-              aria-label="Close"
-              className="sn-ghost sn-icon-btn absolute right-4 top-4 z-10 h-9 w-9"
+        <section className="sn-card @container flex flex-col justify-between gap-5 px-5 pb-5 pt-6 sm:px-6 sm:pb-[18px]">
+          <div className="relative grid grid-cols-2 items-center gap-4 @min-[570px]:flex @min-[570px]:justify-between">
+            <Person side="left" name={me} city={myCity} portrait={chibiFor(me)} />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-[30px] w-[30%] -translate-x-1/2 @min-[570px]:top-1/2 @min-[570px]:w-[26%] @min-[570px]:-translate-y-[60%]"
             >
-              <X size={16} strokeWidth={2} />
-            </button>
-          )}
-
-          {editing ? (
-            <div className="pr-10">
-              <h2 className="font-serif text-[22px] font-semibold text-sn-navy">Where are you today?</h2>
-              <label className="mt-4 block text-[13px] font-semibold text-sn-ink">{me}</label>
-              <div className="mt-1.5 flex gap-2">
-                <input
-                  value={myDraft}
-                  onChange={(e) => setMyDraft(e.target.value)}
-                  placeholder="City"
-                  className="h-11 min-w-0 flex-1 rounded-full border border-[#e1e4f5] bg-white/85 px-4 text-[15px] text-sn-navy outline-none focus:border-sn-periwinkle"
-                />
-                <button
-                  onClick={() => {
-                    setLocating(true);
-                    loc.locateMe((ok) => {
-                      setLocating(false);
-                      if (ok) {
-                        setEditing(false);
-                        toast.success("Location updated");
-                      } else toast.error("Location access was blocked");
-                    });
-                  }}
-                  disabled={locating}
-                  aria-label="Use my current location"
-                  title="Use my current location"
-                  className="sn-pill sn-icon-btn h-11 w-11"
-                >
-                  <LocateFixed size={18} strokeWidth={1.9} />
-                </button>
-              </div>
-              {!loc.partnerIsShared && (
-                <>
-                  <label className="mt-3 block text-[13px] font-semibold text-sn-ink">{partner}</label>
-                  <input
-                    value={partnerDraft}
-                    onChange={(e) => setPartnerDraft(e.target.value)}
-                    placeholder="City"
-                    className="mt-1.5 h-11 w-full rounded-full border border-[#e1e4f5] bg-white/85 px-4 text-[15px] text-sn-navy outline-none focus:border-sn-periwinkle"
-                  />
-                </>
-              )}
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {QUICK_CITIES.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setMyDraft(c)}
-                    className={`rounded-full px-3 py-1 text-[13px] transition-colors ${myDraft === c ? "bg-white text-sn-navy shadow-[var(--shadow-pill)]" : "text-sn-ink hover:bg-white/70"}`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-              <button onClick={saveLocations} className="sn-pill mt-4 h-11 px-6 text-[15px]">
-                <Check size={17} strokeWidth={2} />
-                Save
-              </button>
+              <HeartRibbon className="w-full" />
             </div>
-          ) : (
-            <div className="relative grid flex-1 grid-cols-2 items-center gap-4 @min-[570px]:flex @min-[570px]:justify-between">
-              <Person side="left" name={me} city={loc.mine.city} portrait={chibiFor(me)} />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-[30px] flex w-[30%] -translate-x-1/2 flex-col items-center @min-[570px]:top-1/2 @min-[570px]:w-[26%] @min-[570px]:-translate-y-[60%]"
-              >
-                <HeartRibbon className="w-full" />
-              </div>
-              <Person side="right" name={partner} city={loc.partner.city} portrait={chibiFor(partner)} />
-              <div className="col-span-2 -mt-1 flex items-center justify-center gap-2 text-[14px] text-[#545e88] tabular-nums @min-[570px]:absolute @min-[570px]:left-1/2 @min-[570px]:top-1/2 @min-[570px]:mt-0 @min-[570px]:-translate-x-1/2 @min-[570px]:translate-y-[2px]">
+            <Person side="right" name={partner} city={partnerCity} portrait={chibiFor(partner)} />
+            {loc.distanceKm !== null && (
+              <div className="col-span-2 -mt-1 text-center text-[14px] text-[#545e88] tabular-nums @min-[570px]:absolute @min-[570px]:left-1/2 @min-[570px]:top-1/2 @min-[570px]:mt-0 @min-[570px]:-translate-x-1/2 @min-[570px]:translate-y-[2px]">
                 {loc.distanceKm.toLocaleString()} km apart
-                <button
-                  onClick={() => setEditing(true)}
-                  aria-label="Change locations"
-                  title="Change locations"
-                  className="sn-pill sn-icon-btn h-7 w-7"
-                >
-                  <Pencil size={12} strokeWidth={2.2} />
-                </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {!editing && (
-            <div className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-4">
-              <button
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([40, 80, 40]);
-                  hug.mutate();
-                }}
-                disabled={hug.isPending}
-                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
-              >
-                <Heart size={18} strokeWidth={1.9} />
-                Send Hug
-              </button>
-              <button
-                onClick={() => openSheet("add-note")}
-                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
-              >
-                <SquarePen size={17} strokeWidth={1.9} />
-                Leave Note
-              </button>
-              <button
-                onClick={() => openSheet("add-memory")}
-                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
-              >
-                <Plus size={18} strokeWidth={2} />
-                Add Memory
-              </button>
-            </div>
-          )}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            <button
+              onClick={() => {
+                if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([40, 80, 40]);
+                hug.mutate();
+              }}
+              disabled={hug.isPending}
+              className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
+            >
+              <Heart size={18} strokeWidth={1.9} />
+              Send Hug
+            </button>
+            <button
+              onClick={() => openSheet("add-note")}
+              className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
+            >
+              <SquarePen size={17} strokeWidth={1.9} />
+              Leave Note
+            </button>
+            <button
+              onClick={() => openSheet("add-memory")}
+              className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] sm:h-[48px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
+            >
+              <Plus size={18} strokeWidth={2} />
+              Add Memory
+            </button>
+          </div>
         </section>
 
         {/* ───── Studio ───── */}
@@ -313,15 +213,11 @@ export function HomeView({
               className="ml-1 mt-1 w-[112px] shrink-0 group-hover:rotate-[-3deg] sm:w-[146px]"
               photoClassName="aspect-[128/138]"
             />
-            <div className="flex min-w-0 flex-1 flex-col self-stretch">
+            <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
               <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[24px]">
                 Remote Photo Booth
               </h3>
-              <p className="mt-2 text-[14px] leading-[1.6] text-[#5b6489] sm:text-[14.5px]">
-                Shoot a four-frame strip together from {loc.mine.city} and {loc.partner.city}. Each
-                strip lands in your album.
-              </p>
-              <span className="sn-pill mt-auto h-11 self-start px-5 text-[14.5px]">
+              <span className="sn-pill mt-5 h-11 self-start px-5 text-[14.5px]">
                 Enter booth
                 <ArrowRight size={17} strokeWidth={2} className="transition-transform group-hover:translate-x-0.5" />
               </span>
@@ -358,7 +254,11 @@ export function HomeView({
         </section>
 
         {/* ───── Monthly milestone ───── */}
-        <section className="sn-card @container flex flex-col justify-center px-5 py-6 sm:px-[30px]">
+        <section
+          onClick={openMonthsary}
+          title="Open our monthsary story"
+          className="sn-card @container flex cursor-pointer flex-col justify-center px-5 py-6 transition-shadow hover:shadow-[0_26px_48px_-26px_rgba(80,98,172,0.55)] sm:px-[30px]"
+        >
           <div className="flex items-center justify-between gap-3">
             <h2 className="sn-label">Monthly milestone</h2>
             <span className="text-[14px] text-[#5b6489] sm:text-[15px]">

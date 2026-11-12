@@ -42,7 +42,6 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
     const key = "intro-dismissed-pet";
     const val = localStorage.getItem(key);
     if (!val) {
-      setShowLongPressInfo(true);
       localStorage.setItem(key, "true");
     }
   }, []);
@@ -329,27 +328,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32 select-none relative">
-      {/* ── Cat Sanctuary Card ── */}
-      <section className="sn-card p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] text-center space-y-3 relative overflow-hidden">
-        <div className="absolute -top-12 -left-12 w-24 h-24 rounded-full bg-yellow-200/20 blur-xl" />
-        <div className="absolute -bottom-12 -right-12 w-24 h-24 rounded-full bg-pink-200/20 blur-xl" />
-
-        <div className="mx-auto w-16 h-16 rounded-full bg-white/60 flex items-center justify-center border border-white/50 shadow-sm text-foreground/50">
-          <Cat size={28} />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Welcome your cats. Upload their face and pattern coat photos to have them roam!
-          </p>
-        </div>
-      </section>
-
-      {/* ── Cats List ── */}
-      <section className="sn-card p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Our Cats ({pets.length})
-        </h3>
+    <div className="relative mx-auto max-w-[640px] select-none px-4 pb-32 pt-6 sm:px-6 lg:max-w-[1186px]">
+      <section>
 
         {loadingPets ? (
           <ul className="space-y-4 animate-pulse">
@@ -377,11 +357,12 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             ))}
           </ul>
         ) : pets.length === 0 ? (
-          <div className="text-xs italic text-muted-foreground text-center py-4">
-            No cats welcomed yet. Welcome your first cat!
+          <div className="flex flex-col items-center pt-6 text-center">
+            <img src="/art/cats-cloud.webp" alt="" aria-hidden className="w-[220px] select-none" />
+            <div className="mt-3 font-serif text-[22px] font-semibold text-sn-navy">No cats here yet</div>
           </div>
         ) : (
-          <ul className="space-y-4">
+          <ul className="grid gap-[18px] lg:grid-cols-2">
             {pets.map((p) => {
               const ageInDays = p.birthday
                 ? differenceInDays(new Date(), new Date(p.birthday))
@@ -393,7 +374,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               return (
                 <li
                   key={p.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-white/40 bg-white/30 p-3.5 shadow-[0_2px_8px_-4px_rgba(80,110,160,0.1)]"
+                  className="sn-card flex flex-col gap-4 p-5"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -417,41 +398,34 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                         </label>
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-foreground/95 flex items-center gap-1.5">
+                        <div className="flex items-center gap-2 font-serif text-[20px] font-semibold text-sn-navy">
                           {p.name}
                           {isCurrentlyVisible && (
-                            <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            <span className="font-sans text-[13px] font-semibold text-[#3a9c7a]">
                               Roaming
                             </span>
                           )}
                           {isActive && !isPetVisible && (
-                            <span className="text-[8px] bg-slate-500/20 text-slate-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            <span className="font-sans text-[13px] font-semibold text-sn-muted">
                               Hidden
                             </span>
                           )}
                         </div>
-                        <div className="text-[12px] text-muted-foreground flex items-center gap-2">
-                          <span>Cat</span>
-                          {ageInDays !== null && <span>• {ageInDays} days with us</span>}
+                        <div className="text-[14px] text-sn-muted">
+                          {ageInDays !== null && <span>{ageInDays} days with us</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEyeToggle(p, isActive)}
-                        className={`p-1.5 rounded-full border border-white/50 transition-all ${
-                          isCurrentlyVisible
-                            ? "bg-emerald-500 text-white scale-110 shadow-sm"
-                            : isActive
-                              ? "bg-slate-500 text-white scale-110 shadow-sm"
-                              : "bg-white/50 text-foreground/45 hover:text-foreground"
-                        }`}
+                        className={`sn-pill sn-icon-btn h-10 w-10 ${isCurrentlyVisible ? "sn-active" : ""}`}
                         title={
                           isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"
                         }
                       >
-                        {isCurrentlyVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                        {isCurrentlyVisible ? <Eye size={17} /> : <EyeOff size={17} />}
                       </button>
 
                       <button
@@ -462,20 +436,21 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                             onConfirm: () => deletePet.mutate(p.id),
                           });
                         }}
-                        className="p-1.5 rounded-full bg-red-50 border border-red-200/50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                        className="sn-pill sn-icon-btn h-10 w-10"
                         title="Remove cat"
+                        aria-label="Remove cat"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={16} className="!text-[#c2416c]" />
                       </button>
                     </div>
                   </div>
 
                   {/* Photo Updates (Outlines and solid colors completely abandoned) */}
-                  <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/20 pt-3">
+                  <div className="grid grid-cols-2 gap-3 border-t border-[#ebe8f6] pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground font-semibold">Face Image:</span>
-                      <label className="font-semibold text-primary hover:text-primary-hover cursor-pointer flex items-center gap-1.5">
-                        <Upload size={11} />
+                      <span className="text-[13px] font-semibold text-sn-ink">Face</span>
+                      <label className="sn-pill h-9 self-start px-3.5 text-[13px]">
+                        <Upload size={14} />
                         Upload photo
                         <input
                           type="file"
@@ -487,9 +462,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     </div>
 
                     <div className="flex flex-col gap-1 border-l border-white/10 pl-3">
-                      <span className="text-muted-foreground font-semibold">Coat Pattern:</span>
-                      <label className="font-semibold text-primary hover:text-primary-hover cursor-pointer flex items-center gap-1.5">
-                        <Upload size={11} />
+                      <span className="text-[13px] font-semibold text-sn-ink">Coat</span>
+                      <label className="sn-pill h-9 self-start px-3.5 text-[13px]">
+                        <Upload size={14} />
                         Upload photo
                         <input
                           type="file"
@@ -576,7 +551,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/20 pt-3.5">
                 {/* Required Face Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[11px]">
                     Face Image (Required)
                   </span>
                   <label className="w-16 h-16 rounded-full border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
@@ -585,7 +560,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     ) : (
                       <>
                         <Upload size={16} className="text-foreground/40" />
-                        <span className="text-[8px] text-foreground/50 mt-1">Upload photo</span>
+                        <span className="text-[11px] text-foreground/50 mt-1">Upload photo</span>
                       </>
                     )}
                     <input
@@ -599,7 +574,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
                 {/* Required Pattern Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center border-l border-white/10 pl-2">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[11px]">
                     Coat Pattern (Required)
                   </span>
                   <label className="w-16 h-16 rounded-2xl border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
@@ -608,7 +583,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     ) : (
                       <>
                         <Upload size={16} className="text-foreground/40" />
-                        <span className="text-[8px] text-foreground/50 mt-1">Upload photo</span>
+                        <span className="text-[11px] text-foreground/50 mt-1">Upload photo</span>
                       </>
                     )}
                     <input
@@ -624,7 +599,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               <button
                 onClick={() => createPet.mutate()}
                 disabled={createPet.isPending || !petName.trim() || !faceFile || !patternFile}
-                className="font-sans font-semibold w-full py-3 rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-foreground text-xs active:scale-[0.99] transition-all shadow-[0_10px_30px_-14px_rgba(80,110,160,0.25)] disabled:opacity-50 mt-2 cursor-pointer"
+                className="sn-pill mt-2 h-12 w-full text-[15px]"
               >
                 {createPet.isPending ? "Welcoming Cat..." : "Welcome Cat"}
               </button>
@@ -638,7 +613,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm select-none">
           <div className="w-full max-w-sm sn-card p-5 shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-full flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="sn-label">
                 Crop Face
               </h3>
               <button

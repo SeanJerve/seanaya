@@ -3,33 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import {
-  Sun,
-  Moon,
-  Sunset,
-  Bell,
-  BookHeart,
-  Calendar,
-  MapPin,
-  PinIcon,
-  Music2,
-  Heart,
-  Upload,
-} from "lucide-react";
+import { Upload } from "lucide-react";
 import { pinStorage, hashPin, ANNIVERSARY_ISO, type Slot } from "@/features/pin/pin-utils";
-import { FieldWrap, Input, PrimaryButton } from "./form-ui";
-import { useTheme, type Theme } from "@/lib/theme";
+import { Input } from "./form-ui";
 import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
 import { uploadImage } from "@/lib/storage";
-import {
-  getUserCity,
-  setUserCity,
-  getPartnerCity,
-  setPartnerCity,
-  calculateDistanceKm,
-  resolveCity,
-  getTimezoneOffsetDescription,
-} from "@/lib/location-service";
 
 export function SettingsSheet({
   relationshipId,
@@ -43,9 +21,6 @@ export function SettingsSheet({
   const [displayName, setDisplayName] = useState(pinStorage.getName() ?? "");
   const [newPin, setNewPin] = useState("");
   const [anniversary, setAnniversary] = useState<string>("");
-  const [userCity, setUserCityState] = useState(getUserCity());
-  const [partnerCity, setPartnerCityState] = useState(getPartnerCity());
-  const [theme, setTheme] = useTheme();
   const { prefs, set: setPref } = useNotificationPrefs();
 
   const slot: Slot = pinStorage.getSlot() ?? "a";
@@ -147,356 +122,150 @@ export function SettingsSheet({
   const yourName = slot === "a" ? rel?.name_a : rel?.name_b;
   const partnerName = slot === "a" ? rel?.name_b : rel?.name_a;
 
-  return (
-    <div className="space-y-6">
-      <section className="space-y-4 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
-        <SectionHead label="Your Profile" />
+  const copy = (text: string, msg: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    toast.success(msg, { duration: 5000 });
+  };
 
-        {/* Profile Picture and Info Row */}
+  const prefRows: { k: PrefKind; label: string }[] = [
+    { k: "memory", label: "Memories" },
+    { k: "event", label: "Moments" },
+    { k: "trip", label: "Places" },
+    { k: "note", label: "Notes" },
+    { k: "song", label: "Songs" },
+    { k: "hug", label: "Hugs" },
+  ];
+
+  return (
+    <div className="divide-y divide-[#e7e4f3]">
+      <Group label="Profile">
         <div className="flex items-center gap-4">
-          <div className="relative w-16 h-16 rounded-full bg-white/60 border border-white/50 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+          <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-white bg-[#e6eafc] shadow-[var(--shadow-pill)]">
             {myProfile?.avatar_url ? (
-              <img
-                src={myProfile.avatar_url}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
+              <img src={myProfile.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-foreground/45">
+              <span className="font-serif text-[24px] font-semibold text-sn-navy">
                 {displayName.slice(0, 1).toUpperCase() || "?"}
               </span>
             )}
           </div>
-          <div className="flex-1 flex flex-col gap-1.5">
-            <input
-              type="file"
-              accept="image/*"
-              id="profile-pic-upload"
-              className="sr-only"
-              onChange={handleAvatarUpload}
-              disabled={uploadingAvatar}
-            />
-            <div className="flex gap-2">
-              <label
-                htmlFor="profile-pic-upload"
-                className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-white/50 bg-white/70 hover:bg-white/80 active:scale-95 transition-all cursor-pointer shadow-sm text-foreground/80"
-              >
-                <Upload size={12} className="mr-1.5" />
-                {uploadingAvatar ? "Uploading..." : "Upload photo"}
-              </label>
-              {myProfile?.avatar_url && (
-                <button
-                  onClick={handleRemoveAvatar}
-                  className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-full border border-red-200/50 bg-red-50/70 hover:bg-red-50/80 active:scale-95 transition-all cursor-pointer shadow-sm text-red-500"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-            <p className="text-[12px] text-muted-foreground">
-              Upload a profile picture to show next to your activity.
-            </p>
-          </div>
+          <input
+            type="file"
+            accept="image/*"
+            id="profile-pic-upload"
+            className="sr-only"
+            onChange={handleAvatarUpload}
+            disabled={uploadingAvatar}
+          />
+          <label htmlFor="profile-pic-upload" className="sn-pill h-10 px-4 text-[14px]">
+            <Upload size={15} strokeWidth={1.9} />
+            {uploadingAvatar ? "Uploading…" : myProfile?.avatar_url ? "Change photo" : "Add photo"}
+          </label>
+          {myProfile?.avatar_url && (
+            <button onClick={handleRemoveAvatar} className="sn-ghost h-10 px-4 text-[14px]">
+              Remove
+            </button>
+          )}
         </div>
+        <Row label="Name">
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <button onClick={() => saveName.mutate()} disabled={saveName.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+            Save
+          </button>
+        </Row>
+      </Group>
 
-        {/* Display Name Input */}
-        <div className="space-y-3 pt-2 border-t border-white/20">
-          <FieldWrap label="Displayed as">
-            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          </FieldWrap>
-          <PrimaryButton onClick={() => saveName.mutate()}>Save profile</PrimaryButton>
-        </div>
-      </section>
-
-      {/* ── Anniversary Setting ── */}
-      <section className="space-y-3 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
-        <SectionHead label="Anniversary" />
-        <p className="text-[11px] text-muted-foreground">
-          The milestone date that anchors your relationship timeline.
-        </p>
-        <FieldWrap label="Date">
+      <Group label="Anniversary">
+        <Row>
           <Input type="date" value={anniversary} onChange={(e) => setAnniversary(e.target.value)} />
-        </FieldWrap>
-        <PrimaryButton onClick={() => saveAnn.mutate()} disabled={saveAnn.isPending}>
-          Save Anniversary
-        </PrimaryButton>
-      </section>
-
-      {/* ── LDR Cities & Timezones ── */}
-      <section className="space-y-4 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
-        <div className="flex items-center justify-between">
-          <SectionHead label="LDR Cities & Timezones" />
-          <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-widest">
-            {calculateDistanceKm(
-              resolveCity(userCity).lat,
-              resolveCity(userCity).lng,
-              resolveCity(partnerCity).lat,
-              resolveCity(partnerCity).lng,
-            )}{" "}
-            km apart
-          </span>
-        </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Configure accurate home cities for you and your partner. This powers live dual clocks,
-          solar day-night cycles, and distance metrics.
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldWrap label="Your City">
-            <Input
-              value={userCity}
-              onChange={(e) => setUserCityState(e.target.value)}
-              placeholder="e.g. Bacolod"
-            />
-          </FieldWrap>
-          <FieldWrap label="Partner's City">
-            <Input
-              value={partnerCity}
-              onChange={(e) => setPartnerCityState(e.target.value)}
-              placeholder="e.g. Manila"
-            />
-          </FieldWrap>
-        </div>
-
-        {/* Quick Philippine & Global City Chips */}
-        <div>
-          <span className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-            Quick Select for Partner:
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              "Manila",
-              "Cebu City",
-              "Iloilo City",
-              "Davao City",
-              "Baguio",
-              "Dumaguete",
-              "Tokyo",
-              "Vancouver",
-            ].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setPartnerCityState(c)}
-                className={`text-[11px] px-2.5 py-1 rounded-full border transition cursor-pointer ${
-                  partnerCity.toLowerCase() === c.toLowerCase()
-                    ? "border-primary/60 bg-white/90 font-medium text-foreground shadow-2xs"
-                    : "border-white/40 bg-white/40 text-foreground/70 hover:bg-white/60"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Live Preview Bar */}
-        <div className="rounded-xl border border-white/40 bg-white/60 p-3 text-[11px] flex items-center justify-between text-muted-foreground">
-          <span>
-            {userCity || "Bacolod"} — {partnerCity || "Manila"}
-          </span>
-          <span className="font-medium text-foreground/80">
-            {getTimezoneOffsetDescription(
-              resolveCity(userCity).timezone,
-              resolveCity(partnerCity).timezone,
-            )}
-          </span>
-        </div>
-
-        <PrimaryButton
-          onClick={() => {
-            const u = userCity.trim() || "Bacolod";
-            const p = partnerCity.trim() || "Manila";
-            setUserCity(u);
-            setPartnerCity(p);
-            setUserCityState(u);
-            setPartnerCityState(p);
-            toast.success(`Locations updated: ${u} — ${p}`);
-            qc.invalidateQueries({ queryKey: ["stats"] });
-          }}
-        >
-          Save Locations
-        </PrimaryButton>
-      </section>
-
-      <section className="space-y-3">
-        <SectionHead label="Theme" />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setTheme("light")}
-            className="flex flex-col items-center gap-1 rounded-2xl border border-primary/60 bg-white/70 px-3 py-3 text-xs backdrop-blur-xl transition cursor-pointer"
-          >
-            <span className="text-foreground/70">
-              <Sun size={14} />
-            </span>
-            Light
+          <button onClick={() => saveAnn.mutate()} disabled={saveAnn.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+            Save
           </button>
-          <button
-            disabled
-            className="flex flex-col items-center gap-1 rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-xs backdrop-blur-xl opacity-50 cursor-not-allowed text-muted-foreground/60"
-          >
-            <span>
-              <Moon size={14} />
-            </span>
-            Dark (Work in progress)
-          </button>
-        </div>
-      </section>
+        </Row>
+      </Group>
 
-      <section className="space-y-3">
-        <SectionHead label="Whispers" icon={<Bell size={11} />} />
-        <p className="text-[11px] text-muted-foreground">
-          Choose which of your partner's moments should notify you.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <PrefRow
-            k="memory"
-            label="Memories"
-            icon={<BookHeart size={14} />}
-            on={prefs.memory}
-            onToggle={(v) => setPref({ memory: v })}
-          />
-          <PrefRow
-            k="event"
-            label="Events"
-            icon={<Calendar size={14} />}
-            on={prefs.event}
-            onToggle={(v) => setPref({ event: v })}
-          />
-          <PrefRow
-            k="trip"
-            label="Places"
-            icon={<MapPin size={14} />}
-            on={prefs.trip}
-            onToggle={(v) => setPref({ trip: v })}
-          />
-          <PrefRow
-            k="note"
-            label="Notes"
-            icon={<PinIcon size={14} />}
-            on={prefs.note}
-            onToggle={(v) => setPref({ note: v })}
-          />
-          <PrefRow
-            k="song"
-            label="Songs"
-            icon={<Music2 size={14} />}
-            on={prefs.song}
-            onToggle={(v) => setPref({ song: v })}
-          />
-          <PrefRow
-            k="hug"
-            label="Hugs"
-            icon={<Heart size={14} />}
-            on={prefs.hug}
-            onToggle={(v) => setPref({ hug: v })}
-          />
+      <Group label={`Notify me when ${partnerName || "my partner"} adds`}>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+          {prefRows.map(({ k, label }) => (
+            <Switch key={k} label={label} on={prefs[k]} onToggle={(v) => setPref({ [k]: v })} />
+          ))}
         </div>
-      </section>
+      </Group>
 
-      <section className="space-y-3">
-        <SectionHead label="Your PIN" />
-        <p className="text-[11px] text-muted-foreground">
-          This changes only your PIN. Your partner's PIN stays the same.
-        </p>
-        <FieldWrap label="New 4-digit PIN">
+      <Group label="Your PIN">
+        <Row>
           <Input
             value={newPin}
-            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onChange={(e) => setNewPin(e.target.value.replace(/D/g, "").slice(0, 4))}
             inputMode="numeric"
-            placeholder="••••"
+            placeholder="New 4-digit PIN"
           />
-        </FieldWrap>
-        <PrimaryButton onClick={() => savePin.mutate()}>Update PIN</PrimaryButton>
-      </section>
+          <button onClick={() => savePin.mutate()} disabled={savePin.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+            Update
+          </button>
+        </Row>
+      </Group>
 
-      {!rel?.user_b_id && (
-        <section className="space-y-3">
-          <SectionHead label="Invitation Link" />
-          <p className="text-[11px] text-muted-foreground">
-            Share this link with your partner so they can join your space.
-          </p>
-          <PrimaryButton
-            onClick={() => {
-              const code = inviteCode || rel?.invite_code || "";
-              const link = `${window.location.origin}/?invite=${code}`;
-              if (
-                typeof navigator !== "undefined" &&
-                navigator.clipboard &&
-                navigator.clipboard.writeText
-              ) {
-                navigator.clipboard.writeText(link).catch(() => {});
+      <Group label="Links">
+        <div className="flex flex-wrap gap-2.5">
+          {!rel?.user_b_id && (
+            <button
+              onClick={() =>
+                copy(`${window.location.origin}/?invite=${inviteCode || rel?.invite_code || ""}`, "Invite link copied")
               }
-              toast.success("Invitation link copied to clipboard!", { duration: 6000 });
+              className="sn-pill h-11 px-5 text-[14.5px]"
+            >
+              Copy invite link
+            </button>
+          )}
+          <button
+            onClick={() => {
+              const partnerSlot = slot === "a" ? "b" : "a";
+              const d = anniversary || rel?.anniversary || ANNIVERSARY_ISO;
+              copy(`${window.location.origin}/?reset=${partnerSlot}&date=${d}`, "PIN reset link copied");
             }}
+            className="sn-pill h-11 px-5 text-[14.5px]"
           >
-            Copy invitation link
-          </PrimaryButton>
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <SectionHead label="Partner's PIN" />
-        <p className="text-[11px] text-muted-foreground">
-          If your partner forgot their PIN, you can generate a reset link for them.
-        </p>
-        <PrimaryButton
-          onClick={() => {
-            const partnerSlot = slot === "a" ? "b" : "a";
-            const d = anniversary || rel?.anniversary || ANNIVERSARY_ISO;
-            const link = `${window.location.origin}/?reset=${partnerSlot}&date=${d}`;
-            if (
-              typeof navigator !== "undefined" &&
-              navigator.clipboard &&
-              navigator.clipboard.writeText
-            ) {
-              navigator.clipboard.writeText(link).catch(() => {});
-            }
-            toast.success("Reset link copied! Send it to your partner.", { duration: 6000 });
-          }}
-        >
-          Copy Reset Link
-        </PrimaryButton>
-      </section>
+            Copy PIN reset link for {partnerName || "partner"}
+          </button>
+        </div>
+      </Group>
     </div>
   );
 }
 
-function SectionHead({ label, icon }: { label: string; icon?: React.ReactNode }) {
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.2em] text-muted-foreground">
-      {icon}
-      {label}
+    <section className="space-y-4 py-6 first:pt-1 last:pb-2">
+      <h3 className="sn-label">{label}</h3>
+      {children}
+    </section>
+  );
+}
+
+function Row({ label, children }: { label?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {label && <div className="mb-2 text-[13px] font-semibold text-sn-ink">{label}</div>}
+      <div className="flex items-center gap-2.5">{children}</div>
     </div>
   );
 }
-function PrefRow({
-  k: _k,
-  label,
-  icon,
-  on,
-  onToggle,
-}: {
-  k: PrefKind;
-  label: string;
-  icon: React.ReactNode;
-  on: boolean;
-  onToggle: (v: boolean) => void;
-}) {
+
+function Switch({ label, on, onToggle }: { label: string; on: boolean; onToggle: (v: boolean) => void }) {
   return (
     <button
+      role="switch"
+      aria-checked={on}
       onClick={() => onToggle(!on)}
-      className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5 text-sm backdrop-blur-xl transition ${on ? "border-primary/60 bg-white/70" : "border-white/40 bg-white/40 text-foreground/60"}`}
+      className="flex h-12 items-center justify-between gap-3 text-left text-[15px] text-sn-navy"
     >
-      <span className="flex items-center gap-2">
-        <span className="text-foreground/70">{icon}</span>
-        {label}
-      </span>
+      {label}
       <span
-        className={`h-4 w-7 rounded-full transition ${on ? "bg-primary/80" : "bg-foreground/20"}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full border border-white/80 transition-colors ${on ? "bg-[radial-gradient(circle_at_35%_30%,#c9d8fd,#94b2f6_75%)]" : "bg-[#e3e5f1]"}`}
       >
         <span
-          className={`block h-3 w-3 rounded-full bg-white mt-0.5 transition ${on ? "ml-3.5" : "ml-0.5"}`}
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-white shadow-[0_2px_6px_rgba(60,80,150,0.35)] transition-[left] ${on ? "left-[24px]" : "left-[3px]"}`}
         />
       </span>
     </button>

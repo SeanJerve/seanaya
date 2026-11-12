@@ -217,8 +217,9 @@
 }
 
 /*
- * The one button style: a periwinkle bubble, the same as the dock's active tab.
- * Used for every action, labelled pill or round icon button alike.
+ * Buttons. One family, taken from the PIN keypad: round liquid-glass keys with a
+ * white rim and navy ink. `sn-active` is the selected/on state — the same
+ * periwinkle bubble as the dock's current tab.
  */
 @utility sn-pill {
   display: inline-flex;
@@ -226,57 +227,76 @@
   justify-content: center;
   gap: 0.5rem;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  background: radial-gradient(130% 150% at 32% 22%, #d6e2fe 0%, #b2c8fa 48%, #96b3f6 100%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: radial-gradient(
+    circle at 30% 25%,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0.32)
+  );
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.75),
-    inset 0 -3px 8px rgba(70, 100, 210, 0.16),
-    0 8px 18px -10px rgba(60, 90, 200, 0.6);
-  color: #2b4699;
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 6px 20px -8px rgba(80, 110, 160, 0.38);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--sn-navy);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.18s ease,
-    filter 0.18s ease;
+    transform 0.16s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.16s ease,
+    background 0.16s ease;
   &:hover {
-    filter: brightness(1.04) saturate(1.05);
     box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.8),
-      inset 0 -3px 8px rgba(70, 100, 210, 0.16),
-      0 12px 22px -10px rgba(60, 90, 200, 0.65);
+      inset 0 1px 1px rgba(255, 255, 255, 0.9),
+      0 10px 24px -10px rgba(80, 110, 160, 0.45);
   }
   &:active {
-    transform: scale(0.96);
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 6px rgba(80, 110, 160, 0.25);
   }
   &:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: default;
+    transform: none;
   }
+  & svg {
+    color: #3a4c96;
+  }
+}
+
+/* Selected / on state — the dock's active bubble */
+@utility sn-active {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: radial-gradient(circle at 35% 30%, #c9d8fd, #94b2f6 75%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    0 8px 16px -8px rgba(70, 100, 200, 0.65);
+  color: #2b4699;
   & svg {
     color: #3150a8;
   }
 }
 
-/* Quiet companion for Cancel / Close next to a bubble */
+/* Quiet text-weight companion for Cancel / Close */
 @utility sn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: transparent;
   color: var(--sn-ink);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 0.18s ease,
-    transform 0.18s cubic-bezier(0.2, 0, 0, 1);
+    background-color 0.16s ease,
+    transform 0.16s cubic-bezier(0.2, 0, 0, 1);
   &:hover {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.45);
   }
   &:active {
     transform: scale(0.97);

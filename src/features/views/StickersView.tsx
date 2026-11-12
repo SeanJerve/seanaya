@@ -82,7 +82,6 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
     const key = "intro-dismissed-stickers";
     const val = localStorage.getItem(key);
     if (!val) {
-      setShowLongPressInfo(true);
       localStorage.setItem(key, "true");
     }
   }, []);
