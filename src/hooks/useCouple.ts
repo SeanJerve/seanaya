@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useRelationship } from "./useRelationship";
 import { KNOWN_CITIES, calculateDistanceKm, setUserCity } from "@/lib/location-service";
+import { CITIES } from "@/lib/cities";
 
 /** Short names read as initials: "Sj" → "SJ". */
 export function displayName(raw: string | null | undefined, fallback: string) {
@@ -43,14 +44,21 @@ export type Spot = { city: string; lat: number; lng: number };
 const LS_SPOT = "seanaya.my_spot";
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Closest city we know by name; coordinates themselves stay exact. */
+/**
+ * Closest named place, from an offline list (coordinates never leave the device).
+ * More than 30 km from anything listed reads "Near <city>".
+ */
 export function nearestCity(lat: number, lng: number) {
   let best = { name: "", km: Infinity };
+  for (const [name, clat, clng] of CITIES) {
+    const km = calculateDistanceKm(lat, lng, clat, clng);
+    if (km < best.km) best = { name, km };
+  }
   for (const c of Object.values(KNOWN_CITIES)) {
     const km = calculateDistanceKm(lat, lng, c.lat, c.lng);
     if (km < best.km) best = { name: c.name, km };
   }
-  return best;
+  return { ...best, label: best.km > 30 ? `Near ${best.name}` : best.name };
 }
 
 function readMySpot(): (Spot & { date?: string }) | null {
@@ -109,7 +117,7 @@ export function useCoupleLocations(relationshipId: string) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        const spot = { city: nearestCity(lat, lng).name, lat, lng };
+        const spot = { city: nearestCity(lat, lng).label, lat, lng };
         saveMySpot(spot);
         setMine(spot);
         setStatus("ok");

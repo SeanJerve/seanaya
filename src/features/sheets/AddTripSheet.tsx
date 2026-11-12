@@ -4,11 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
-import { FieldWrap, Input, PrimaryButton } from "./form-ui";
+import { FieldWrap, FormStack, Group, Input, OfflineNote, PhotoPicker, PrimaryButton, Segmented } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { uploadImage } from "@/lib/storage";
-import { DropZone } from "@/lib/DropZone";
-import { CloudOff, Save, Upload, X } from "lucide-react";
 
 const STATUSES = ["visited", "dream", "planned"] as const;
 
@@ -82,78 +80,28 @@ export function AddTripSheet({ relationshipId }: { relationshipId: string }) {
   });
 
   return (
-    <div className="space-y-4">
-      {!online && (
-        <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 text-[11px] text-muted-foreground">
-          <CloudOff size={12} /> Offline — draft saved. Will sync when you're back.
-        </div>
-      )}
-
-      <FieldWrap label="Photo (optional)">
-        {preview ? (
-          <div className="relative overflow-hidden rounded-2xl border border-white/50">
-            <img src={preview} alt="" className="h-40 w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => {
-                setFile(null);
-                setPreview(null);
-              }}
-              className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <DropZone
-            onFile={onFile}
-            className="flex h-32 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground"
-          >
-            <Upload size={18} />
-            <span>Upload photo</span>
-          </DropZone>
-        )}
-      </FieldWrap>
-
-      <FieldWrap label="Title">
-        <Input
-          value={form.title}
-          onChange={(e) => set("title", e.target.value)}
-          placeholder="A name for this trip"
-        />
+    <FormStack>
+      {!online && <OfflineNote />}
+      <PhotoPicker
+        preview={preview}
+        onFile={onFile}
+        onClear={() => {
+          setFile(null);
+          setPreview(null);
+        }}
+      />
+      <FieldWrap label="Name">
+        <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="A name for this place" />
       </FieldWrap>
       <FieldWrap label="Where">
-        <Input
-          value={form.location}
-          onChange={(e) => set("location", e.target.value)}
-          placeholder="City, country"
-        />
+        <Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="City, country" />
       </FieldWrap>
-      <FieldWrap label="Status">
-        <div className="grid grid-cols-3 gap-2">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => set("status", s)}
-              className={`rounded-full py-2 text-xs capitalize transition ${
-                form.status === s
-                  ? "bg-foreground text-background"
-                  : "border border-white/50 bg-white/40 text-foreground/70"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </FieldWrap>
-
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-        <Save size={11} /> Draft autosaved locally
-      </div>
-
+      <Group label="Status">
+        <Segmented options={STATUSES} value={form.status} onChange={(s) => set("status", s)} />
+      </Group>
       <PrimaryButton disabled={create.isPending || !online} onClick={() => create.mutate()}>
-        {online ? "Add pin" : "Waiting to sync…"}
+        {online ? "Pin this place" : "Waiting to sync…"}
       </PrimaryButton>
-    </div>
+    </FormStack>
   );
 }

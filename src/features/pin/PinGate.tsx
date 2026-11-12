@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
 import { useAppStore } from "@/features/app/store";
+import { ART } from "@/components/seanaya/art";
+import { useCoupleNames } from "@/hooks/useCouple";
 
 type Stage =
   | "loading"
@@ -129,7 +131,7 @@ function EqVisualizer({ analyser }: { analyser: AnalyserNode | null }) {
 
         // Gradient: bottom primary blue, top white glow
         const grad = ctx.createLinearGradient(x, y + barH, x, y);
-        grad.addColorStop(0, "rgba(14,165,233,0.95)"); // Primary blue
+        grad.addColorStop(0, "rgba(120,148,232,0.95)"); // Periwinkle
         grad.addColorStop(1, "rgba(255,255,255,0.95)"); // White glow
 
         ctx.fillStyle = grad;
@@ -565,7 +567,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       }
     } else {
       // If already interacted:
-      // If voice message is playing, tap to pause/stop it and show controls (Listen Again & Download VM)
+      // If voice message is playing, tap to pause/stop it and show controls (Listen Again & Save voice message)
       if (isVmPlaying && voiceMessageRef.current) {
         voiceMessageRef.current.pause();
         setIsVmPlaying(false);
@@ -764,9 +766,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ delay: 3, duration: 0.8 }}
-              className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
+              className="pointer-events-none absolute inset-x-0 bottom-[max(2rem,env(safe-area-inset-bottom))] z-20 flex justify-center px-6 text-center"
             >
-              <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+              <span className="text-[14px] font-semibold text-sn-ink animate-pulse">
                 Tap anywhere to listen, volumes up or earphones on, baby!
               </span>
             </motion.div>
@@ -777,9 +779,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="absolute bottom-8 left-0 right-0 flex justify-center text-center px-6 pointer-events-none z-20"
+              className="pointer-events-none absolute inset-x-0 bottom-[max(2rem,env(safe-area-inset-bottom))] z-20 flex justify-center px-6 text-center"
             >
-              <span className="text-[11px] font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+              <span className="text-[14px] font-semibold text-sn-ink animate-pulse">
                 Tap anywhere to continue
               </span>
             </motion.div>
@@ -791,9 +793,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       {["partner-name-input", "partner-pin", "partner-confirm"].includes(stage) && (
         <button
           onClick={handleBack}
-          className="absolute top-5 left-5 z-20 p-2.5 rounded-full border border-white/40 bg-white/20 backdrop-blur-xl hover:bg-white/40 active:scale-95 transition text-foreground"
+          aria-label="Back"
+          className="sn-pill sn-icon-btn absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-20 h-11 w-11 sm:left-6 sm:top-6"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={19} strokeWidth={2} />
         </button>
       )}
 
@@ -809,31 +812,34 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       <AnimatePresence mode="wait">
         {stage === "loading" && (
           <Screen key="loading">
-            <div className="text-sm text-muted-foreground animate-pulse">Warming your space...</div>
+            <motion.img
+              src={ART.clayHeart}
+              alt=""
+              aria-hidden
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              className="h-16 w-16 select-none"
+            />
+            <div className="mt-4 text-[15px] text-sn-muted">Warming your space…</div>
           </Screen>
         )}
 
         {stage === "error" && (
           <Screen key="error">
             <Title
-              kicker="Gentle pause"
               title="Waking your space"
-              sub={
-                errorMsg
-                  ? `${errorMsg} Reconnecting automatically…`
-                  : "Connecting to your space. Reconnecting automatically…"
-              }
+              sub="Reconnecting automatically…"
             />
             <div className="mt-8 flex flex-col items-center gap-3">
               <button
                 onClick={() => initApp()}
-                className="rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm font-medium"
+                className="sn-pill h-12 px-8 text-[15px]"
               >
                 Retry now
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-4"
+                className="sn-ghost h-10 px-5 text-[14px]"
               >
                 Reload page
               </button>
@@ -844,9 +850,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "setup-name" && (
           <Screen key="name">
             <Title
-              kicker="Welcome to"
-              title="Seanaya"
-              sub="This is your space. What should we call you?"
+              wordmark
+              title="What should we call you?"
             />
             <NameInput value={name} onChange={setName} />
             <ContinueButton disabled={!name.trim()} onClick={() => setStage("setup-pin")} />
@@ -856,10 +861,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           <Screen key="setpin">
             <Title
               kicker={`Hi, ${name.trim()}`}
-              title="Set your PIN"
-              sub="Four digits. This is just yours."
+              title="Choose your PIN"
             />
-            <div className="mt-10">
+            <div className="mt-9">
               <PinKeypad
                 value={pin}
                 onChange={setPin}
@@ -875,11 +879,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "setup-confirm" && (
           <Screen key="confirm">
             <Title
-              kicker="Almost there"
+              kicker="Once more"
               title="Confirm your PIN"
-              sub="Enter the same four digits again."
             />
-            <div className="mt-10">
+            <div className="mt-9">
               <PinKeypad
                 value={pinConfirm}
                 onChange={setPinConfirm}
@@ -902,7 +905,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               variants={sentenceVariants}
               initial="hidden"
               animate="visible"
-              className="display text-4xl leading-tight text-foreground mt-4 flex flex-wrap justify-center"
+              className="mt-4 flex flex-wrap justify-center font-serif text-[36px] font-semibold leading-tight text-sn-navy sm:text-[44px]"
             >
               {"Happy 3rd Monthsary, Aya!".split(" ").map((word, wordIdx) => (
                 <span key={wordIdx} className="inline-block whitespace-nowrap mr-2">
@@ -926,7 +929,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <motion.div
                 animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute w-52 h-52 bg-[radial-gradient(circle,rgba(255,255,255,0.75)_0%,rgba(14,165,233,0.25)_65%,transparent_100%)] blur-md rounded-full"
+                className="absolute h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.8)_0%,rgba(143,170,240,0.3)_65%,transparent_100%)] blur-md"
               />
 
               {/* Floating Couple Sticker wrapper */}
@@ -935,7 +938,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 src="/couple-sticker.webp"
                 alt="Sean & Aya Sticker"
-                className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-[0_12px_28px_rgba(14,165,233,0.22)]"
+                className="relative h-60 w-60 object-contain drop-shadow-[0_14px_28px_rgba(80,100,170,0.25)] sm:h-72 sm:w-72"
               />
 
               {/* Twinkling star 1 */}
@@ -1061,16 +1064,16 @@ export function PinGate({ children }: { children: React.ReactNode }) {
                 >
                   <button
                     onClick={handleReplayVm}
-                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                    className="sn-pill h-11 px-5 text-[14px]"
                   >
-                    <Play size={10} fill="currentColor" />
+                    <Play size={15} fill="currentColor" />
                     Listen Again
                   </button>
                   <button
                     onClick={handleDownloadVm}
-                    className="flex items-center gap-2 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-5 py-2 text-[11px] font-medium hover:bg-white/60 transition shadow-sm"
+                    className="sn-pill h-11 px-5 text-[14px]"
                   >
-                    <Download size={10} />
+                    <Download size={16} strokeWidth={1.9} />
                     Download VM
                   </button>
                 </motion.div>
@@ -1082,9 +1085,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {/* Page 2: Name input onboarding with Monthsary congrats and cycling compliments */}
         {stage === "partner-name-input" && (
           <Screen key="pname-input">
-            <div className="text-[12px] uppercase tracking-[0.22em] text-muted-foreground flex items-center justify-center flex-wrap gap-x-1 min-h-[16px]">
+            <div className="sn-hand flex min-h-[30px] flex-wrap items-center justify-center gap-x-1.5 text-[22px] text-sn-ink">
               <span>You must be the</span>
-              <span className="font-semibold text-primary inline-flex min-w-[70px] justify-center">
+              <span className="inline-flex min-w-[80px] justify-center text-[#c9457a]">
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={wordIndex}
@@ -1100,10 +1103,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               <span>girlfriend?</span>
             </div>
 
-            <h1 className="display mt-3 text-4xl leading-tight text-foreground">
-              Congratulations on your monthsary!
+            <h1 className="mt-3 font-serif text-[34px] font-semibold leading-tight text-sn-navy sm:text-[40px]">
+              Congratulations on your monthsary
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">What should we call you here?</p>
 
             <NameInput value={name} onChange={setName} />
             <ContinueButton
@@ -1119,11 +1121,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "partner-pin" && (
           <Screen key="ppin">
             <Title
-              kicker={name ? `Hi, ${name}` : "Hi"}
-              title="Set your own PIN"
-              sub="Four digits — just yours. Different from your partner's."
+              kicker={name ? `Hi, ${name}` : undefined}
+              title="Choose your own PIN"
             />
-            <div className="mt-10">
+            <div className="mt-9">
               <PinKeypad
                 value={pin}
                 onChange={setPin}
@@ -1139,11 +1140,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {stage === "partner-confirm" && (
           <Screen key="pconfirm">
             <Title
-              kicker="Almost there"
+              kicker="Once more"
               title="Confirm your PIN"
-              sub="Enter the same four digits again."
             />
-            <div className="mt-10">
+            <div className="mt-9">
               <PinKeypad
                 value={pinConfirm}
                 onChange={setPinConfirm}
@@ -1161,8 +1161,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "unlock" && (
           <Screen key="unlock">
-            <Title kicker="Seanaya" title="Enter your PIN" />
-            <div className="mt-10">
+            <CouplePortraits />
+            <Title wordmark title="Enter your PIN" />
+            <div className="mt-9">
               <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>
           </Screen>
@@ -1170,8 +1171,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
 
         {stage === "forgot-newpin" && (
           <Screen key="newpin">
-            <Title kicker="Reset PIN" title="Pick a new PIN" sub="Four digits." />
-            <div className="mt-10">
+            <Title kicker="Reset" title="Choose a new PIN" />
+            <div className="mt-9">
               <PinKeypad value={pin} onChange={setPin} onComplete={completeReset} />
             </div>
           </Screen>
@@ -1189,17 +1190,14 @@ function NameInput({ value, onChange }: { value: string; onChange: (v: string) =
       onChange={(e) => onChange(e.target.value)}
       placeholder="Your name"
       maxLength={40}
-      className="mt-8 w-72 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-6 py-3 text-center text-lg outline-none focus:ring-2 focus:ring-primary/40"
+      aria-label="Your name"
+      className="mt-8 h-14 w-full max-w-[300px] rounded-full border border-white/90 bg-white/80 px-6 text-center text-[18px] text-sn-navy shadow-[var(--shadow-pill)] outline-none backdrop-blur-xl placeholder:text-sn-faint focus:border-sn-periwinkle"
     />
   );
 }
 function ContinueButton({ disabled, onClick }: { disabled?: boolean; onClick: () => void }) {
   return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-8 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm disabled:opacity-40 disabled:hover:bg-white/40 font-medium"
-    >
+    <button disabled={disabled} onClick={onClick} className="sn-pill mt-5 h-12 px-9 text-[15.5px]">
       Continue
     </button>
   );
@@ -1207,29 +1205,83 @@ function ContinueButton({ disabled, onClick }: { disabled?: boolean; onClick: ()
 function Screen({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="relative z-10 flex w-full max-w-md flex-col items-center px-6 text-center"
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+      className="relative z-10 flex max-h-full w-full max-w-md flex-col items-center overflow-y-auto px-6 py-8 text-center"
     >
       {children}
     </motion.div>
   );
 }
-function Title({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
+function Title({
+  kicker,
+  title,
+  sub,
+  wordmark,
+}: {
+  kicker?: string;
+  title: string;
+  sub?: string;
+  wordmark?: boolean;
+}) {
   return (
     <>
-      <div className="text-[12px] uppercase tracking-[0.25em] text-muted-foreground">{kicker}</div>
-      <div className="display mt-2 text-4xl leading-tight">{title}</div>
-      {sub && <p className="mt-2 text-sm text-muted-foreground">{sub}</p>}
+      {wordmark ? (
+        <div className="font-serif text-[20px] font-medium tracking-[0.18em] text-[#38457c]">
+          SEANAYA
+        </div>
+      ) : kicker ? (
+        <div className="sn-hand text-[22px] text-sn-ink">{kicker}</div>
+      ) : null}
+      <h1 className="mt-2 font-serif text-[32px] font-semibold leading-tight text-sn-navy sm:text-[38px]">
+        {title}
+      </h1>
+      {sub && <p className="mt-2 text-[15px] text-sn-muted">{sub}</p>}
     </>
   );
 }
+/** Both of you, side by side, on the lock screen. */
+function CouplePortraits() {
+  const { me, partner, slot } = useCoupleNames();
+  const [a, b] = slot === "a" ? [me, partner] : [partner, me];
+  return (
+    <div className="mb-6 flex items-end justify-center">
+      <img
+        src={ART.seanChibi}
+        alt={a}
+        className="h-[84px] w-[74px] -rotate-6 rounded-[20px] border-[3px] border-white object-cover shadow-[0_10px_22px_-12px_rgba(86,104,176,0.6)]"
+      />
+      <img src={ART.clayHeart} alt="" aria-hidden className="z-10 -mx-3 mb-1 h-9 w-9 select-none" />
+      <img
+        src={ART.ayaChibi}
+        alt={b}
+        className="h-[84px] w-[74px] rotate-6 rounded-[20px] border-[3px] border-white object-cover shadow-[0_10px_22px_-12px_rgba(86,104,176,0.6)]"
+      />
+    </div>
+  );
+}
+/** Soft sky scenery behind every lock and onboarding screen. */
 function AmbientBlobs() {
   return (
-    <>
-      <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-white/25 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 bottom-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-    </>
+    <div aria-hidden className="pointer-events-none absolute inset-0 select-none overflow-hidden">
+      <img src="/art/cloud-puff.webp" alt="" className="sn-cloud -left-28 top-[12%] w-[380px] opacity-60" />
+      <img src="/art/cloud-puff.webp" alt="" className="sn-cloud -right-32 top-[58%] w-[340px] opacity-50" />
+      <img
+        src={ART.lilyOpen}
+        alt=""
+        className="absolute -right-10 -top-12 w-[190px] -rotate-[18deg] opacity-95 sm:w-[230px]"
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-[110px]"
+        style={{
+          backgroundImage: `url(${ART.cloudBand})`,
+          backgroundRepeat: "repeat-x",
+          backgroundSize: "auto 100%",
+          backgroundPosition: "left bottom",
+        }}
+      />
+    </div>
   );
 }

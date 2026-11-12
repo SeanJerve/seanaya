@@ -4,11 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
-import { FieldWrap, Input, Textarea, PrimaryButton } from "./form-ui";
+import { FieldWrap, FormStack, Input, OfflineNote, PhotoPicker, PrimaryButton, Textarea, Toggle } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { uploadImage } from "@/lib/storage";
-import { DropZone } from "@/lib/DropZone";
-import { Upload, X, CloudOff, Save } from "lucide-react";
 
 type Form = {
   title: string;
@@ -98,81 +96,39 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   });
 
   return (
-    <div className="space-y-4">
-      {!online && (
-        <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 text-[11px] text-muted-foreground">
-          <CloudOff size={12} /> Offline — draft is saved automatically. Will sync when you're back.
-        </div>
-      )}
-
-      <FieldWrap label="Photo (optional)">
-        {preview ? (
-          <div className="relative overflow-hidden rounded-2xl border border-white/50">
-            <img src={preview} alt="" className="h-40 w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => {
-                setFile(null);
-                setPreview(null);
-              }}
-              className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <DropZone
-            onFile={onFile}
-            className="flex h-32 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-foreground/25 bg-white/40 text-xs text-muted-foreground"
-          >
-            <Upload size={18} />
-            <span>Upload photo</span>
-          </DropZone>
-        )}
-      </FieldWrap>
-
+    <FormStack>
+      {!online && <OfflineNote />}
+      <PhotoPicker
+        preview={preview}
+        onFile={onFile}
+        onClear={() => {
+          setFile(null);
+          setPreview(null);
+        }}
+      />
       <FieldWrap label="Title">
-        <Input
-          value={form.title}
-          onChange={(e) => set("title", e.target.value)}
-          placeholder="A moment worth keeping"
-        />
+        <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="A moment worth keeping" />
       </FieldWrap>
       <FieldWrap label="Story">
         <Textarea
           rows={3}
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
-          placeholder="Tell the story…"
+          placeholder="What happened?"
         />
       </FieldWrap>
-      <FieldWrap label="Date">
-        <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-      </FieldWrap>
-      <FieldWrap label="Location">
-        <Input
-          value={form.location}
-          onChange={(e) => set("location", e.target.value)}
-          placeholder="Optional"
-        />
-      </FieldWrap>
-      <label className="flex items-center gap-2 text-sm text-foreground/80">
-        <input
-          type="checkbox"
-          checked={featured}
-          onChange={(e) => setFeatured(e.target.checked)}
-          className="accent-foreground"
-        />
-        Feature this month (may appear on Monthsary)
-      </label>
-
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-        <Save size={11} /> Draft autosaved locally
+      <div className="grid gap-5 sm:grid-cols-2">
+        <FieldWrap label="Date">
+          <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+        </FieldWrap>
+        <FieldWrap label="Place">
+          <Input value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Optional" />
+        </FieldWrap>
       </div>
-
+      <Toggle label="Feature in this month's story" on={featured} onChange={setFeatured} />
       <PrimaryButton disabled={create.isPending || !online} onClick={() => create.mutate()}>
-        {online ? "Save memory" : "Waiting to sync…"}
+        {online ? "Keep this memory" : "Waiting to sync…"}
       </PrimaryButton>
-    </div>
+    </FormStack>
   );
 }

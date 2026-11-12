@@ -10,8 +10,8 @@ import {
   applyStickerOutline,
   type BGRemovalMode,
 } from "@/lib/background-remover";
-import { PrimaryButton } from "./form-ui";
-import { Upload, Sliders, Wand2, Paintbrush, Eraser, Undo2, Check, Eye } from "lucide-react";
+import { FormStack, Group, PrimaryButton } from "./form-ui";
+import { ImagePlus, Wand2, Paintbrush, Eraser, Undo2, Check } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 
 const OUTLINE_COLORS = [
@@ -311,58 +311,51 @@ export function AddStickerSheet({
     if (f) setFile(f);
   };
 
+  const slider =
+    "h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfe3f5] accent-[#7f9ef0]";
+  const tools = [
+    { id: "wand" as const, label: "Magic tap", icon: <Wand2 size={16} strokeWidth={1.8} /> },
+    { id: "restore" as const, label: "Restore", icon: <Paintbrush size={16} strokeWidth={1.8} /> },
+    { id: "erase" as const, label: "Erase", icon: <Eraser size={16} strokeWidth={1.8} /> },
+  ];
+
   return (
-    <div className="space-y-4">
+    <FormStack>
       {!file ? (
-        <label className="relative flex flex-col items-center justify-center border border-dashed border-foreground/25 bg-white/40 hover:bg-white/50 transition-all rounded-2xl p-8 cursor-pointer text-center group overflow-hidden">
-          <Upload
-            size={22}
-            className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform"
-          />
-          <span className="text-xs font-semibold text-foreground/75">Upload photo for sticker</span>
-          <span className="text-[12px] text-muted-foreground mt-1">
-            Smart background removal & custom touch-up tools
-          </span>
-          {/* Use sr-only instead of hidden for iOS Safari mobile compatibility */}
+        <label className="flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] border border-dashed border-[#c9cfee] bg-white/45 text-[14px] font-semibold text-sn-ink transition hover:bg-white/70">
+          <ImagePlus size={24} strokeWidth={1.6} className="text-[#5b6aa6]" />
+          Choose a photo
+          {/* sr-only rather than hidden, for iOS Safari */}
           <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
         </label>
       ) : (
-        <div className="space-y-4">
-          {/* Mode Selector */}
-          <div className="flex items-center justify-between bg-white/40 p-1.5 rounded-2xl border border-white/50 text-xs">
-            <span className="text-[12px] uppercase font-bold text-muted-foreground tracking-wider pl-2">
-              Cut Mode:
-            </span>
-            <div className="flex gap-1">
+        <>
+          <Group label="Cut">
+            <div className="flex flex-wrap gap-2">
               <button
+                type="button"
                 onClick={() => setMode("exterior")}
-                className={`px-3 py-1 rounded-xl font-semibold transition-all text-[11px] ${
-                  mode === "exterior"
-                    ? "bg-white shadow-sm text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                aria-pressed={mode === "exterior"}
+                className={`sn-pill h-10 px-4 text-[14px] ${mode === "exterior" ? "sn-active" : ""}`}
               >
-                Smart Outer (Protects Inner)
+                Outline only
               </button>
               <button
+                type="button"
                 onClick={() => setMode("global")}
-                className={`px-3 py-1 rounded-xl font-semibold transition-all text-[11px] ${
-                  mode === "global"
-                    ? "bg-white shadow-sm text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                aria-pressed={mode === "global"}
+                className={`sn-pill h-10 px-4 text-[14px] ${mode === "global" ? "sn-active" : ""}`}
               >
-                All Colors
+                Every matching colour
               </button>
             </div>
-          </div>
+          </Group>
 
-          {/* Canvas Interactive Studio */}
-          <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-white/40 bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:16px_16px] bg-slate-50 flex items-center justify-center p-2 touch-none">
+          <div className="relative flex aspect-video w-full touch-none items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f6fe] bg-[radial-gradient(#dfe3f5_1.5px,transparent_1.5px)] [background-size:16px_16px] p-2">
             {processing && (
-              <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-xs flex flex-col items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-5 w-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                Processing sticker silhouette...
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/70 text-[14px] text-sn-ink backdrop-blur-xs">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#c9d8fd] border-t-[#7f9ef0]" />
+                Cutting out…
               </div>
             )}
             <canvas
@@ -373,164 +366,79 @@ export function AddStickerSheet({
               onTouchStart={handleCanvasInteractionStart}
               onTouchMove={handleCanvasInteractionMove}
               onTouchEnd={handleCanvasInteractionEnd}
-              className="max-h-full max-w-full object-contain cursor-crosshair drop-shadow-[0_6px_12px_rgba(0,0,0,0.15)]"
+              className="max-h-full max-w-full cursor-crosshair object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.15)]"
             />
           </div>
 
-          {/* Interactive Touch Tools Bar */}
-          <div className="flex items-center justify-between gap-1.5 bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/60 shadow-sm">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {tools.map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={() => setActiveTool("wand")}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
-                  activeTool === "wand"
-                    ? "sn-pill sn-active"
-                    : "text-muted-foreground hover:bg-white/60"
-                }`}
-                title="Tap any background spot to erase it"
+                onClick={() => setActiveTool(t.id)}
+                aria-pressed={activeTool === t.id}
+                className={`sn-pill h-10 px-3.5 text-[14px] ${activeTool === t.id ? "sn-active" : ""}`}
               >
-                <Wand2 size={12} /> Magic Tap
+                {t.icon}
+                {t.label}
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTool("restore")}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
-                  activeTool === "restore"
-                    ? "sn-pill sn-active"
-                    : "text-muted-foreground hover:bg-white/60"
-                }`}
-                title="Draw over broken areas to restore original photo"
-              >
-                <Paintbrush size={12} /> Restore
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTool("erase")}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
-                  activeTool === "erase"
-                    ? "sn-pill sn-active"
-                    : "text-muted-foreground hover:bg-white/60"
-                }`}
-                title="Draw manually to erase background"
-              >
-                <Eraser size={12} /> Eraser
-              </button>
-            </div>
-
+            ))}
             <button
               type="button"
               disabled={history.length <= 1}
               onClick={handleUndo}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-semibold text-foreground/70 hover:bg-white/60 disabled:opacity-30 transition-all"
-              title="Undo last touch-up"
+              className="sn-ghost ml-auto h-10 px-3.5 text-[14px] disabled:opacity-40"
             >
-              <Undo2 size={12} /> Undo
+              <Undo2 size={16} strokeWidth={1.8} /> Undo
             </button>
           </div>
 
-          {/* Adjusters & Sliders */}
-          <div className="space-y-3 pt-1">
-            {/* Brush Size for Restore/Eraser */}
-            {activeTool !== "wand" && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  <span>Brush Size</span>
-                  <span>{brushSize}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="6"
-                  max="48"
-                  value={brushSize}
-                  onChange={(e) => setBrushSize(Number(e.target.value))}
-                  className="w-full h-1.5 bg-white/40 rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-              </div>
-            )}
+          {activeTool !== "wand" && (
+            <Group label={`Brush · ${brushSize}px`}>
+              <input type="range" min="6" max="48" value={brushSize} onChange={(e) => setBrushSize(Number(e.target.value))} className={slider} />
+            </Group>
+          )}
+          <Group label={`Sensitivity · ${tolerance}`}>
+            <input type="range" min="10" max="100" value={tolerance} onChange={(e) => setTolerance(Number(e.target.value))} className={slider} />
+          </Group>
+          <Group label={`Border · ${outlineSize}px`}>
+            <input type="range" min="0" max="24" value={outlineSize} onChange={(e) => setOutlineSize(Number(e.target.value))} className={slider} />
+          </Group>
 
-            {/* Tolerance Adjuster */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <span className="flex items-center gap-1">
-                  <Sliders size={10} /> Cut Sensitivity
-                </span>
-                <span>{tolerance}</span>
-              </div>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={tolerance}
-                onChange={(e) => setTolerance(Number(e.target.value))}
-                className="w-full h-1.5 bg-white/40 rounded-lg appearance-none cursor-pointer accent-primary"
-              />
-            </div>
-
-            {/* Border Thickness */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <span className="flex items-center gap-1">
-                  <Sliders size={10} /> Border Thickness
-                </span>
-                <span>{outlineSize}px</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="24"
-                value={outlineSize}
-                onChange={(e) => setOutlineSize(Number(e.target.value))}
-                className="w-full h-1.5 bg-white/40 rounded-lg appearance-none cursor-pointer accent-primary"
-              />
-            </div>
-
-            {/* Outline Color Palette Selection */}
-            {outlineSize > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Border Color
-                </div>
-                <div className="flex gap-2">
-                  {OUTLINE_COLORS.map((c) => (
+          {outlineSize > 0 && (
+            <Group label="Border colour">
+              <div className="flex flex-wrap gap-2.5">
+                {OUTLINE_COLORS.map((c) => {
+                  const on = outlineColor === c.value;
+                  return (
                     <button
                       key={c.value}
                       type="button"
                       onClick={() => setOutlineColor(c.value)}
-                      className={`h-7 w-7 rounded-full border-2 shadow-sm transition-all flex items-center justify-center ${
-                        outlineColor === c.value ? "border-primary scale-110" : "border-white/60"
-                      }`}
-                      style={{ background: c.value }}
+                      aria-label={c.label}
+                      aria-pressed={on}
                       title={c.label}
+                      className={`grid h-10 w-10 place-items-center rounded-full border-2 transition ${on ? "border-[#94b2f6] ring-2 ring-white" : "border-white"}`}
+                      style={{ background: c.value }}
                     >
-                      {outlineColor === c.value && (
-                        <Check size={12} className="text-foreground/80" />
-                      )}
+                      {on && <Check size={16} strokeWidth={2.4} className="text-sn-navy" />}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
+            </Group>
+          )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setFile(null)}
-              className="flex-1 py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-xs font-semibold text-foreground/70 transition-all active:scale-95"
-            >
-              Clear
+          <div className="flex gap-2.5">
+            <button type="button" onClick={() => setFile(null)} className="sn-ghost h-12 px-6 text-[15px]">
+              Start over
             </button>
-            <PrimaryButton
-              disabled={uploadSticker.isPending || processing}
-              onClick={() => uploadSticker.mutate()}
-            >
-              Save Sticker
+            <PrimaryButton disabled={uploadSticker.isPending || processing} onClick={() => uploadSticker.mutate()} className="flex-1">
+              Save sticker
             </PrimaryButton>
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </FormStack>
   );
 }

@@ -5,7 +5,7 @@ import { ArrowLeft, Check, Download, FlipHorizontal2, RotateCcw, SwitchCamera, B
 import { useWebRTC } from "./useWebRTC";
 import { useBoothSession } from "./useBoothSession";
 import { FILTERS, LAYOUTS, STYLES, downloadCanvas, renderBooth, type LayoutId, type StyleId } from "./booth-templates";
-import { saveStripToAlbumBook, updateSavedStrip, type SavedStrip } from "./canvas-exporter";
+import { saveStripToAlbumBook, updateSavedStrip, type SavedStrip } from "./album-save";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
 import { useCoupleNames } from "@/hooks/useCouple";

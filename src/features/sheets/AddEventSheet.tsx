@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
-import { FieldWrap, Input, Select, PrimaryButton } from "./form-ui";
+import { FieldWrap, FormStack, Input, OfflineNote, PrimaryButton, Toggle } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { CloudOff, Save } from "lucide-react";
 
@@ -68,55 +68,25 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
   });
 
   return (
-    <div className="space-y-4">
-      {!online && (
-        <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 text-[11px] text-muted-foreground">
-          <CloudOff size={12} /> Offline — draft saved locally. Will sync when you're back.
-        </div>
-      )}
-
-      <FieldWrap label="Title">
+    <FormStack>
+      {!online && <OfflineNote />}
+      <FieldWrap label="What's the moment?">
         <Input
           value={form.title}
           onChange={(e) => set("title", e.target.value)}
-          placeholder="What is it?"
+          placeholder="Our 6th monthsary"
         />
       </FieldWrap>
       <FieldWrap label="When">
-        <Input
-          type="datetime-local"
-          value={form.when}
-          onChange={(e) => set("when", e.target.value)}
-        />
+        <Input type="datetime-local" value={form.when} onChange={(e) => set("when", e.target.value)} />
       </FieldWrap>
-      <div className="flex flex-col gap-3 bg-white/30 rounded-2xl p-4 border border-white/30 backdrop-blur-sm">
-        <label className="flex items-center gap-2.5 text-xs text-foreground/80 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={form.countdown}
-            onChange={(e) => set("countdown", e.target.checked)}
-            className="h-4 w-4 rounded border-white/50 bg-white/40 accent-primary cursor-pointer"
-          />
-          Show countdown on Home
-        </label>
-        <label className="flex items-center gap-2.5 text-xs text-foreground/80 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={form.recurring}
-            onChange={(e) => set("recurring", e.target.checked)}
-            className="h-4 w-4 rounded border-white/50 bg-white/40 accent-primary cursor-pointer"
-          />
-          Repeat monthly (monthsary)
-        </label>
+      <div className="divide-y divide-[#e7e4f3]">
+        <Toggle label="Count down on Home" on={form.countdown} onChange={(v) => set("countdown", v)} />
+        <Toggle label="Repeat every monthsary" on={form.recurring} onChange={(v) => set("recurring", v)} />
       </div>
-
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-        <Save size={11} /> Draft autosaved locally
-      </div>
-
       <PrimaryButton disabled={create.isPending || !online} onClick={() => create.mutate()}>
-        {online ? "Save event" : "Waiting to sync…"}
+        {online ? "Add moment" : "Waiting to sync…"}
       </PrimaryButton>
-    </div>
+    </FormStack>
   );
 }

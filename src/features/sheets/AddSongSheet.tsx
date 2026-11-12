@@ -3,9 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
-import { FieldWrap, Input, PrimaryButton } from "./form-ui";
+import { FieldWrap, FormStack, Input, OfflineNote, PrimaryButton } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
-import { CloudOff, Save } from "lucide-react";
 
 type Form = { title: string; artist: string };
 
@@ -38,35 +37,17 @@ export function AddSongSheet({ relationshipId }: { relationshipId: string }) {
   });
 
   return (
-    <div className="space-y-4">
-      {!online && (
-        <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 text-[11px] text-muted-foreground">
-          <CloudOff size={12} /> Offline — draft saved. Will sync when you're back.
-        </div>
-      )}
-
-      <FieldWrap label="Title">
-        <Input
-          value={form.title}
-          onChange={(e) => set("title", e.target.value)}
-          placeholder="Song title"
-        />
+    <FormStack>
+      {!online && <OfflineNote />}
+      <FieldWrap label="Song">
+        <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Song title" />
       </FieldWrap>
       <FieldWrap label="Artist">
-        <Input
-          value={form.artist}
-          onChange={(e) => set("artist", e.target.value)}
-          placeholder="Optional"
-        />
+        <Input value={form.artist} onChange={(e) => set("artist", e.target.value)} placeholder="Optional" />
       </FieldWrap>
-
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-        <Save size={11} /> Draft autosaved locally
-      </div>
-
       <PrimaryButton disabled={add.isPending || !online} onClick={() => add.mutate()}>
         {online ? "Add song" : "Waiting to sync…"}
       </PrimaryButton>
-    </div>
+    </FormStack>
   );
 }

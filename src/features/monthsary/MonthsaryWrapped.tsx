@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
+import { useCoupleNames } from "@/hooks/useCouple";
+import { useRelationship } from "@/hooks/useRelationship";
 import { X, Heart, RotateCcw, ChevronRight, Camera, Layers } from "lucide-react";
 
 type Pet = {
@@ -104,7 +106,7 @@ function AmbientBlobs() {
           scale: [1, 1.1, 1],
         }}
         transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-sky-200/60 blur-3xl"
+        className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[#c9d6fb]/60 blur-3xl"
       />
       <motion.div
         animate={{
@@ -112,7 +114,7 @@ function AmbientBlobs() {
           opacity: [0.35, 0.55, 0.35],
         }}
         transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/3 right-1/4 h-72 w-72 rounded-full bg-sky-100/50 blur-2xl"
+        className="absolute top-1/3 right-1/4 h-72 w-72 rounded-full bg-[#e4eafc]/50 blur-2xl"
       />
     </div>
   );
@@ -160,6 +162,16 @@ function BackgroundSparkles() {
 
 export function MonthsaryWrapped({ relationshipId }: { relationshipId: string }) {
   const { isMonthsaryOpen, closeMonthsary } = useAppStore();
+  const couple = useCoupleNames();
+  const nameA = couple.slot === "a" ? couple.me : couple.partner;
+  const nameB = couple.slot === "a" ? couple.partner : couple.me;
+  const { data: rel } = useRelationship();
+  const startISO = rel?.anniversary || "2026-06-19";
+  const startLabel = new Date(startISO + "T00:00:00").toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -204,18 +216,16 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
         stickers: (stickersRes.data as StickerItem[]) || [],
         pets: (petsRes.data as Pet[]) || [],
         memories: (memoriesRes.data as Memory[]) || [],
-        hugsCount: hugsRes.count || 35,
+        hugsCount: hugsRes.count ?? 0,
       };
     },
   });
 
   // Calculate days together since June 19, 2026
   const daysTogether = useMemo(() => {
-    const start = new Date("2026-06-19T00:00:00");
-    const now = new Date();
-    const diff = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    return diff > 0 ? diff : 92;
-  }, []);
+    const start = new Date(startISO + "T00:00:00");
+    return Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  }, [startISO]);
 
   // Ensure all 9 stickers are always available and rendered on the board
   const displayStickers = useMemo(() => {
@@ -418,10 +428,25 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
 
   if (!isMonthsaryOpen) return null;
 
+  const pets = stats?.pets ?? [];
+  const petNames =
+    pets.length === 0
+      ? ""
+      : pets.length === 1
+        ? pets[0].name
+        : `${pets.slice(0, -1).map((p) => p.name).join(", ")} and ${pets[pets.length - 1].name}`;
+  const slideMotion = {
+    initial: { opacity: 0, y: 14 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
+    transition: { duration: 0.38, ease: [0.2, 0, 0, 1] as const },
+  };
+  const title = "font-serif text-[34px] font-semibold leading-[1.1] text-sn-navy sm:text-[44px]";
+
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none"
+        className="fixed inset-0 z-50 flex select-none flex-col justify-between overflow-hidden"
         style={{ background: "var(--gradient-sky)" }}
         onMouseDown={() => setIsPaused(true)}
         onMouseUp={() => setIsPaused(false)}
@@ -429,520 +454,277 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
         onTouchEnd={() => setIsPaused(false)}
         onClick={handleContainerTap}
       >
-        {/* Confetti canvas */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 pointer-events-none z-30"
-          style={{ width: "100%", height: "100%" }}
-        />
-
-        {/* Ambient atmospheric blobs & sparkles */}
+        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-30" style={{ width: "100%", height: "100%" }} />
         <AmbientBlobs />
         <BackgroundSparkles />
 
-        {/* Top Story Header: Progress Bars & Close Button (No volume) */}
-        <div className="relative z-40 px-5 pt-4 pb-2 flex flex-col gap-2.5">
-          {/* Progress bar segments */}
-          <div className="flex items-center gap-1.5 w-full">
+        {/* Progress + close */}
+        <div className="relative z-40 mx-auto flex w-full max-w-[720px] flex-col gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="flex w-full items-center gap-1.5">
             {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => {
-              let fillPercent = 0;
-              if (idx < currentSlide) fillPercent = 100;
-              else if (idx === currentSlide) fillPercent = slideProgress;
-
+              const fill = idx < currentSlide ? 100 : idx === currentSlide ? slideProgress : 0;
               return (
-                <div
-                  key={idx}
-                  className="h-1 flex-1 bg-foreground/15 rounded-full overflow-hidden backdrop-blur-sm"
-                >
+                <div key={idx} className="h-[5px] flex-1 overflow-hidden rounded-full bg-white/55">
                   <div
-                    className="h-full bg-primary transition-all duration-75 ease-linear rounded-full"
-                    style={{ width: `${fillPercent}%` }}
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#a9c0f6,#7f9fe9)] transition-[width] duration-75 ease-linear"
+                    style={{ width: `${fill}%` }}
                   />
                 </div>
               );
             })}
           </div>
-
-          {/* Simple header */}
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-xs font-bold text-foreground/80 tracking-wide">
-              3rd Monthsary
-            </span>
-
+          <div className="flex items-center justify-between">
+            <span className="sn-label">3rd monthsary</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 closeMonthsary();
               }}
-              className="p-1.5 rounded-full bg-white/60 hover:bg-white/80 active:scale-95 transition border border-white/60 text-foreground shadow-2xs"
-              title="Close"
+              aria-label="Close"
+              className="sn-pill sn-icon-btn h-10 w-10"
             >
-              <X size={15} />
+              <X size={17} strokeWidth={2} />
             </button>
           </div>
         </div>
 
-        {/* Slide Content */}
-        <div className="relative z-20 flex-1 flex flex-col justify-center items-center px-6 max-w-md mx-auto w-full text-center min-h-0">
+        {/* Slides */}
+        <div className="relative z-20 mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col items-center justify-center px-6 text-center">
           <AnimatePresence mode="wait">
-            {/* SLIDE 0: 1st Monthsary Tribute Greeting */}
             {currentSlide === 0 && (
-              <motion.div
-                key="slide-0"
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.04 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto"
-              >
-                {/* Letter by letter animated title in text-foreground */}
+              <motion.div key="s0" {...slideMotion} className="flex w-full flex-col items-center">
                 <motion.h1
                   variants={sentenceVariants}
                   initial="hidden"
                   animate="visible"
-                  className="display text-4xl sm:text-5xl font-extrabold leading-tight text-foreground flex flex-wrap justify-center"
+                  className={`${title} flex flex-wrap justify-center`}
                 >
-                  {"Happy 3rd Monthsary, Aya!".split(" ").map((word, wordIdx) => (
-                    <span key={wordIdx} className="inline-block whitespace-nowrap mr-2.5">
-                      {Array.from(word).map((char, charIdx) => (
-                        <motion.span
-                          key={charIdx}
-                          variants={letterVariants}
-                          className="inline-block"
-                        >
-                          {char}
+                  {`Happy 3rd monthsary, ${nameB}`.split(" ").map((word, wi) => (
+                    <span key={wi} className="mr-2.5 inline-block whitespace-nowrap">
+                      {Array.from(word).map((ch, ci) => (
+                        <motion.span key={ci} variants={letterVariants} className="inline-block">
+                          {ch}
                         </motion.span>
                       ))}
                     </span>
                   ))}
                 </motion.h1>
-
                 <motion.p
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35, duration: 0.5 }}
-                  className="mt-2 text-xs sm:text-sm text-muted-foreground font-medium"
+                  transition={{ delay: 0.4, duration: 0.5 }}
+                  className="sn-hand mt-2 text-[22px] text-sn-ink"
                 >
                   three months of us
                 </motion.p>
-
-                {/* Floating Lily Bouquet with glowing backdrop and 8 twinkling stars */}
                 <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
+                  initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.3, type: "spring", stiffness: 95 }}
-                  className="my-8 relative flex justify-center items-center"
+                  className="relative my-8 flex items-center justify-center"
                 >
-                  {/* Pulsing glow */}
                   <motion.div
-                    animate={{ scale: [1, 1.15, 1], opacity: [0.35, 0.55, 0.35] }}
+                    animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0.7, 0.45] }}
                     transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute w-56 h-56 bg-[radial-gradient(circle,rgba(255,255,255,0.95)_0%,rgba(14,165,233,0.3)_60%,transparent_100%)] blur-lg rounded-full"
+                    className="absolute h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.95)_0%,rgba(201,214,251,0.5)_60%,transparent_100%)] blur-lg"
                   />
-
-                  {/* Couple Sticker Image */}
                   <motion.img
                     animate={{ y: [0, -9, 0] }}
                     transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
                     src="/couple-sticker.webp"
-                    alt="Sean & Aya Sticker"
-                    className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-[0_12px_28px_rgba(14,165,233,0.22)]"
+                    alt={`${nameA} and ${nameB}`}
+                    className="relative h-60 w-60 object-contain drop-shadow-[0_14px_28px_rgba(50,70,150,0.25)] sm:h-72 sm:w-72"
                   />
-
-                  {/* 8 Twinkling Stars */}
                   <TwinklingStar top="12%" left="18%" delay={0} duration={2.0} rotate={90} />
                   <TwinklingStar top="16%" right="20%" delay={0.6} duration={1.8} rotate={-90} />
-                  <TwinklingStar top="34%" right="14%" delay={1.2} duration={2.2} rotate={90} />
-                  <TwinklingStar bottom="20%" left="22%" delay={0.4} duration={2.1} rotate={-90} />
-                  <TwinklingStar bottom="14%" right="24%" delay={0.9} duration={1.9} rotate={90} />
-                  <TwinklingStar top="48%" left="12%" delay={1.4} duration={2.3} rotate={-90} />
-                  <TwinklingStar bottom="8%" left="46%" delay={0.7} duration={1.7} rotate={90} />
-                  <TwinklingStar top="8%" left="48%" delay={1.1} duration={2.0} rotate={-90} />
+                  <TwinklingStar bottom="18%" left="20%" delay={0.4} duration={2.1} rotate={-90} />
+                  <TwinklingStar bottom="12%" right="22%" delay={0.9} duration={1.9} rotate={90} />
                 </motion.div>
-
-                {/* Bottom Call to Action */}
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.5 }}
-                  className="text-xs font-medium text-muted-foreground/80 tracking-wide"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-[14px] text-sn-muted"
                 >
-                  tap anywhere to see our story
+                  Tap to begin
                 </motion.div>
               </motion.div>
             )}
 
-            {/* SLIDE 1: Our Timeline & Activity */}
             {currentSlide === 1 && (
-              <motion.div
-                key="slide-1"
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto space-y-4"
-              >
-                <div className="space-y-1 text-center">
-                  <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
-                    3 months together
-                  </h2>
-                  <p className="text-xs text-muted-foreground">since June 19, 2026</p>
+              <motion.div key="s1" {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>Three months together</h2>
+                <div className="mt-8 flex items-baseline gap-3">
+                  <span className="font-serif text-[96px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums sm:text-[120px]">
+                    {daysTogether}
+                  </span>
+                  <span className="font-serif text-[28px] text-sn-ink">days</span>
                 </div>
-
-                {/* Days Counter Card */}
-                <div className="w-full sn-card p-5 shadow-soft text-center space-y-4">
+                <div className="mt-1 text-[15px] text-sn-muted">since {startLabel}</div>
+                <div className="mt-10 flex items-start justify-center gap-14">
                   <div>
-                    <div className="flex items-baseline justify-center gap-1.5">
-                      <span className="display text-5xl sm:text-6xl font-black text-primary">
-                        {daysTogether}
-                      </span>
-                      <span className="text-base font-bold text-foreground/70">days</span>
+                    <div className="font-serif text-[40px] font-semibold leading-none text-sn-navy tabular-nums">
+                      {stats?.hugsCount ?? 0}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      of loving each other through everything
-                    </p>
+                    <div className="mt-2 text-[14px] text-sn-ink">hugs sent</div>
                   </div>
-
-                  {/* Activity Grid */}
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/50">
-                    <div className="rounded-2xl bg-white/60 p-3.5 flex flex-col items-center border border-white/40">
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1.6, repeat: Infinity }}
-                      >
-                        <Heart size={20} className="text-primary fill-primary" />
-                      </motion.div>
-                      <div className="display text-2xl font-black text-foreground mt-1.5">
-                        {stats?.hugsCount ?? 35}
-                      </div>
-                      <div className="text-[12px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
-                        hugs sent
-                      </div>
+                  <div>
+                    <div className="font-serif text-[40px] font-semibold leading-none text-sn-navy tabular-nums">
+                      {stats?.notes.length ?? 0}
                     </div>
-
-                    <div className="rounded-2xl bg-white/60 p-3.5 flex flex-col items-center border border-white/40">
-                      <Layers size={20} className="text-primary" />
-                      <div className="display text-2xl font-black text-foreground mt-1.5">
-                        {stats?.notes.length ?? 5}
-                      </div>
-                      <div className="text-[12px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
-                        notes on wall
-                      </div>
-                    </div>
+                    <div className="mt-2 text-[14px] text-sn-ink">notes on the wall</div>
                   </div>
-
-                  <p className="text-[11px] text-muted-foreground italic pt-1">
-                    "Every little note and hug here reminds me of how lucky I am to have you."
-                  </p>
                 </div>
               </motion.div>
             )}
 
-            {/* SLIDE 2: Added Pictures & Milestones */}
             {currentSlide === 2 && (
-              <motion.div
-                key="slide-2"
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto space-y-3.5"
-              >
-                <div className="space-y-1 text-center">
-                  <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
-                    Memories we've saved
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    A few snapshots of us along the way
-                  </p>
-                </div>
-
-                {/* Polaroid Showcase */}
-                <div className="w-full flex items-center justify-center gap-3 py-1 overflow-hidden">
+              <motion.div key="s2" {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>Memories we kept</h2>
+                <div className="mt-8 flex w-full items-start justify-center gap-3 sm:gap-5">
                   {(stats?.memories.slice(0, 3) || []).map((m, idx) => {
-                    const rotations = [-3, 3, -1];
-                    const rot = rotations[idx % rotations.length];
+                    const rot = [-4, 3, -2][idx % 3];
                     return (
-                      <motion.div
+                      <motion.figure
                         key={m.id}
-                        initial={{ opacity: 0, y: 15, rotate: 0 }}
+                        initial={{ opacity: 0, y: 16, rotate: 0 }}
                         animate={{ opacity: 1, y: 0, rotate: rot }}
-                        transition={{ delay: 0.12 * idx, duration: 0.35 }}
-                        className="w-28 sm:w-32 rounded-xl bg-white p-2 shadow-md border border-white/60"
+                        transition={{ delay: 0.12 * idx, duration: 0.4 }}
+                        className="w-[30%] max-w-[150px] rounded-[3px] bg-white p-2 pb-3 shadow-[0_16px_30px_-16px_rgba(50,70,150,0.6)]"
                       >
-                        {/* Washi tape header */}
-                        <div className="w-10 h-2.5 bg-sky-100/90 -mt-3 mx-auto rounded-xs rotate-[-2deg] border border-sky-200/40" />
-                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-sky-50 mt-1">
+                        <div className="aspect-square w-full overflow-hidden bg-[#e6ecfc]">
                           {m.cover_url ? (
-                            <img
-                              src={m.cover_url}
-                              alt={m.title}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={m.cover_url} alt={m.title} className="h-full w-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-sky-50">
-                              <Camera size={18} className="text-primary/60" />
-                            </div>
+                            <img src="/lily2.webp" alt="" className="h-full w-full object-contain p-3" />
                           )}
                         </div>
-                        <div className="mt-1.5 text-left">
-                          <div className="text-[12px] font-bold text-foreground truncate">
-                            {m.title}
-                          </div>
-                          <div className="text-[8px] text-muted-foreground">
-                            {m.memory_date || "Cherished"}
-                          </div>
-                        </div>
-                      </motion.div>
+                        <figcaption className="mt-2 truncate text-left font-serif text-[14px] font-semibold text-sn-navy">
+                          {m.title}
+                        </figcaption>
+                      </motion.figure>
                     );
                   })}
                 </div>
-
-                {/* Subtitle card */}
-                <div className="w-full rounded-2xl border border-white/60 bg-white/55 backdrop-blur-xl p-3.5 text-center text-xs text-foreground/80 leading-relaxed shadow-2xs">
-                  From our 1st & 2nd monthsary to my 22nd birthday with your sweet donut cake
-                  effort, thank you for always making me smile.
-                </div>
-              </motion.div>
-            )}
-
-            {/* SLIDE 3: Added Stickers */}
-            {currentSlide === 3 && (
-              <motion.div
-                key="slide-3"
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto space-y-4"
-              >
-                <div className="space-y-1 text-center">
-                  <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
-                    Our sticker collection
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.stickers.length ?? 9} stickers placed on our board
-                  </p>
-                </div>
-
-                {/* Floating stickers board with all 9 stickers */}
-                <div className="relative w-full h-56 sm:h-64 sn-card p-3 overflow-hidden flex items-center justify-center shadow-soft">
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    {displayStickers.map((s, idx) => {
-                      const positions = [
-                        { top: "6%", left: "6%", rotate: -10, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { top: "5%", left: "40%", rotate: 8, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { top: "7%", right: "6%", rotate: -12, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { top: "37%", left: "6%", rotate: 10, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        {
-                          top: "33%",
-                          left: "37%",
-                          rotate: -4,
-                          size: "w-16 h-16 sm:w-20 sm:h-20",
-                          scale: 1.15,
-                        },
-                        { top: "36%", right: "6%", rotate: -8, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { bottom: "7%", left: "8%", rotate: -7, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        { bottom: "5%", left: "40%", rotate: 6, size: "w-14 h-14 sm:w-16 sm:h-16" },
-                        {
-                          bottom: "7%",
-                          right: "8%",
-                          rotate: 11,
-                          size: "w-14 h-14 sm:w-16 sm:h-16",
-                        },
-                      ];
-                      const pos = positions[idx % positions.length];
-                      return (
-                        <motion.img
-                          key={s.id}
-                          src={s.image_url}
-                          alt="Sticker"
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{
-                            scale: pos.scale || 1,
-                            opacity: 1,
-                            rotate: [pos.rotate - 2, pos.rotate + 2, pos.rotate - 2],
-                          }}
-                          transition={{
-                            delay: 0.05 * idx,
-                            opacity: { duration: 0.25 },
-                            rotate: {
-                              duration: 3 + (idx % 3) * 0.4,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                            },
-                          }}
-                          style={{
-                            position: "absolute",
-                            top: pos.top,
-                            left: pos.left,
-                            right: pos.right,
-                            bottom: pos.bottom,
-                          }}
-                          className={`${pos.size} object-contain drop-shadow-[0_4px_10px_rgba(14,165,233,0.2)]`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground italic">
-                  "Every sticker we place makes this little corner feel more like home."
+                <p className="sn-hand mt-8 max-w-[440px] text-[20px] leading-snug text-sn-ink">
+                  From our 1st and 2nd monthsary to my 22nd birthday with your sweet donut cake,
+                  thank you for always making me smile.
                 </p>
               </motion.div>
             )}
 
-            {/* SLIDE 4: Added Cats */}
-            {currentSlide === 4 && (
-              <motion.div
-                key="slide-4"
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto space-y-3.5"
-              >
-                <div className="space-y-1 text-center">
-                  <h2 className="display text-3xl sm:text-4xl font-extrabold text-foreground">
-                    Our 3 cats
-                  </h2>
-                  <p className="text-xs text-muted-foreground">Mallows, Daichi, and Mingg</p>
+            {currentSlide === 3 && (
+              <motion.div key="s3" {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>Our stickers</h2>
+                <div className="mt-1 text-[15px] text-sn-muted">
+                  {stats?.stickers.length ?? 0} made together
                 </div>
-
-                {/* Cats Cards */}
-                <div className="grid grid-cols-3 gap-2.5 w-full py-1">
-                  {(stats?.pets.length
-                    ? stats.pets
-                    : [
-                        { id: "1", name: "Mallows", photos: [], species: "cat", created_at: "" },
-                        { id: "2", name: "Daichi", photos: [], species: "cat", created_at: "" },
-                        { id: "3", name: "Mingg", photos: [], species: "cat", created_at: "" },
-                      ]
-                  ).map((pet, idx) => (
-                    <motion.div
-                      key={pet.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.12 * idx }}
-                      className="rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl p-2.5 flex flex-col items-center shadow-xs"
-                    >
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/80 shadow-xs bg-sky-50">
-                        {pet.photos?.[0] ? (
-                          <img
-                            src={pet.photos[0]}
-                            alt={pet.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-sky-100/60">
-                            <Heart size={20} className="text-primary/60 fill-primary/20" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="display text-sm font-bold text-foreground mt-1.5 truncate max-w-full">
-                        {pet.name}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="w-full rounded-2xl border border-white/60 bg-white/55 backdrop-blur-xl p-3 text-center text-xs text-foreground/80 shadow-2xs">
-                  Our three little companions keeping our room warm and full of life.
+                <div className="relative mt-6 h-64 w-full sm:h-72">
+                  {displayStickers.map((s, idx) => {
+                    const positions = [
+                      { top: "4%", left: "4%", rotate: -10 },
+                      { top: "2%", left: "39%", rotate: 8 },
+                      { top: "5%", right: "4%", rotate: -12 },
+                      { top: "36%", left: "2%", rotate: 10 },
+                      { top: "32%", left: "36%", rotate: -4, big: true },
+                      { top: "35%", right: "2%", rotate: -8 },
+                      { bottom: "4%", left: "6%", rotate: -7 },
+                      { bottom: "2%", left: "40%", rotate: 6 },
+                      { bottom: "4%", right: "6%", rotate: 11 },
+                    ];
+                    const pos = positions[idx % positions.length];
+                    return (
+                      <motion.img
+                        key={s.id}
+                        src={s.image_url}
+                        alt=""
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{
+                          scale: pos.big ? 1.15 : 1,
+                          opacity: 1,
+                          rotate: [pos.rotate - 2, pos.rotate + 2, pos.rotate - 2],
+                        }}
+                        transition={{
+                          delay: 0.05 * idx,
+                          opacity: { duration: 0.25 },
+                          rotate: { duration: 3 + (idx % 3) * 0.4, repeat: Infinity, ease: "easeInOut" },
+                        }}
+                        style={{ position: "absolute", top: pos.top, left: pos.left, right: pos.right, bottom: pos.bottom }}
+                        className={`${pos.big ? "h-20 w-20 sm:h-24 sm:w-24" : "h-16 w-16 sm:h-20 sm:w-20"} object-contain drop-shadow-[0_6px_12px_rgba(50,70,150,0.25)]`}
+                      />
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
-            {/* SLIDE 5: Summary Card & Letter */}
+            {currentSlide === 4 && (
+              <motion.div key="s4" {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>{pets.length ? `Our ${pets.length} cats` : "Our cats"}</h2>
+                {petNames && <div className="mt-1 text-[15px] text-sn-muted">{petNames}</div>}
+                {pets.length > 0 ? (
+                  <div className="mt-10 flex flex-wrap items-start justify-center gap-8">
+                    {pets.map((pet, idx) => (
+                      <motion.div
+                        key={pet.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.12 * idx }}
+                        className="flex flex-col items-center"
+                      >
+                        <div className="h-24 w-24 overflow-hidden rounded-full border-[3px] border-white bg-[#e6ecfc] shadow-[0_12px_24px_-12px_rgba(50,70,150,0.55)]">
+                          {pet.photos?.[0] ? (
+                            <img src={pet.photos[0]} alt={pet.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <img src="/art/cat-peek.webp" alt="" className="h-full w-full scale-150 object-contain pt-4" />
+                          )}
+                        </div>
+                        <span className="mt-2.5 font-serif text-[18px] font-semibold text-sn-navy">{pet.name}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <img src="/art/cats-cloud.webp" alt="" className="mt-8 w-[220px]" />
+                )}
+              </motion.div>
+            )}
+
             {currentSlide === 5 && (
-              <motion.div
-                key="slide-5"
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.04 }}
-                transition={{ duration: 0.35 }}
-                className="flex flex-col items-center justify-center w-full my-auto space-y-3.5"
-              >
-                {/* Main Card in Blue & White frosted glass */}
-                <div className="w-full sn-card p-5 shadow-soft text-left space-y-3.5">
-                  {/* Header without Spotify Wrapped */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="display text-xl sm:text-2xl font-black text-foreground leading-tight">
-                        Sean & Aya's 3rd Monthsary
-                      </div>
+              <motion.div key="s5" {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>
+                  {nameA} &amp; {nameB}
+                </h2>
+                <div className="mt-1 text-[15px] text-sn-muted">3rd monthsary · September 19, 2026</div>
+                <div className="mt-7 grid w-full grid-cols-4 gap-2">
+                  {[
+                    [daysTogether, "days"],
+                    [stats?.memories.length ?? 0, "memories"],
+                    [stats?.stickers.length ?? 0, "stickers"],
+                    [pets.length, "cats"],
+                  ].map(([n, label]) => (
+                    <div key={label as string}>
+                      <div className="font-serif text-[30px] font-semibold leading-none text-sn-navy tabular-nums">{n}</div>
+                      <div className="mt-1.5 text-[13px] text-sn-ink">{label}</div>
                     </div>
-                    <div className="text-[12px] font-bold text-muted-foreground bg-white/80 border border-white/60 px-2.5 py-1 rounded-full shadow-2xs shrink-0">
-                      Sep 19, 2026
-                    </div>
-                  </div>
-
-                  {/* 4 Metric Pills Grid */}
-                  <div className="grid grid-cols-2 gap-2 text-foreground">
-                    <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
-                        Together
-                      </div>
-                      <div className="text-base font-black text-primary mt-0.5">
-                        {daysTogether} Days
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
-                        Milestones
-                      </div>
-                      <div className="text-base font-black text-primary mt-0.5">
-                        {stats?.memories.length ?? 4} Photos
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
-                        Stickers
-                      </div>
-                      <div className="text-base font-black text-primary mt-0.5">
-                        {stats?.stickers.length ?? 9} Placed
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
-                        Cats
-                      </div>
-                      <div className="text-base font-black text-primary mt-0.5">3</div>
-                    </div>
-                  </div>
-
-                  {/* Letter from Sj */}
-                  <div className="rounded-2xl bg-white/60 border border-white/50 p-4 text-foreground/90 text-xs leading-relaxed space-y-2 shadow-2xs">
-                    <p className="font-bold text-foreground">Dearest Aya,</p>
-                    <p className="text-foreground/80">
-                      Happy 3rd Monthsary! Thank you for 3 wonderful months of joy, sweetness, and
-                      comfort. Even through any distance, you always make me feel like the happiest
-                      boy. Here's to endless more months, more memories, more stickers, and a
-                      lifetime together. I love you so much!
-                    </p>
-                    <p className="text-right font-bold text-primary pt-0.5">— Forever yours, Sj</p>
-                  </div>
+                  ))}
                 </div>
-
-                {/* Bottom Buttons */}
-                <div
-                  className="flex items-center gap-2.5 w-full pt-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={handleRestart}
-                    className="flex-1 rounded-full border border-white/70 bg-white/60 backdrop-blur-xl py-2.5 px-4 text-xs font-bold text-foreground hover:bg-white/80 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    <RotateCcw size={13} />
+                {/* The letter: the one thing on paper */}
+                <div className="sn-card mt-7 w-full rotate-[-0.6deg] p-6 text-left">
+                  <p className="font-serif text-[20px] font-semibold text-sn-navy">Dearest {nameB},</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-sn-ink">
+                    Happy 3rd monthsary! Thank you for three wonderful months of joy, sweetness and
+                    comfort. Even through the distance, you always make me feel like the happiest boy.
+                    Here's to endless more months, more memories, more stickers, and a lifetime
+                    together. I love you so much!
+                  </p>
+                  <p className="sn-hand mt-3 text-right text-[22px] text-sn-navy">Forever yours, {nameA}</p>
+                </div>
+                <div className="mt-6 flex w-full gap-2.5" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={handleRestart} className="sn-pill h-12 flex-1 text-[15px]">
+                    <RotateCcw size={16} strokeWidth={1.9} />
                     Replay
                   </button>
-
-                  <button
-                    onClick={closeMonthsary}
-                    className="sn-pill flex-[2] h-11 px-4 text-[14.5px]"
-                  >
+                  <button onClick={closeMonthsary} className="sn-pill h-12 flex-[2] text-[15px]">
                     Continue
                   </button>
                 </div>
@@ -951,17 +733,8 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
           </AnimatePresence>
         </div>
 
-        {/* Bottom footer */}
-        <div className="relative z-30 pb-4 px-6 text-center text-muted-foreground/70 text-[12px]">
-          {currentSlide < TOTAL_SLIDES - 1 ? (
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Tap left or right to browse</span>
-              <span>·</span>
-              <span>Hold to pause</span>
-            </div>
-          ) : (
-            <span>Sean & Aya · September 19, 2026</span>
-          )}
+        <div className="relative z-30 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-[13px] text-sn-muted">
+          {currentSlide < TOTAL_SLIDES - 1 ? "Tap left or right to browse · hold to pause" : `${nameA} & ${nameB}`}
         </div>
       </div>
     </AnimatePresence>

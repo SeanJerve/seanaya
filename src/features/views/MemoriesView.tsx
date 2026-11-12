@@ -585,849 +585,708 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   );
 
   // Render Open Book Layout
+  const closeTool = () => {
+    setActiveTab(null);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
+  const toggleTool = (t: "stickers" | "photos" | "note") => {
+    setActiveTab(activeTab === t ? null : t);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
+  const addStickerItem = (url: string) => {
+    if (!activePage) return;
+    addItem.mutate({
+      page_id: activePage.id,
+      item_type: "sticker",
+      content: null,
+      image_url: url,
+      color: null,
+      pos_x: 30,
+      pos_y: 30,
+      scale: 1,
+      rotation: 0,
+    });
+    toast.success("Sticker added");
+  };
+  const SHAPE_LABEL: Record<string, string> = {
+    rect: "Portrait",
+    square: "Square",
+    circle: "Circle",
+    heart: "Heart",
+    star: "Star",
+  };
+  const stickerTile =
+    "grid aspect-square place-items-center overflow-hidden rounded-[16px] border border-white bg-white/70 p-1.5 transition hover:bg-white active:scale-95";
+
   const renderOpenBook = () => {
     return (
-      <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
-        {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
-        <div className="w-full sn-card p-4 flex flex-col gap-2 shrink-0 z-20 mb-3 relative">
-          {showPageSearch && (
-            <div className="flex items-center gap-1 border-b border-white/20 pb-2">
-              <input
-                type="text"
-                value={pageSearchQuery}
-                onChange={(e) => setPageSearchQuery(e.target.value)}
-                placeholder="Search pages by name or number..."
-                className="w-full font-sans text-[12px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
-                autoFocus
-              />
-              {pageSearchQuery && (
-                <button
-                  onClick={() => setPageSearchQuery("")}
-                  className="p-1 text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between w-full gap-2.5 overflow-hidden">
-            {/* Arrow icon only back button */}
+      <div className="mx-auto w-full max-w-[640px] select-none px-4 pb-[200px] pt-2 sm:px-6 lg:max-w-[1186px] lg:pb-32">
+        {/* ── Page bar: back, page numbers, page actions ── */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsOpen(false)}
+            aria-label="Close the album"
+            title="Close the album"
+            className="sn-pill sn-icon-btn h-11 w-11"
+          >
+            <ArrowLeft size={18} strokeWidth={2} />
+          </button>
+          <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
+            {filteredPages.length === 0 ? (
+              <span className="px-1 text-[14px] text-sn-muted">No pages match</span>
+            ) : (
+              filteredPages.map((p) => {
+                const idx = p.originalIndex;
+                const active = currentPageIdx === idx;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setCurrentPageIdx(idx);
+                      setSelectedItemId(null);
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    className={`sn-pill h-10 shrink-0 px-4 text-[14px] ${active ? "sn-active" : ""}`}
+                  >
+                    {p.name || idx + 1}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <button
-              onClick={() => setIsOpen(false)}
-              className="w-8 h-8 rounded-full bg-white/50 border border-white/40 text-foreground/70 hover:text-foreground active:scale-90 transition-all shadow-2xs shrink-0 flex items-center justify-center touch-manipulation"
-              title="Go Back"
-              aria-label="Go Back"
+              onClick={() => {
+                setShowPageSearch(!showPageSearch);
+                if (showPageSearch) setPageSearchQuery("");
+              }}
+              aria-label="Find a page"
+              title="Find a page"
+              aria-pressed={showPageSearch}
+              className={`sn-pill sn-icon-btn h-10 w-10 ${showPageSearch ? "sn-active" : ""}`}
             >
-              <ArrowLeft size={16} />
+              <Search size={17} strokeWidth={1.9} />
             </button>
-
-            {/* center Page: 1 2 3 selector (Compact layout) */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
-              <span className="text-[12px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">
-                Page:
-              </span>
-              <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
-                {filteredPages.length === 0 ? (
-                  <span className="text-[12px] text-muted-foreground/60 italic px-1">
-                    No pages match
-                  </span>
-                ) : (
-                  filteredPages.map((p) => {
-                    const idx = p.originalIndex;
-                    const active = currentPageIdx === idx;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          setCurrentPageIdx(idx);
-                          setSelectedItemId(null);
-                        }}
-                        className={`px-2 h-6 flex items-center justify-center text-[12px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
-                          active
-                            ? "bg-white text-primary border-primary/20 shadow-sm"
-                            : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
-                        }`}
-                      >
-                        {p.name ? `${p.name} (${idx + 1})` : idx + 1}
-                      </button>
-                    );
+            <button
+              onClick={() => addPage.mutate()}
+              aria-label="Add a page"
+              title="Add a page"
+              className="sn-pill sn-icon-btn h-10 w-10"
+            >
+              <Plus size={18} strokeWidth={2} />
+            </button>
+            {pages.length > 1 && (
+              <button
+                onClick={() =>
+                  confirm({
+                    title: "Delete this page?",
+                    message: "Everything placed on this page will be removed too.",
+                    onConfirm: () => {
+                      if (activePage) deletePage.mutate(activePage.id);
+                    },
                   })
-                )}
-              </div>
-            </div>
-
-            {/* Plus and Trash controls side-by-side on the right */}
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setShowLongPressInfo(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-90 transition-all touch-manipulation"
-                title="View Album Guide"
-                aria-label="Album Guide"
+                }
+                aria-label="Delete this page"
+                title="Delete this page"
+                className="sn-pill sn-icon-btn hidden h-10 w-10 sm:inline-grid"
               >
-                <HelpCircle size={15} />
+                <Trash2 size={16} strokeWidth={1.9} className="!text-[#c2416c]" />
               </button>
-              <button
-                onClick={() => {
-                  setShowPageSearch(!showPageSearch);
-                  if (showPageSearch) setPageSearchQuery("");
-                }}
-                className={`w-7 h-7 flex items-center justify-center rounded-full active:scale-90 transition-all touch-manipulation ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/60 hover:text-foreground hover:bg-white/40"}`}
-                title="Search Page"
-                aria-label="Search Page"
-              >
-                <Search size={15} />
-              </button>
-
-              <button
-                onClick={() => addPage.mutate()}
-                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/60 text-foreground/60 hover:text-foreground active:scale-90 transition-all touch-manipulation"
-                title="Add Page"
-                aria-label="Add Page"
-              >
-                <Plus size={15} />
-              </button>
-
-              {pages.length > 1 && (
-                <button
-                  onClick={() => {
-                    confirm({
-                      title: "Delete this page?",
-                      message:
-                        "Are you sure you want to delete this page and all items decorated inside it?",
-                      onConfirm: () => {
-                        if (activePage) deletePage.mutate(activePage.id);
-                      },
-                    });
-                  }}
-                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-red-500 active:scale-90 transition-all touch-manipulation"
-                  title="Delete Page"
-                  aria-label="Delete Page"
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Page renaming row under pages bar - Styled exactly like stickers page name */}
-        {activePage && (
-          <div className="w-full flex justify-start px-1 mb-1 shrink-0">
-            <button
-              onClick={() => {
-                setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
-                setRenameModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 bg-white/40 px-3.5 py-1 rounded-full border border-white/30 text-xs font-bold text-foreground/75 active:scale-95 transition-all shadow-sm"
-            >
-              <span className="uppercase tracking-wider">
-                {activePage.name || `Page ${currentPageIdx + 1}`}
-              </span>
-              <Pencil size={11} className="text-foreground/45" />
-            </button>
+        {showPageSearch && (
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={pageSearchQuery}
+              onChange={(e) => setPageSearchQuery(e.target.value)}
+              placeholder="Page name or number"
+              autoFocus
+              className="h-11 w-full rounded-full border border-white/80 bg-white/75 px-4 text-[15px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
+            />
+            {pageSearchQuery && (
+              <button
+                onClick={() => setPageSearchQuery("")}
+                aria-label="Clear search"
+                className="sn-ghost sn-icon-btn h-11 w-11"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         )}
 
-        {/* Paper Page layout (Stretches to w-full, matching customize panel exactly, aspect 1/1.4) */}
-        <div className="relative w-full flex flex-col items-center py-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentPageIdx}
-              ref={pageRef}
-              initial={{ opacity: 0, scale: 0.94, rotate: -1.5, y: 15 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, rotate: 1.5, y: -15 }}
-              transition={{ type: "spring", damping: 20, stiffness: 130 }}
-              className="relative w-full aspect-[1/1.4] rounded-[32px] border border-white/50 bg-[#fafafa] overflow-hidden"
-              onClick={() => setSelectedItemId(null)}
-            >
-              {/* Grid notebook texture */}
-              <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:16px_16px] pointer-events-none" />
+        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-10">
+          {/* ── The page ── */}
+          <div className="flex min-w-0 flex-col items-center">
+            {activePage && (
+              <div className="mb-3 flex w-full max-w-[min(100%,calc((100dvh-230px)/1.4))] items-center justify-between gap-3 lg:max-w-[min(100%,calc((100dvh-250px)/1.4))]">
+                <button
+                  onClick={() => {
+                    setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
+                    setRenameModalOpen(true);
+                  }}
+                  title="Rename this page"
+                  className="group flex min-w-0 items-center gap-2 text-left"
+                >
+                  <span className="truncate font-serif text-[22px] font-semibold text-sn-navy">
+                    {activePage.name || `Page ${currentPageIdx + 1}`}
+                  </span>
+                  <Pencil
+                    size={14}
+                    strokeWidth={2}
+                    className="shrink-0 text-sn-muted transition-colors group-hover:text-sn-navy"
+                  />
+                </button>
+                <span className="shrink-0 text-[14px] text-sn-muted tabular-nums">
+                  {currentPageIdx + 1} / {pages.length}
+                </span>
+              </div>
+            )}
 
-              {loadingPages || loadingItems ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none animate-pulse">
-                  <div className="h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-2" />
-                  <div className="text-xs font-semibold text-foreground/50">Loading page...</div>
-                </div>
-              ) : activePageItems.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
-                  <BookHeart size={32} className="text-foreground/20 mb-2" />
-                  <div className="text-xs font-semibold text-foreground/50">This page is empty</div>
-                  <p className="text-[12px] text-muted-foreground mt-1">
-                    Use Customize tools below to start decorating our space!
-                  </p>
-                </div>
-              ) : (
-                activePageItems.map((it) => {
-                  const isSelected = selectedItemId === it.id;
+            <div className="relative w-full max-w-[min(100%,calc((100dvh-230px)/1.4))] lg:max-w-[min(100%,calc((100dvh-250px)/1.4))]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPageIdx}
+                  ref={pageRef}
+                  initial={{ opacity: 0, x: 18, rotate: 0.6 }}
+                  animate={{ opacity: 1, x: 0, rotate: 0 }}
+                  exit={{ opacity: 0, x: -18, rotate: -0.6 }}
+                  transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+                  className="relative aspect-[1/1.4] w-full overflow-hidden rounded-[8px_26px_26px_8px] bg-[#fdfbf7] shadow-[0_30px_60px_-30px_rgba(50,70,150,0.65),0_2px_6px_rgba(80,98,172,0.1)]"
+                  onClick={() => setSelectedItemId(null)}
+                >
+                  {/* paper: grain, dot grid and a soft gutter shadow */}
+                  <div className="pointer-events-none absolute inset-0 bg-[url('/art/paper-grain.png')] [background-size:220px_220px]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#e6e3ef_1.4px,transparent_1.4px)] [background-size:18px_18px]" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-[linear-gradient(90deg,rgba(31,42,92,0.09),transparent)]" />
 
-                  return (
-                    <motion.div
-                      key={`${it.id}-${it.pos_x.toFixed(3)}-${it.pos_y.toFixed(3)}`}
-                      drag
-                      dragConstraints={pageRef}
-                      dragMomentum={false}
-                      dragElastic={0}
-                      onDragEnd={(event) => {
-                        if (!pageRef.current) return;
-                        const page = pageRef.current.getBoundingClientRect();
-                        const el = event.target as HTMLElement;
-                        const card = el.closest(".album-item-drag-target") as HTMLElement;
-                        if (card) {
-                          const rect = card.getBoundingClientRect();
-                          let xPct = ((rect.left - page.left) / page.width) * 100;
-                          let yPct = ((rect.top - page.top) / page.height) * 100;
-
-                          // constrain bounds so items stay within book sheet
-                          xPct = Math.max(0, Math.min(68, xPct));
-                          yPct = Math.max(0, Math.min(80, yPct));
-                          updateItemPosition.mutate({
-                            id: it.id,
-                            pos_x: xPct,
-                            pos_y: yPct,
-                          });
-                        }
-                      }}
-                      onDragStart={() => setSelectedItemId(null)}
-                      whileDrag={{ scale: 1.05, zIndex: 100 }}
-                      className="album-item-drag-target absolute touch-none select-none"
-                      style={{
-                        left: `${it.pos_x}%`,
-                        top: `${it.pos_y}%`,
-                        zIndex: isSelected ? 50 : 10,
-                      }}
-                    >
-                      {/* DIV holding rotate transformation ONLY on the inner item content */}
-                      <div
-                        className="relative p-2 cursor-grab active:cursor-grabbing"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedItemId(isSelected ? null : it.id);
-                        }}
-                      >
-                        {/* 1. Stickers / User custom stickers */}
-                        {it.item_type === "sticker" && (
+                  {loadingPages || loadingItems ? (
+                    <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                      <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#c9d5f7] border-t-sn-periwinkle" />
+                    </div>
+                  ) : activePageItems.length === 0 ? (
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                      <img src="/lily1.webp" alt="" aria-hidden className="w-[110px] -rotate-6 opacity-90" />
+                      <div className="mt-2 font-serif text-[20px] font-semibold text-sn-navy">
+                        An empty page
+                      </div>
+                    </div>
+                  ) : (
+                    activePageItems.map((it) => {
+                      const isSelected = selectedItemId === it.id;
+                      return (
+                        <motion.div
+                          key={`${it.id}-${it.pos_x.toFixed(3)}-${it.pos_y.toFixed(3)}`}
+                          drag
+                          dragConstraints={pageRef}
+                          dragMomentum={false}
+                          dragElastic={0}
+                          onDragEnd={(event) => {
+                            if (!pageRef.current) return;
+                            const page = pageRef.current.getBoundingClientRect();
+                            const el = event.target as HTMLElement;
+                            const card = el.closest(".album-item-drag-target") as HTMLElement;
+                            if (card) {
+                              const rect = card.getBoundingClientRect();
+                              let xPct = ((rect.left - page.left) / page.width) * 100;
+                              let yPct = ((rect.top - page.top) / page.height) * 100;
+                              xPct = Math.max(0, Math.min(68, xPct));
+                              yPct = Math.max(0, Math.min(80, yPct));
+                              updateItemPosition.mutate({ id: it.id, pos_x: xPct, pos_y: yPct });
+                            }
+                          }}
+                          onDragStart={() => setSelectedItemId(null)}
+                          whileDrag={{ scale: 1.05, zIndex: 100 }}
+                          className="album-item-drag-target absolute touch-none select-none"
+                          style={{ left: `${it.pos_x}%`, top: `${it.pos_y}%`, zIndex: isSelected ? 50 : 10 }}
+                        >
                           <div
-                            className="select-none pointer-events-none drop-shadow-md"
-                            style={{ transform: `rotate(${it.rotation}deg)` }}
+                            className="relative cursor-grab p-2 active:cursor-grabbing"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedItemId(isSelected ? null : it.id);
+                            }}
                           >
-                            {it.image_url ? (
-                              <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
-                            ) : (
-                              <div className="text-5xl">{it.content}</div>
+                            {it.item_type === "sticker" && (
+                              <div
+                                className="pointer-events-none select-none drop-shadow-md"
+                                style={{ transform: `rotate(${it.rotation}deg)` }}
+                              >
+                                {it.image_url ? (
+                                  <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
+                                ) : (
+                                  <div className="text-5xl">{it.content}</div>
+                                )}
+                              </div>
                             )}
+
+                            {it.item_type === "picture" && it.image_url && (
+                              <div
+                                className="pointer-events-none select-none drop-shadow-md"
+                                style={{ transform: `rotate(${it.rotation}deg)` }}
+                              >
+                                <img src={it.image_url} alt="" className="w-28 object-contain" />
+                              </div>
+                            )}
+
+                            {it.item_type === "polaroid" && it.image_url && (
+                              <div
+                                className="pointer-events-none flex w-24 select-none flex-col items-center rounded-[3px] bg-white p-1.5 pb-5 shadow-[0_10px_20px_-10px_rgba(50,70,150,0.6)] ring-1 ring-[#ebe8f6]"
+                                style={{ transform: `rotate(${it.rotation}deg)` }}
+                              >
+                                <div className="aspect-square w-full overflow-hidden bg-[#eef1fb]">
+                                  <img src={it.image_url} alt="" className="h-full w-full object-cover" />
+                                </div>
+                              </div>
+                            )}
+
+                            {it.item_type === "text" && (
+                              <div
+                                className="pointer-events-none max-w-[140px] select-none rounded-[6px] p-3 text-left shadow-[0_8px_16px_-10px_rgba(50,70,150,0.55)]"
+                                style={{
+                                  background: it.color || PASTEL_COLORS[0],
+                                  transform: `rotate(${it.rotation}deg)`,
+                                }}
+                              >
+                                <p className="sn-hand whitespace-pre-wrap break-words text-[17px] leading-tight text-sn-navy">
+                                  {it.content}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Item actions stay upright */}
+                            <AnimatePresence>
+                              {isSelected && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 4 }}
+                                  transition={{ duration: 0.16 }}
+                                  className="pointer-events-auto absolute bottom-full left-1/2 z-50 mb-1 flex -translate-x-1/2 items-center gap-1.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {(it.item_type === "polaroid" ||
+                                    it.item_type === "picture" ||
+                                    (it.item_type === "sticker" && it.image_url)) &&
+                                    it.image_url && (
+                                      <button
+                                        onClick={() => {
+                                          setLightbox(it.image_url);
+                                          setSelectedItemId(null);
+                                        }}
+                                        aria-label="View"
+                                        title="View"
+                                        className="sn-pill sn-icon-btn h-9 w-9"
+                                      >
+                                        <Eye size={15} />
+                                      </button>
+                                    )}
+                                  <button
+                                    onClick={() =>
+                                      updateItemRotation.mutate({ id: it.id, rotation: (it.rotation + 15) % 360 })
+                                    }
+                                    aria-label="Rotate"
+                                    title="Rotate"
+                                    className="sn-pill sn-icon-btn h-9 w-9"
+                                  >
+                                    <RotateCw size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      confirm({
+                                        title: "Remove this from the page?",
+                                        message: "It will be deleted from the album.",
+                                        onConfirm: () => deleteItem.mutate(it.id),
+                                      })
+                                    }
+                                    aria-label="Delete"
+                                    title="Delete"
+                                    className="sn-pill sn-icon-btn h-9 w-9"
+                                  >
+                                    <Trash2 size={15} className="!text-[#c2416c]" />
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {pages.length > 1 && activePage && (
+              <button
+                onClick={() =>
+                  confirm({
+                    title: "Delete this page?",
+                    message: "Everything placed on this page will be removed too.",
+                    onConfirm: () => deletePage.mutate(activePage.id),
+                  })
+                }
+                className="sn-ghost mt-3 h-10 px-4 text-[14px] sm:hidden"
+              >
+                <Trash2 size={15} className="text-[#c2416c]" />
+                Delete page
+              </button>
+            )}
+          </div>
+
+          {/* ── Tools: floating above the dock on phones, a side column on desktop ── */}
+          {activePage && (
+            <div className="fixed inset-x-3 bottom-[calc(max(0.875rem,env(safe-area-inset-bottom))+76px)] z-30 lg:sticky lg:inset-auto lg:top-6 lg:bottom-auto">
+              <AnimatePresence initial={false}>
+                {activeTab && (
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+                    className="sn-card mb-3 max-h-[46dvh] overflow-y-auto p-5 lg:max-h-[calc(100dvh-220px)]"
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-serif text-[20px] font-semibold text-sn-navy">
+                        {activeTab === "stickers" ? "Stickers" : activeTab === "photos" ? "Photo" : "Note"}
+                      </h3>
+                      <button onClick={closeTool} aria-label="Close" className="sn-ghost sn-icon-btn h-9 w-9">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Stickers */}
+                    {activeTab === "stickers" && (
+                      <div className="space-y-5">
+                        {recentStickers.length > 0 && (
+                          <div>
+                            <h4 className="sn-label">New</h4>
+                            <div className="mt-2.5 grid grid-cols-5 gap-2.5 lg:grid-cols-4">
+                              {recentStickers.map((st: any) => (
+                                <button
+                                  key={st.id}
+                                  onClick={() => addStickerItem(st.image_url)}
+                                  className={stickerTile}
+                                  aria-label="Add sticker"
+                                >
+                                  <img src={st.image_url} alt="" className="pointer-events-none max-h-full max-w-full object-contain" />
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
+                        <div>
+                          {recentStickers.length > 0 && <h4 className="sn-label">All stickers</h4>}
+                          {olderStickers.length === 0 && recentStickers.length === 0 ? (
+                            <p className="text-[14.5px] text-sn-muted">Make stickers on the Stickers page first.</p>
+                          ) : (
+                            <div className="mt-2.5 grid grid-cols-5 gap-2.5 lg:grid-cols-4">
+                              {olderStickers.map((st: any) => (
+                                <button
+                                  key={st.id}
+                                  onClick={() => addStickerItem(st.image_url)}
+                                  className={stickerTile}
+                                  aria-label="Add sticker"
+                                >
+                                  <img src={st.image_url} alt="" className="pointer-events-none max-h-full max-w-full object-contain" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                        {/* 2. Plain Baked Cropped Picture */}
-                        {it.item_type === "picture" && it.image_url && (
-                          <div
-                            className="select-none pointer-events-none drop-shadow-md"
-                            style={{ transform: `rotate(${it.rotation}deg)` }}
-                          >
-                            <img src={it.image_url} alt="" className="w-28 object-contain" />
-                          </div>
-                        )}
-
-                        {/* 3. Polaroid Frame */}
-                        {it.item_type === "polaroid" && it.image_url && (
-                          <div
-                            className="w-24 p-1.5 pb-5 rounded bg-white shadow-lg border border-black/5 flex flex-col items-center select-none pointer-events-none"
-                            style={{ transform: `rotate(${it.rotation}deg)` }}
-                          >
-                            <div className="w-full aspect-square overflow-hidden bg-slate-50">
-                              <img
-                                src={it.image_url}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
+                    {/* Photo */}
+                    {activeTab === "photos" && (
+                      <div className="space-y-5">
+                        {recentPolaroids.length > 0 && !previewUrl && (
+                          <div>
+                            <h4 className="sn-label">From the love wall</h4>
+                            <div className="no-scrollbar mt-2.5 flex gap-3 overflow-x-auto pb-1">
+                              {recentPolaroids.map((p: any) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => {
+                                    addItem.mutate({
+                                      page_id: activePage.id,
+                                      item_type: "polaroid",
+                                      content: null,
+                                      image_url: p.image_url,
+                                      color: null,
+                                      pos_x: 30,
+                                      pos_y: 30,
+                                      scale: 1,
+                                      rotation: (Math.random() - 0.5) * 8,
+                                    });
+                                    toast.success("Polaroid added");
+                                  }}
+                                  aria-label="Add this polaroid"
+                                  className="w-16 shrink-0 rounded-[3px] bg-white p-1 pb-3 shadow-[0_8px_14px_-8px_rgba(50,70,150,0.55)] transition active:scale-95"
+                                >
+                                  <img src={p.image_url} alt="" className="pointer-events-none aspect-square w-full object-cover" />
+                                </button>
+                              ))}
                             </div>
                           </div>
                         )}
 
-                        {/* 4. Text Note card */}
-                        {it.item_type === "text" && (
-                          <div
-                            className="max-w-[130px] p-2.5 rounded-lg shadow-md border border-white/20 select-none pointer-events-none text-left"
-                            style={{
-                              background: it.color || PASTEL_COLORS[0],
-                              transform: `rotate(${it.rotation}deg)`,
-                            }}
-                          >
-                            <p className="text-[12px] text-foreground/80 font-medium leading-tight whitespace-pre-wrap break-words">
-                              {it.content}
-                            </p>
+                        {previewUrl && (
+                          <div className="flex flex-col items-center gap-4">
+                            <div
+                              className="relative flex cursor-move select-none items-center justify-center overflow-hidden shadow-[0_12px_24px_-12px_rgba(50,70,150,0.55)]"
+                              style={{
+                                width: "140px",
+                                height: photoShape === "rect" ? "196px" : "140px",
+                                borderRadius:
+                                  photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "24px" : "0px",
+                                clipPath:
+                                  photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                                background: photoOutline,
+                                padding: "6px",
+                              }}
+                              onMouseDown={(e) => handlePreviewDragStart(e.clientX, e.clientY)}
+                              onMouseMove={(e) => handlePreviewDragMove(e.clientX, e.clientY)}
+                              onMouseUp={handlePreviewDragEnd}
+                              onMouseLeave={handlePreviewDragEnd}
+                              onTouchStart={(e) => e.touches[0] && handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+                              onTouchMove={(e) => e.touches[0] && handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)}
+                              onTouchEnd={handlePreviewDragEnd}
+                            >
+                              <div
+                                className="pointer-events-none h-full w-full overflow-hidden"
+                                style={{
+                                  borderRadius:
+                                    photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "18px" : "0px",
+                                  clipPath:
+                                    photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                                }}
+                              >
+                                <img
+                                  id="preview-img-target"
+                                  src={previewUrl}
+                                  alt=""
+                                  className="max-w-none origin-center"
+                                  style={{
+                                    width: "140px",
+                                    transform: `translate(${previewOffsetX}px, ${previewOffsetY}px) scale(${previewScale})`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <label className="w-full">
+                              <span className="flex justify-between text-[13px] font-semibold text-sn-ink">
+                                Zoom <span className="tabular-nums text-sn-muted">{previewScale.toFixed(1)}×</span>
+                              </span>
+                              <input
+                                type="range"
+                                min="0.8"
+                                max="4"
+                                step="0.05"
+                                value={previewScale}
+                                onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
+                                className="mt-2 w-full accent-[#8faaf0]"
+                              />
+                            </label>
+                            <div className="flex w-full gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedFile(null);
+                                  setPreviewUrl(null);
+                                }}
+                                className="sn-ghost h-11 flex-1 text-[14.5px]"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (selectedFile) {
+                                    uploadBakedPhoto.mutate({
+                                      file: selectedFile,
+                                      shape: photoShape,
+                                      outline: photoOutline,
+                                      scale: previewScale,
+                                      offsetX: previewOffsetX,
+                                      offsetY: previewOffsetY,
+                                    });
+                                  }
+                                }}
+                                disabled={uploadBakedPhoto.isPending}
+                                className="sn-pill h-11 flex-1 text-[14.5px]"
+                              >
+                                {uploadBakedPhoto.isPending ? "Adding…" : "Add to page"}
+                              </button>
+                            </div>
                           </div>
                         )}
 
-                        {/* Selection actions panel (Eye, Rotate, Trash) - STAYS PERFECTLY UPRIGHT AND STRAIGHT */}
-                        <AnimatePresence>
-                          {isSelected && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-center gap-1.5 bg-white/95 border border-white/40 rounded-full shadow-lg p-1 z-50 pointer-events-auto"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {(it.item_type === "polaroid" ||
-                                it.item_type === "picture" ||
-                                (it.item_type === "sticker" && it.image_url)) &&
-                                it.image_url && (
-                                  <button
-                                    onClick={() => {
-                                      setLightbox(it.image_url);
-                                      setSelectedItemId(null);
-                                    }}
-                                    className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
-                                    title="View Photo"
-                                  >
-                                    <Eye size={12} />
-                                  </button>
-                                )}
-
-                              {/* Rotate adjust button */}
+                        <div>
+                          <h4 className="sn-label">Shape</h4>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
                               <button
-                                onClick={() => {
-                                  const nextRot = (it.rotation + 15) % 360;
-                                  updateItemRotation.mutate({ id: it.id, rotation: nextRot });
-                                }}
-                                className="p-1 rounded-full hover:bg-black/5 text-foreground/70"
-                                title="Rotate"
+                                key={s}
+                                onClick={() => setPhotoShape(s)}
+                                className={`sn-pill h-9 px-4 text-[13.5px] ${photoShape === s ? "sn-active" : ""}`}
                               >
-                                <RotateCw size={12} />
+                                {SHAPE_LABEL[s]}
                               </button>
-
-                              <button
-                                onClick={() => {
-                                  confirm({
-                                    title: "Delete item?",
-                                    message:
-                                      "Are you sure you want to permanently remove this item from the page?",
-                                    onConfirm: () => deleteItem.mutate(it.id),
-                                  });
-                                }}
-                                className="p-1 rounded-full hover:bg-red-50 text-red-500"
-                                title="Delete"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Customize Toolbar Area (Takes exactly w-full) */}
-        {activePage && (
-          <div className="w-full flex flex-col gap-3 sn-card p-4 shadow-xl mt-4">
-            <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
-              <span>Customize</span>
-              {activeTab && (
-                <button
-                  onClick={() => {
-                    setActiveTab(null);
-                    setSelectedFile(null);
-                    setPreviewUrl(null);
-                  }}
-                  className="p-0.5 hover:bg-black/5 rounded-full text-foreground/60 hover:text-foreground transition-colors animate-in spin-in-12 duration-200"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* Icons list with consistent glass layout styles */}
-            <div className="flex items-center justify-between gap-1.5 mt-1">
-              <button
-                onClick={() => {
-                  setActiveTab(activeTab === "stickers" ? null : "stickers");
-                  setSelectedFile(null);
-                  setPreviewUrl(null);
-                }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
-                  activeTab === "stickers"
-                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
-                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
-                }`}
-              >
-                <Star size={14} />
-                Decorate
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab(activeTab === "photos" ? null : "photos");
-                  setSelectedFile(null);
-                  setPreviewUrl(null);
-                }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
-                  activeTab === "photos"
-                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
-                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
-                }`}
-              >
-                <ImageIcon size={14} />
-                Add Photo
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab(activeTab === "note" ? null : "note");
-                  setSelectedFile(null);
-                  setPreviewUrl(null);
-                }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
-                  activeTab === "note"
-                    ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
-                    : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
-                }`}
-              >
-                <StickyNote size={14} />
-                Add Text
-              </button>
-            </div>
-
-            {/* Dynamic tool panels */}
-            <AnimatePresence mode="wait">
-              {/* DECORATE Tab - USER OWN STICKERS ONLY */}
-              {activeTab === "stickers" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-3"
-                >
-                  {/* Recently Added Stickers (Created in the last 24 hours) - Taxonomy tag outside */}
-                  {recentStickers.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
-                        Recently Added Stickers:
-                      </div>
-                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
-                        {recentStickers.map((st: any) => (
-                          <div key={st.id} className="flex flex-col items-center shrink-0 gap-1">
-                            <button
-                              onClick={() => {
-                                addItem.mutate({
-                                  page_id: activePage.id,
-                                  item_type: "sticker",
-                                  content: null,
-                                  image_url: st.image_url,
-                                  color: null,
-                                  pos_x: 30,
-                                  pos_y: 30,
-                                  scale: 1,
-                                  rotation: 0,
-                                });
-                                toast.success("Sticker added!");
-                              }}
-                              className="w-14 h-14 p-1.5 rounded-2xl bg-white/40 border border-white/50 shrink-0 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center relative shadow-sm"
-                            >
-                              <img
-                                src={st.image_url}
-                                alt=""
-                                className="max-h-full max-w-full object-contain pointer-events-none"
-                              />
-                            </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
-                              Sticker
-                            </span>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
 
-                  {/* My Stickers (Older than 24 hours) */}
-                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
-                      My Stickers:
-                    </div>
-                    <div className="grid grid-cols-4 gap-3 p-1 max-h-44 overflow-y-auto">
-                      {olderStickers.length === 0 && recentStickers.length === 0 ? (
-                        <div className="col-span-4 text-[12px] text-muted-foreground italic text-center p-2">
-                          No stickers created on the Stickers page yet. Go create some!
+                        <div>
+                          <h4 className="sn-label">Border</h4>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {OUTLINE_COLORS.map((oc) => (
+                              <button
+                                key={oc.value}
+                                onClick={() => setPhotoOutline(oc.value)}
+                                aria-label={oc.label}
+                                title={oc.label}
+                                className={`h-9 w-9 rounded-full border-2 transition active:scale-95 ${
+                                  photoOutline === oc.value ? "border-[#94b2f6] ring-2 ring-white" : "border-white"
+                                }`}
+                                style={{ background: oc.value }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      ) : olderStickers.length === 0 ? (
-                        <div className="col-span-4 text-[12px] text-muted-foreground italic text-center p-2">
-                          All stickers are listed under Recently Added.
+
+                        {!previewUrl && (
+                          <label className="sn-pill h-11 w-full cursor-pointer text-[14.5px]">
+                            <Upload size={16} strokeWidth={1.9} />
+                            Choose a photo
+                            <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
+                          </label>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Note */}
+                    {activeTab === "note" && (
+                      <div className="space-y-5">
+                        {recentTexts.length > 0 && (
+                          <div>
+                            <h4 className="sn-label">From the love wall</h4>
+                            <div className="no-scrollbar mt-2.5 flex gap-2.5 overflow-x-auto pb-1">
+                              {recentTexts.map((t: any) => (
+                                <button
+                                  key={t.id}
+                                  onClick={() => {
+                                    addItem.mutate({
+                                      page_id: activePage.id,
+                                      item_type: "text",
+                                      content: t.body,
+                                      image_url: null,
+                                      color: t.color || PASTEL_COLORS[0],
+                                      pos_x: 30,
+                                      pos_y: 30,
+                                      scale: 1,
+                                      rotation: 0,
+                                    });
+                                    toast.success("Note added");
+                                  }}
+                                  className="h-20 w-28 shrink-0 overflow-hidden rounded-[8px] p-2.5 text-left shadow-[0_8px_14px_-10px_rgba(50,70,150,0.55)] transition active:scale-95"
+                                  style={{ background: t.color || PASTEL_COLORS[0] }}
+                                >
+                                  <p className="line-clamp-3 break-words text-[13px] leading-snug text-sn-navy">{t.body}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="sn-label">Paper</h4>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {PASTEL_COLORS.map((col) => (
+                              <button
+                                key={col}
+                                onClick={() => setNoteColor(col)}
+                                aria-label="Paper colour"
+                                className={`h-9 w-9 rounded-full border-2 transition active:scale-95 ${
+                                  noteColor === col ? "border-[#94b2f6] ring-2 ring-white" : "border-white"
+                                }`}
+                                style={{ background: col }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      ) : (
-                        olderStickers.map((st: any) => (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={100}
+                            placeholder="Write something"
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            className="h-11 min-w-0 flex-1 rounded-full border border-[#e1e4f5] bg-white/85 px-4 text-[15px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
+                          />
                           <button
-                            key={st.id}
                             onClick={() => {
+                              if (!noteText.trim()) return;
                               addItem.mutate({
                                 page_id: activePage.id,
-                                item_type: "sticker",
-                                content: null,
-                                image_url: st.image_url,
-                                color: null,
+                                item_type: "text",
+                                content: noteText.trim(),
+                                image_url: null,
+                                color: noteColor,
                                 pos_x: 30,
                                 pos_y: 30,
                                 scale: 1,
                                 rotation: 0,
                               });
-                              toast.success("Sticker added!");
+                              setNoteText("");
+                              setActiveTab(null);
                             }}
-                            className="aspect-square p-1.5 rounded-2xl bg-white/40 border border-white/50 hover:bg-white/60 active:scale-95 transition-all overflow-hidden flex items-center justify-center shadow-sm"
+                            disabled={!noteText.trim()}
+                            className="sn-pill h-11 shrink-0 px-5 text-[14.5px]"
                           >
-                            <img
-                              src={st.image_url}
-                              alt=""
-                              className="max-h-full max-w-full object-contain pointer-events-none select-none"
-                            />
+                            Pin
                           </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* PHOTO options + shape selector + recent polaroids drawer + drag cropping preview system */}
-              {activeTab === "photos" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-4"
-                >
-                  {/* Recent Polaroids list (added in last 24 hours) - Taxonomy tag outside */}
-                  {recentPolaroids.length > 0 && !previewUrl && (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
-                        Recently Added Polaroids:
-                      </div>
-                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
-                        {recentPolaroids.map((p: any) => (
-                          <div key={p.id} className="flex flex-col items-center shrink-0 gap-1">
-                            <button
-                              onClick={() => {
-                                addItem.mutate({
-                                  page_id: activePage.id,
-                                  item_type: "polaroid",
-                                  content: null,
-                                  image_url: p.image_url,
-                                  color: null,
-                                  pos_x: 30,
-                                  pos_y: 30,
-                                  scale: 1,
-                                  rotation: (Math.random() - 0.5) * 8,
-                                });
-                                toast.success("Polaroid imported!");
-                              }}
-                              className="w-16 aspect-[3/4] p-1 pb-3 rounded bg-white shadow border border-black/5 hover:scale-105 active:scale-95 transition-all overflow-hidden relative"
-                            >
-                              <img
-                                src={p.image_url}
-                                alt=""
-                                className="w-full aspect-square object-cover rounded-sm pointer-events-none"
-                              />
-                            </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
-                              Polaroid
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* LIVE Interactive Drag & Crop Preview */}
-                  {previewUrl && (
-                    <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200 w-full">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
-                        Preview (Drag inside to position):
-                      </div>
-
-                      {/* Live Crop and drag container */}
-                      <div
-                        className="relative overflow-hidden cursor-move select-none flex items-center justify-center border border-black/5 shadow-md"
-                        style={{
-                          width: photoShape === "rect" ? "140px" : "140px",
-                          height: photoShape === "rect" ? "196px" : "140px",
-                          borderRadius:
-                            photoShape === "circle"
-                              ? "50%"
-                              : photoShape === "square" || photoShape === "rect"
-                                ? "24px"
-                                : "0px",
-                          clipPath:
-                            photoShape === "heart"
-                              ? "url(#heart-mask)"
-                              : photoShape === "star"
-                                ? "url(#star-mask)"
-                                : undefined,
-                          background: photoOutline,
-                          padding: "6px", // thickness of outline in preview
-                        }}
-                        onMouseDown={(e) => handlePreviewDragStart(e.clientX, e.clientY)}
-                        onMouseMove={(e) => handlePreviewDragMove(e.clientX, e.clientY)}
-                        onMouseUp={handlePreviewDragEnd}
-                        onMouseLeave={handlePreviewDragEnd}
-                        onTouchStart={(e) =>
-                          e.touches[0] &&
-                          handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)
-                        }
-                        onTouchMove={(e) =>
-                          e.touches[0] &&
-                          handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)
-                        }
-                        onTouchEnd={handlePreviewDragEnd}
-                      >
-                        <div
-                          className="w-full h-full overflow-hidden pointer-events-none"
-                          style={{
-                            borderRadius:
-                              photoShape === "circle"
-                                ? "50%"
-                                : photoShape === "square" || photoShape === "rect"
-                                  ? "18px"
-                                  : "0px",
-                            clipPath:
-                              photoShape === "heart"
-                                ? "url(#heart-mask)"
-                                : photoShape === "star"
-                                  ? "url(#star-mask)"
-                                  : undefined,
-                          }}
-                        >
-                          <img
-                            id="preview-img-target"
-                            src={previewUrl}
-                            alt=""
-                            className="max-w-none origin-center"
-                            style={{
-                              width: photoShape === "rect" ? "140px" : "140px",
-                              transform: `translate(${previewOffsetX}px, ${previewOffsetY}px) scale(${previewScale})`,
-                            }}
-                          />
                         </div>
                       </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                      {/* Zoom Slider */}
-                      <div className="w-full space-y-1 px-2">
-                        <div className="flex justify-between text-[11px] text-muted-foreground font-semibold">
-                          <span>Zoom scale:</span>
-                          <span>{previewScale.toFixed(1)}x</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.8"
-                          max="4"
-                          step="0.05"
-                          value={previewScale}
-                          onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
-                          className="w-full h-1 bg-foreground/15 rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
-                      </div>
-
-                      {/* Add/Cancel buttons with premium glass styles */}
-                      <div className="flex gap-2 w-full font-semibold text-xs pt-1">
-                        <button
-                          onClick={() => {
-                            if (selectedFile) {
-                              uploadBakedPhoto.mutate({
-                                file: selectedFile,
-                                shape: photoShape,
-                                outline: photoOutline,
-                                scale: previewScale,
-                                offsetX: previewOffsetX,
-                                offsetY: previewOffsetY,
-                              });
-                            }
-                          }}
-                          disabled={uploadBakedPhoto.isPending}
-                          className="flex-1 py-2 rounded-full bg-white/70 hover:bg-white/80 border border-white/60 text-primary active:scale-95 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_4px_12px_-4px_rgba(80,110,160,0.2)] text-center font-bold backdrop-blur-md"
-                        >
-                          {uploadBakedPhoto.isPending ? "Adding..." : "Add Picture"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedFile(null);
-                            setPreviewUrl(null);
-                          }}
-                          className="flex-1 py-2 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-foreground/75 text-center active:scale-95 transition-all"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Frame & Shape selections with glass styling */}
-                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
-                      Choose Frame:
-                    </div>
-                    <div className="flex gap-1 flex-wrap">
-                      {(["rect", "square", "circle", "heart", "star"] as const).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setPhotoShape(s)}
-                          className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
-                            photoShape === s
-                              ? "bg-white/75 border-white/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.8),0_4px_10px_-3px_rgba(80,110,160,0.2)] backdrop-blur-md"
-                              : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
-                          }`}
-                        >
-                          {s.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Frame Border Color Selector - pastel choices matching choose background */}
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
-                      Frame Outline Color:
-                    </div>
-                    <div className="flex gap-1.5">
-                      {OUTLINE_COLORS.map((oc) => (
-                        <button
-                          key={oc.value}
-                          onClick={() => setPhotoOutline(oc.value)}
-                          className={`h-5 w-5 rounded-full border transition-all hover:scale-110 active:scale-95 ${
-                            photoOutline === oc.value
-                              ? "ring-2 ring-primary ring-offset-1 scale-110"
-                              : "border-white/50"
-                          }`}
-                          style={{ background: oc.value }}
-                          title={oc.label}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Choose File Widget */}
-                  {!previewUrl && (
-                    <div className="space-y-2">
-                      <label className="flex items-center justify-center gap-1.5 w-full py-3 text-center rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl text-xs font-semibold text-foreground cursor-pointer active:scale-95 transition-all shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)]">
-                        <Upload size={14} />
-                        Upload photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* TEXT Composer Panel */}
-              {activeTab === "note" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="pt-2 space-y-4"
+              {/* Tool switcher */}
+              <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/80 bg-white/45 p-1.5 shadow-[0_14px_30px_-16px_rgba(70,88,168,0.55)] backdrop-blur-xl lg:mx-0 lg:w-full lg:justify-between">
+                {(
+                  [
+                    ["stickers", "Stickers", Star],
+                    ["photos", "Photo", ImageIcon],
+                    ["note", "Note", StickyNote],
+                  ] as const
+                ).map(([key, label, Icon]) => (
+                  <button
+                    key={key}
+                    onClick={() => toggleTool(key)}
+                    aria-pressed={activeTab === key}
+                    className={`sn-pill h-11 px-4 text-[14px] lg:flex-1 ${activeTab === key ? "sn-active" : ""}`}
+                  >
+                    <Icon size={17} strokeWidth={1.8} />
+                    {label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowLongPressInfo(true)}
+                  aria-label="How the album works"
+                  title="How the album works"
+                  className="sn-pill sn-icon-btn h-11 w-11"
                 >
-                  {/* Recent Texts list (added in last 24 hours) - Taxonomy tag outside */}
-                  {recentTexts.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
-                        Recently Added Texts:
-                      </div>
-                      <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
-                        {recentTexts.map((t: any) => (
-                          <div key={t.id} className="flex flex-col items-center shrink-0 gap-1">
-                            <button
-                              onClick={() => {
-                                addItem.mutate({
-                                  page_id: activePage.id,
-                                  item_type: "text",
-                                  content: t.body,
-                                  image_url: null,
-                                  color: t.color || PASTEL_COLORS[0],
-                                  pos_x: 30,
-                                  pos_y: 30,
-                                  scale: 1,
-                                  rotation: 0,
-                                });
-                                toast.success("Text imported!");
-                              }}
-                              className="w-24 h-16 p-2 rounded-xl bg-white/40 border border-white/50 hover:scale-105 active:scale-95 transition-all overflow-hidden text-left shadow-sm flex flex-col justify-between"
-                            >
-                              <p className="text-[12px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">
-                                {t.body}
-                              </p>
-                            </button>
-                            <span className="text-[7.5px] uppercase tracking-wider text-muted-foreground/85 font-extrabold select-none pointer-events-none">
-                              Love Wall
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Pastel Colors picker */}
-                  <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
-                      Choose Background:
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {PASTEL_COLORS.map((col) => (
-                        <button
-                          key={col}
-                          onClick={() => setNoteColor(col)}
-                          className={`h-5 w-5 rounded-full border transition-all ${
-                            noteColor === col
-                              ? "ring-2 ring-primary ring-offset-1 scale-110"
-                              : "border-white/50"
-                          }`}
-                          style={{ background: col }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      maxLength={100}
-                      placeholder="Write text note... (max 100 words)"
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      className="flex-1 rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all"
-                    />
-                    <button
-                      onClick={() => {
-                        if (!noteText.trim()) return;
-                        addItem.mutate({
-                          page_id: activePage.id,
-                          item_type: "text",
-                          content: noteText.trim(),
-                          image_url: null,
-                          color: noteColor,
-                          pos_x: 30,
-                          pos_y: 30,
-                          scale: 1,
-                          rotation: 0,
-                        });
-                        setNoteText("");
-                        setActiveTab(null);
-                      }}
-                      className="rounded-2xl bg-white/70 hover:bg-white/80 border border-white/60 text-primary px-4 py-2 text-xs font-bold active:scale-95 transition-all shadow-[0_2px_8px_-3px_rgba(0,0,0,0.08)] backdrop-blur-md"
-                    >
-                      Pin Text
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+                  <HelpCircle size={17} strokeWidth={1.8} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1452,20 +1311,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setRenameModalOpen(false)}
-              className="absolute inset-0 bg-black/20 backdrop-blur-[3px]"
+              className="absolute inset-0 bg-[#1f2a5c]/20 backdrop-blur-[3px]"
             />
             <motion.form
               onSubmit={handleRenameSubmit}
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="relative w-full max-w-[280px] sn-card p-5 shadow-2xl z-10 space-y-4"
+              className="sn-card relative z-10 w-full max-w-[340px] space-y-4 p-6"
             >
-              <h3 className="display text-sm font-semibold text-foreground/80">Rename Page Name</h3>
+              <h3 className="font-serif text-[22px] font-semibold text-sn-navy">Rename page</h3>
               <input
                 type="text"
                 autoFocus
-                placeholder="e.g. Summer Vacation, My Love"
+                placeholder="Page name"
                 value={renameNameText}
                 onChange={(e) => setRenameNameText(e.target.value)}
                 className="w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"

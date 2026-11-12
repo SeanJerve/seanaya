@@ -6,13 +6,13 @@ import { BookHeart, Calendar, Music2, PinIcon, MapPin, Heart, CheckCheck } from 
 import { toast } from "sonner";
 
 const ICON: Record<NotifKind, React.ReactNode> = {
-  memory: <BookHeart size={14} />,
-  event: <Calendar size={14} />,
-  note: <PinIcon size={14} />,
-  trip: <MapPin size={14} />,
-  song: <Music2 size={14} />,
-  hug: <Heart size={14} />,
-  capsule: <BookHeart size={14} />,
+  memory: <BookHeart size={17} strokeWidth={1.7} />,
+  event: <Calendar size={17} strokeWidth={1.7} />,
+  note: <PinIcon size={17} strokeWidth={1.7} />,
+  trip: <MapPin size={17} strokeWidth={1.7} />,
+  song: <Music2 size={17} strokeWidth={1.7} />,
+  hug: <Heart size={17} strokeWidth={1.7} />,
+  capsule: <BookHeart size={17} strokeWidth={1.7} />,
 };
 
 const TAB_FOR: Partial<Record<NotifKind, TabKey>> = {
@@ -33,15 +33,6 @@ const TITLE: Record<NotifKind, string> = {
   capsule: "A time capsule was placed",
 };
 
-const SUB: Record<NotifKind, string> = {
-  memory: "Open memories to see it",
-  event: "Peek at the calendar",
-  note: "Take a look at the wall",
-  trip: "See it on your places list",
-  song: "Play it from the radio",
-  hug: "Sent with love",
-  capsule: "Waiting until it opens",
-};
 
 export function NotificationsSheet({ relationshipId }: { relationshipId: string }) {
   const { list, unread, markAllRead, markOneRead } = useNotifications(relationshipId);
@@ -56,28 +47,28 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
   }, [markAllRead]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] text-muted-foreground">
-          {unread > 0 ? `${unread} new whisper${unread === 1 ? "" : "s"}` : "All caught up"}
-        </div>
-        {list.length > 0 && (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[14px] text-sn-muted">
+          {unread > 0 ? `${unread} new` : "All caught up"}
+        </span>
+        {list.length > 0 && unread > 0 && (
           <button
             onClick={() => {
               markAllRead();
-              toast.success("Cleared");
+              toast.success("All marked as read");
             }}
-            className="flex items-center gap-1 rounded-full border border-white/50 bg-white/50 px-3 py-1 text-[11px] text-foreground/80 backdrop-blur-xl"
+            className="sn-ghost h-9 px-3.5 text-[13.5px]"
           >
-            <CheckCheck size={12} /> Mark all as read
+            <CheckCheck size={16} /> Mark all read
           </button>
         )}
       </div>
 
       {list.length === 0 ? (
-        <div className="py-8 text-center text-sm text-muted-foreground">No whispers yet.</div>
+        <div className="py-12 text-center font-serif text-[19px] text-sn-muted">Nothing new yet</div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="mt-3 divide-y divide-[#e7e4f3]">
           {list.map((n) => {
             const tab = TAB_FOR[n.kind];
             return (
@@ -88,23 +79,18 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
                     if (tab) setTab(tab);
                     closeSheet();
                   }}
-                  className={`flex w-full items-start gap-3 rounded-2xl border border-white/40 bg-white/50 px-4 py-3 text-left backdrop-blur-xl transition ${!n.read ? "ring-1 ring-primary/30" : ""}`}
+                  className="flex w-full items-center gap-3.5 py-3.5 text-left"
                 >
-                  <span className="mt-0.5 rounded-full bg-white/60 p-1.5 text-foreground/70">
+                  <span className={`sn-pill sn-icon-btn h-10 w-10 cursor-pointer ${!n.read ? "sn-active" : ""}`}>
                     {ICON[n.kind]}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm">{TITLE[n.kind]}</div>
-                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {SUB[n.kind]}
-                    </div>
-                    <div className="mt-0.5 text-[12px] text-muted-foreground/80">
+                    <div className="truncate text-[15px] font-semibold text-sn-navy">{TITLE[n.kind]}</div>
+                    <div className="mt-0.5 text-[13px] text-sn-muted">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </div>
                   </div>
-                  {!n.read && (
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[color:var(--hug)]" />
-                  )}
+                  {!n.read && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-sn-pink" aria-label="Unread" />}
                 </button>
               </li>
             );
