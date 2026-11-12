@@ -258,7 +258,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   return (
     <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none mx-auto max-w-md px-4 pt-6">
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
-      <div className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 relative">
+      <div className="sn-card p-4 flex flex-col gap-2 shrink-0 z-20 relative">
         {showPageSearch && (
           <div className="flex items-center gap-1 border-b border-white/20 pb-2">
             <input
@@ -266,7 +266,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               value={pageSearchQuery}
               onChange={(e) => setPageSearchQuery(e.target.value)}
               placeholder="Search pages by name or number..."
-              className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+              className="w-full font-sans text-[12px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
               autoFocus
             />
             {pageSearchQuery && (
@@ -284,7 +284,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
             {filteredPages.length === 0 ? (
-              <span className="text-[10px] text-muted-foreground/60 italic px-1">
+              <span className="text-[12px] text-muted-foreground/60 italic px-1">
                 No pages match search
               </span>
             ) : (
@@ -314,7 +314,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
         {/* Row 2: Page Tools */}
         {activePage && (
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[12px]">
             <div className="flex items-center gap-2 text-foreground/55 font-medium">
               <span>Pad Color:</span>
               <div className="flex items-center gap-1.5">
@@ -536,7 +536,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="relative w-full max-w-[280px] rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl z-10 space-y-4"
+              className="relative w-full max-w-[280px] sn-card p-5 shadow-2xl z-10 space-y-4"
             >
               <h3 className="display text-sm font-semibold text-foreground/80">
                 New Sticker Sheet Name

@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useAppStore } from "./store";
 
+/**
+ * Bottom sheet on phones, centred paper dialog from 640px up.
+ */
 export function Sheet({
   open,
   title,
@@ -12,6 +15,8 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const { closeSheet } = useAppStore();
+  const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+
   return (
     <AnimatePresence>
       {open && (
@@ -21,31 +26,38 @@ export function Sheet({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={closeSheet}
-          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-[#1f2a5c]/20 backdrop-blur-[3px] sm:items-center sm:p-6"
         >
           <motion.div
             key="sheet"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 340, damping: 34 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            initial={wide ? { opacity: 0, y: 16, scale: 0.98 } : { y: "100%" }}
+            animate={wide ? { opacity: 1, y: 0, scale: 1 } : { y: 0 }}
+            exit={wide ? { opacity: 0, y: 16, scale: 0.98 } : { y: "100%" }}
+            transition={
+              wide ? { duration: 0.22, ease: [0.2, 0, 0, 1] } : { type: "spring", stiffness: 340, damping: 34 }
+            }
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-3xl border border-white/40
-              bg-white/70 backdrop-blur-2xl shadow-[0_-20px_60px_-20px_rgba(80,110,160,0.4)]
-              max-h-[88vh] flex flex-col overflow-hidden"
+            className="flex max-h-[88vh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[28px] border border-white/90 bg-[var(--paper-blush)] shadow-[0_-20px_60px_-24px_rgba(70,88,168,0.5)] backdrop-blur-2xl sm:rounded-[28px] sm:shadow-[var(--shadow-panel)]"
           >
-            {/* Header fixed at the top with solid backdrop shading */}
-            <div className="flex items-center justify-between border-b border-white/30 bg-white/80 backdrop-blur-xl px-5 py-3.5 z-10 shrink-0">
-              <h2 className="display text-lg">{title}</h2>
+            <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#d9dcf0] sm:hidden" />
+            <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-3 sm:pt-6">
+              <h2 className="font-serif text-[24px] font-semibold capitalize leading-tight text-sn-navy">
+                {title}
+              </h2>
               <button
                 onClick={closeSheet}
-                className="p-1.5 rounded-full hover:bg-black/5 transition"
+                aria-label="Close"
+                className="grid h-9 w-9 place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-muted shadow-[var(--shadow-pill)] hover:text-sn-navy"
               >
                 <X size={16} />
               </button>
             </div>
-            {/* Scrollable contents separated to avoid z-index bleeding */}
-            <div className="p-5 pb-8 overflow-y-auto grow">{children}</div>
+            <div className="grow overflow-y-auto px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2">
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}

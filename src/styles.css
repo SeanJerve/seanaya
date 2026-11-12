@@ -5,8 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Seanaya design system
- * Cozy pastel-blue relationship space with white lily motifs.
+ * SEANAYA design system
+ * Periwinkle baby-blue sky, lavender-to-blush paper cards, deep navy ink.
+ * Pink is reserved for hearts, the hug action and the milestone bar.
  * All tokens live here; components consume them via semantic classes.
  */
 
@@ -50,66 +51,115 @@
   --color-warm: var(--warm);
   --color-hug: var(--hug);
 
-  --font-display: "Fraunces", "Cormorant Garamond", ui-serif, Georgia, serif;
-  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  /* Seanaya named palette (use as bg-sn-navy, text-sn-pink, …) */
+  --color-sn-navy: var(--sn-navy);
+  --color-sn-ink: var(--sn-ink);
+  --color-sn-muted: var(--sn-muted);
+  --color-sn-faint: var(--sn-faint);
+  --color-sn-line: var(--sn-line);
+  --color-sn-sky: var(--sn-sky);
+  --color-sn-powder: var(--sn-powder);
+  --color-sn-periwinkle: var(--sn-periwinkle);
+  --color-sn-lavender: var(--sn-lavender);
+  --color-sn-ivory: var(--sn-ivory);
+  --color-sn-blush: var(--sn-blush);
+  --color-sn-blush-deep: var(--sn-blush-deep);
+  --color-sn-pink: var(--sn-pink);
+  --color-sn-rose: var(--sn-rose);
+  --color-sn-mint: var(--sn-mint);
+  --color-sn-honey: var(--sn-honey);
+
+  --font-display: "Crimson Pro", "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-serif: "Crimson Pro", ui-serif, Georgia, serif;
+  --font-sans: "Nunito Sans", "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-hand: "Caveat", "Segoe Print", cursive;
 }
 
 :root {
-  --radius: 1.5rem;
+  --radius: 1.25rem;
 
-  /* Kawaii Pastel Romance Palette */
-  --background: #ebf3ff;
-  --foreground: #233554;
+  /* ── Seanaya palette ── */
+  --sn-navy: #1f2a5c; /* headlines, numerals */
+  --sn-ink: #3a4675; /* body copy */
+  --sn-muted: #6b7397; /* secondary copy */
+  --sn-faint: #9aa2c4; /* tertiary, placeholders */
+  --sn-line: rgba(132, 146, 204, 0.18); /* hairlines */
+  --sn-sky: #cdd9f8; /* page sky */
+  --sn-powder: #e1e8fb; /* powder blue surfaces */
+  --sn-periwinkle: #8faaf0; /* active nav, focus */
+  --sn-lavender: #ecebfa; /* lavender paper */
+  --sn-ivory: #fdf8f6; /* warm ivory */
+  --sn-blush: #fbe4ec; /* blush surfaces */
+  --sn-blush-deep: #f7cbdb; /* hug button, date stamp */
+  --sn-pink: #ec7aa4; /* hearts, accents */
+  --sn-rose: #c9457a; /* pink text on blush */
+  --sn-mint: #5fd6b0; /* live presence */
+  --sn-honey: #f2b867; /* trophy, star */
 
-  --card: rgba(255, 255, 255, 0.88);
-  --card-foreground: #233554;
-  --popover: rgba(255, 255, 255, 0.95);
-  --popover-foreground: #233554;
+  /* ── Semantic tokens (consumed by every view) ── */
+  --background: #d3def9;
+  --foreground: var(--sn-navy);
 
-  --primary: #f472b6;
+  --card: rgba(250, 247, 254, 0.9);
+  --card-foreground: var(--sn-navy);
+  --popover: rgba(252, 249, 255, 0.97);
+  --popover-foreground: var(--sn-navy);
+
+  --primary: var(--sn-pink);
   --primary-foreground: #ffffff;
-  --secondary: #e0f2fe;
-  --secondary-foreground: #1e3a8a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #fbcfe8;
-  --accent-foreground: #831843;
-  --destructive: #f43f5e;
+  --secondary: var(--sn-powder);
+  --secondary-foreground: var(--sn-navy);
+  --muted: #eef0fb;
+  --muted-foreground: var(--sn-muted);
+  --accent: var(--sn-blush);
+  --accent-foreground: var(--sn-rose);
+  --destructive: #e05577;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.8);
+  --border: rgba(255, 255, 255, 0.85);
   --input: #ffffff;
-  --ring: #f472b6;
+  --ring: var(--sn-periwinkle);
 
-  /* Scene palette */
-  --sky: #dbeafe;
-  --sky-soft: #f0f7ff;
+  /* Scene palette (legacy names kept for existing views) */
+  --sky: #dbe4fb;
+  --sky-soft: #f1f4fe;
   --lily: #ffffff;
-  --lily-stem: #86efac;
-  --petal: #fdf2f8;
-  --mist: rgba(224, 242, 254, 0.7);
-  --dusk: #c084fc;
-  --warm: #fef08a;
-  --hug: #fb7185;
+  --lily-stem: #9fd3b4;
+  --petal: #fdf1f6;
+  --mist: rgba(225, 232, 251, 0.7);
+  --dusk: #b9a8ec;
+  --warm: #fbe7b5;
+  --hug: var(--sn-pink);
 
-  /* Dreamy pastel baby-blue sky gradient */
-  --gradient-sky: linear-gradient(135deg, #dbeafe 0%, #ebf3ff 45%, #fdf2f8 85%, #e0e7ff 100%);
-  --gradient-dawn: linear-gradient(180deg, #ffedd5 0%, #ebf3ff 100%);
-  --gradient-noon: linear-gradient(180deg, #e0f2fe 0%, #dbeafe 100%);
-  --gradient-dusk: linear-gradient(180deg, #fbcfe8 0%, #c7d2fe 100%);
-  --gradient-night: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+  /* Page sky: periwinkle, lifting to lavender at the edges */
+  --gradient-sky:
+    radial-gradient(120% 70% at 0% 0%, #e8e8fb 0%, transparent 55%),
+    radial-gradient(90% 60% at 100% 100%, #dbe7fb 0%, transparent 60%),
+    linear-gradient(180deg, #cbd7f8 0%, #cfdbf9 55%, #d6e3fa 100%);
+  --gradient-dawn: linear-gradient(180deg, #fde9e4 0%, #e6ecfc 100%);
+  --gradient-noon: linear-gradient(180deg, #e1e8fb 0%, #d3def9 100%);
+  --gradient-dusk: linear-gradient(180deg, #f9dbe7 0%, #d7d6f6 100%);
+  --gradient-night: linear-gradient(180deg, #1e2350 0%, #121633 100%);
 
-  --shadow-soft: 0 10px 30px -5px rgba(186, 215, 255, 0.4), 0 4px 12px rgba(220, 230, 250, 0.5);
-  --shadow-panel: 0 20px 50px -20px rgba(165, 195, 245, 0.5), 0 2px 8px rgba(200, 220, 255, 0.4);
-  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 36px -10px rgba(186, 215, 255, 0.45);
+  /* Paper surfaces */
+  --paper-blush: linear-gradient(180deg, rgba(249, 245, 254, 0.94) 0%, rgba(254, 243, 247, 0.94) 100%);
+  --paper-lavender: linear-gradient(180deg, rgba(239, 238, 251, 0.94) 0%, rgba(246, 241, 251, 0.94) 100%);
 
-  --sidebar: rgba(255, 255, 255, 0.85);
-  --sidebar-foreground: #233554;
-  --sidebar-primary: #f472b6;
+  --shadow-soft: 0 14px 34px -18px rgba(86, 104, 176, 0.38), 0 2px 6px rgba(120, 138, 204, 0.08);
+  --shadow-panel:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 22px 44px -26px rgba(80, 98, 172, 0.45),
+    0 3px 10px -4px rgba(120, 138, 204, 0.18);
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 16px 36px -20px rgba(86, 104, 176, 0.4);
+  --shadow-pill: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 18px -10px rgba(86, 104, 176, 0.45);
+  --shadow-press: inset 0 2px 6px rgba(120, 128, 190, 0.18);
+
+  --sidebar: rgba(236, 237, 252, 0.82);
+  --sidebar-foreground: var(--sn-navy);
+  --sidebar-primary: var(--sn-pink);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e0f2fe;
-  --sidebar-accent-foreground: #1e3a8a;
-  --sidebar-border: rgba(255, 255, 255, 0.8);
-  --sidebar-ring: #f472b6;
+  --sidebar-accent: var(--sn-powder);
+  --sidebar-accent-foreground: var(--sn-navy);
+  --sidebar-border: rgba(255, 255, 255, 0.85);
+  --sidebar-ring: var(--sn-periwinkle);
 }
 
 .dark,
@@ -133,20 +183,87 @@
   --ring: oklch(0.65 0.08 240);
 }
 
+/* ── Surfaces ── */
+
 @utility glass-panel {
-  background: color-mix(in oklab, var(--card) 82%, transparent);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  background: var(--paper-blush);
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-glass);
   border-radius: var(--radius-2xl);
 }
 
 @utility soft-card {
-  background: var(--card);
+  background: var(--paper-blush);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
   border-radius: var(--radius-xl);
+}
+
+/* Primary dashboard paper card */
+@utility sn-card {
+  position: relative;
+  background: var(--paper-blush);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-panel);
+  border-radius: 28px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@utility sn-card-lavender {
+  background: var(--paper-lavender);
+}
+
+/* Tactile pill button: soft raised paper */
+@utility sn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: linear-gradient(180deg, #fffafd 0%, #fbf1f6 100%);
+  box-shadow: var(--shadow-pill);
+  color: var(--sn-navy);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+  &:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 12px 22px -12px rgba(86, 104, 176, 0.5);
+  }
+  &:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-press);
+  }
+}
+
+/* Section eyebrow label — the one place we letter-space caps */
+@utility sn-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  @media (width >= 40rem) {
+    font-size: 0.8125rem;
+    letter-spacing: 0.2em;
+  }
+  text-transform: uppercase;
+  color: #4a5687;
+}
+
+/* Handwritten annotations: Caveat, leaned and loosened to read like pen on paper */
+@utility sn-hand {
+  font-family: var(--font-hand);
+  font-weight: 500;
+  font-style: oblique 9deg;
+  font-synthesis: style;
+  letter-spacing: 0.06em;
 }
 
 @utility dot-indicator {
@@ -159,7 +276,7 @@
   background: var(--hug);
   box-shadow:
     0 0 0 2px var(--background),
-    0 0 8px oklch(0.78 0.13 15 / 0.6);
+    0 0 8px rgba(236, 122, 164, 0.6);
 }
 
 @layer base {
@@ -175,9 +292,13 @@
 
   body {
     background: var(--gradient-sky);
+    background-color: var(--background);
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     min-height: 100dvh;
   }
 
@@ -187,8 +308,12 @@
   h4,
   .display {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
-    font-weight: 500;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
   }
 
   .tabular-nums {
@@ -210,6 +335,11 @@
   }
   .btn-press:active {
     transform: scale(0.96);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--sn-periwinkle);
+    outline-offset: 2px;
   }
 }
 
@@ -240,6 +370,28 @@
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes sn-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

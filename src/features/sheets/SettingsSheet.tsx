@@ -193,7 +193,7 @@ export function SettingsSheet({
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               Upload a profile picture to show next to your activity.
             </p>
           </div>
@@ -226,7 +226,7 @@ export function SettingsSheet({
       <section className="space-y-4 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <SectionHead label="LDR Cities & Timezones" />
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+          <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-widest">
             {calculateDistanceKm(
               resolveCity(userCity).lat,
               resolveCity(userCity).lng,
@@ -260,7 +260,7 @@ export function SettingsSheet({
 
         {/* Quick Philippine & Global City Chips */}
         <div>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
+          <span className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
             Quick Select for Partner:
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -464,7 +464,7 @@ export function SettingsSheet({
 
 function SectionHead({ label, icon }: { label: string; icon?: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.2em] text-muted-foreground">
       {icon}
       {label}
     </div>

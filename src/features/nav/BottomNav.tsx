@@ -1,23 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Calendar, BookHeart, PinIcon, Star, Cat, Camera } from "lucide-react";
+import { Home, Calendar, Image as ImageIcon, Pin, Star, Cat, Camera } from "lucide-react";
 import { useAppStore, type TabKey } from "@/features/app/store";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const TABS: { key: TabKey; icon: React.ReactNode; dotKinds?: string[] }[] = [
-  { key: "home", icon: <Home size={22} strokeWidth={1.6} /> },
+const ICON = { size: 23, strokeWidth: 1.55 } as const;
+const TABS: { key: TabKey; label: string; icon: React.ReactNode; dotKinds?: string[] }[] = [
+  { key: "home", label: "Home", icon: <Home {...ICON} /> },
   {
     key: "calendar",
-    icon: <Calendar size={22} strokeWidth={1.6} />,
+    label: "Calendar",
+    icon: <Calendar {...ICON} />,
     dotKinds: ["event", "memory"],
   },
-  { key: "memories", icon: <BookHeart size={22} strokeWidth={1.6} />, dotKinds: ["album_item"] },
-  { key: "photobooth", icon: <Camera size={22} strokeWidth={1.6} /> },
-  { key: "wall", icon: <PinIcon size={22} strokeWidth={1.6} />, dotKinds: ["note"] },
-  { key: "stickers", icon: <Star size={22} strokeWidth={1.6} />, dotKinds: ["sticker"] },
-  { key: "pet", icon: <Cat size={22} strokeWidth={1.6} />, dotKinds: ["pet"] },
+  { key: "memories", label: "Album", icon: <ImageIcon {...ICON} />, dotKinds: ["album_item"] },
+  { key: "photobooth", label: "Photo booth", icon: <Camera {...ICON} /> },
+  { key: "wall", label: "Love wall", icon: <Pin {...ICON} />, dotKinds: ["note"] },
+  { key: "stickers", label: "Stickers", icon: <Star {...ICON} />, dotKinds: ["sticker"] },
+  { key: "pet", label: "Pet room", icon: <Cat {...ICON} />, dotKinds: ["pet"] },
 ];
 
 const SPEECH_MESSAGES: Record<string, string[]> = {
@@ -102,8 +104,11 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
   const petPositionsRef = useRef<Record<string, number>>({});
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none">
-      <div className="relative flex w-full max-w-md flex-col pointer-events-auto">
+    <nav
+      aria-label="Sections"
+      className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none"
+    >
+      <div className="relative flex w-full max-w-[480px] flex-col pointer-events-auto">
         {/* Style block for animations */}
         <style>{`
           @keyframes pet-tail-wag {
@@ -164,7 +169,7 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
         `}</style>
 
         {/* ── Navbar Menu Capsule ── */}
-        <div className="relative flex w-full items-stretch justify-between rounded-full border border-white/40 bg-white/40 backdrop-blur-2xl px-2 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_18px_50px_-20px_rgba(80,110,160,0.45)] z-30">
+        <div className="relative z-30 flex h-[64px] w-full items-center justify-between rounded-full border border-white/95 bg-[linear-gradient(180deg,rgba(244,245,254,0.92),rgba(236,239,252,0.9))] px-2.5 shadow-[inset_0_1px_0_#fff,0_20px_40px_-22px_rgba(70,88,168,0.55),0_2px_8px_rgba(120,138,204,0.12)] backdrop-blur-2xl sm:h-[70px] sm:px-4">
           {isPetVisible &&
             roamingPets.map((p, idx) => (
               <RoamingPet
@@ -189,18 +194,19 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
                   }
                   setTab(t.key);
                 }}
-                className="relative flex flex-1 items-center justify-center rounded-full py-3 min-h-[44px] active:scale-90 transition-transform touch-manipulation"
-                aria-label={t.key}
+                className="relative grid h-11 w-11 place-items-center rounded-full active:scale-90 transition-transform touch-manipulation sm:h-12 sm:w-12"
+                aria-label={t.label}
+                aria-current={active ? "page" : undefined}
               >
                 {active && (
                   <motion.span
                     layoutId="tab-pill"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                    className="absolute inset-0 rounded-full border border-white/60 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.75),rgba(255,255,255,0.25)_65%)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_6px_18px_-8px_rgba(80,110,160,0.35)]"
+                    className="absolute inset-0 rounded-full border border-white/80 bg-[radial-gradient(circle_at_35%_30%,#c9d8fd,#94b2f6_75%)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_8px_16px_-8px_rgba(70,100,200,0.65)]"
                   />
                 )}
                 <span
-                  className={`relative z-10 transition-colors ${active ? "text-foreground" : "text-foreground/45"}`}
+                  className={`relative z-10 transition-colors ${active ? "text-[#3150a8]" : "text-[#5c6aa3] hover:text-sn-navy"}`}
                 >
                   {t.icon}
                   {dot && !active && (
@@ -422,7 +428,7 @@ function RoamingPet({
       }}
     >
       {behavior === "sleep" && (
-        <span className="absolute -top-3.5 right-0.5 text-[9px] font-bold text-primary/75 float-zzz select-none pointer-events-none">
+        <span className="absolute -top-3.5 right-0.5 text-[11px] font-bold text-primary/75 float-zzz select-none pointer-events-none">
           Zzz
         </span>
       )}
@@ -430,7 +436,7 @@ function RoamingPet({
       {/* Lightweight, semi-transparent glassmorphic speech bubble to prevent overlapping blockiness */}
       <AnimatePresence>
         {bubbleVisible && bubbleText && (
-          <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-28 bg-white/70 backdrop-blur-md border border-white/40 px-2 py-1 rounded-xl shadow-md text-[9px] text-foreground font-semibold text-center leading-tight animate-in fade-in slide-in-from-bottom-2 duration-200 select-none pointer-events-none z-50">
+          <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-28 bg-white/70 backdrop-blur-md border border-white/40 px-2 py-1 rounded-xl shadow-md text-[11px] text-foreground font-semibold text-center leading-tight animate-in fade-in slide-in-from-bottom-2 duration-200 select-none pointer-events-none z-50">
             {bubbleText}
             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white/70" />
           </div>

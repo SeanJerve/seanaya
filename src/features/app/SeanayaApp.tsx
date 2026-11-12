@@ -27,6 +27,33 @@ import { HugOverlay } from "@/features/panels/HugOverlay";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MonthsaryWrapped } from "@/features/monthsary/MonthsaryWrapped";
 import { bootTheme } from "@/lib/theme";
+import { ART, Sparkle } from "@/components/seanaya/art";
+
+/** Fixed page scenery: a band of clouds along the bottom, one lily and a few sparkles. */
+function SkyBackdrop() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden">
+      <div
+        className="absolute inset-x-0 bottom-0 h-[110px] opacity-95"
+        style={{
+          backgroundImage: `url(${ART.cloudBand})`,
+          backgroundRepeat: "repeat-x",
+          backgroundSize: "auto 100%",
+          backgroundPosition: "left bottom",
+        }}
+      />
+      <img
+        src={ART.lilyOpen}
+        alt=""
+        className="absolute -top-[46px] right-[max(338px,calc(50%-412px))] hidden w-[230px] -rotate-[18deg] opacity-95 xl:block"
+      />
+      <Sparkle className="absolute left-[78%] top-[38px] hidden h-7 w-7 text-white/90 lg:block" />
+      <Sparkle className="absolute left-[53%] top-[34px] hidden h-3.5 w-3.5 text-white/80 lg:block" />
+      <Sparkle className="absolute bottom-[34px] left-[32%] h-5 w-5 text-white/90" />
+      <Sparkle className="absolute bottom-[50px] right-[30%] h-4 w-4 text-white/80" />
+    </div>
+  );
+}
 
 export function SeanayaApp() {
   useEffect(() => {
@@ -233,8 +260,8 @@ function Inner() {
         className="fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
         style={{ background: "var(--gradient-sky)" }}
       >
-        <div className="rounded-3xl border border-white/50 bg-white/40 backdrop-blur-xl p-8 max-w-sm flex flex-col items-center shadow-soft">
-          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+        <div className="sn-card p-8 max-w-sm flex flex-col items-center shadow-soft">
+          <div className="text-[12px] uppercase tracking-[0.25em] text-muted-foreground">
             Seanaya
           </div>
           <h2 className="display mt-2 text-2xl">Waking your space</h2>
@@ -268,20 +295,14 @@ function Inner() {
   )[tab];
 
   return (
-    <div className="min-h-[100dvh] w-full seanaya-bg flex relative overflow-x-hidden">
-      {/* Dreamy Floral Watermarks matching Reference Scrapbook */}
-      <div className="fixed top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 pointer-events-none opacity-30 select-none z-0 translate-x-16 -translate-y-10">
-        <img src="/main-lily.png" alt="" className="w-full h-full object-contain" />
-      </div>
-      <div className="fixed bottom-0 right-0 w-80 sm:w-[28rem] h-80 sm:h-[28rem] pointer-events-none opacity-25 select-none z-0 translate-x-20 translate-y-16">
-        <img src="/lily1.png" alt="" className="w-full h-full object-contain" />
-      </div>
+    <div className="min-h-[100dvh] w-full seanaya-bg flex relative overflow-x-clip">
+      {tab !== "photobooth" && <SkyBackdrop />}
 
-      {/* Desktop Sidebar (visible on xl: screens, hidden on mobile/tablet) */}
-      {tab !== "photobooth" && <DesktopSidebar className="hidden xl:flex relative z-20" />}
+      <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-[1500px]">
+      {/* Sidebar on wide screens; the floating dock carries navigation elsewhere */}
+      {tab !== "photobooth" && <DesktopSidebar className="hidden xl:flex" />}
 
-      {/* Main Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="relative flex min-w-0 flex-1 flex-col">
         {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
 
         <main className="flex-1">
@@ -294,13 +315,9 @@ function Inner() {
           {tab === "photobooth" && <PhotoBoothView relationshipId={relId} />}
         </main>
       </div>
+      </div>
 
-      {/* Floating Bottom Nav (active on mobile/tablet, hidden on desktop xl: where sidebar is used) */}
-      {tab !== "photobooth" && (
-        <div className="xl:hidden">
-          <BottomNav relationshipId={relId} />
-        </div>
-      )}
+      {tab !== "photobooth" && <BottomNav relationshipId={relId} />}
 
       <Sheet open={sheet === "add-memory"} title="New memory">
         <AddMemorySheet relationshipId={relId} />

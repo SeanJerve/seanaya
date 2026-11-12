@@ -23,7 +23,6 @@ import {
   Maximize2,
   Minimize2,
   CalendarDays,
-  BookHeart,
   Eye,
   EyeOff,
   Play,
@@ -363,11 +362,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           ))}
         </div>
       ) : groupedMemories.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center bg-white/40 rounded-3xl border border-white/20 mt-4">
-          <BookHeart size={32} className="text-foreground/20 mb-2" />
-          <div className="text-xs font-semibold text-foreground/50">No memories recorded yet</div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Capture your first memory together by tapping the floating button!
+        <div className="mt-4 flex flex-col items-center justify-center px-6 pb-8 pt-4 text-center">
+          <img src="/lily2.png" alt="" aria-hidden className="w-[132px] -rotate-12 select-none" />
+          <div className="mt-2 font-serif text-[21px] font-semibold text-sn-navy">
+            The first page is still blank
+          </div>
+          <p className="mt-1.5 max-w-[320px] text-[14.5px] leading-relaxed text-sn-muted">
+            Add a memory and it will bloom here, kept by the day it happened.
           </p>
         </div>
       ) : (
@@ -473,7 +474,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-[9px] uppercase tracking-wider text-foreground/60 font-semibold">
+                                  <span className="text-[11px] uppercase tracking-wider text-foreground/60 font-semibold">
                                     Special
                                   </span>
                                 )}
@@ -499,7 +500,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
                   <div
                     onClick={() => setActiveMemory(group.memories[0])}
-                    className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm text-[10px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center"
+                    className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md shadow-sm text-[12px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer hover:bg-white/65 hover:scale-105 active:scale-95 transition-all text-center"
                     title={group.memories.map((m) => m.title).join(", ")}
                   >
                     {group.memories[0].title}
@@ -515,28 +516,28 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   );
 
   return (
-    <div ref={containerRef} className="mx-auto max-w-md space-y-4 px-5 py-6 pb-32">
+    <div ref={containerRef} className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-32 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0 xl:mx-0 xl:max-w-none xl:pl-[22px] xl:pr-9">
       {/* Calendar section */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
+      <section className="sn-card p-5 sm:p-6 lg:col-start-1">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCursor(subMonths(cursor, 1))}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all touch-manipulation text-foreground/80"
+            className="grid h-[42px] w-[42px] place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-navy shadow-[var(--shadow-pill)] active:scale-95 touch-manipulation"
             aria-label="Previous month"
           >
             <ChevronLeft size={18} />
           </button>
-          <div className="display text-lg font-semibold">{format(cursor, "MMMM yyyy")}</div>
+          <div className="font-serif text-[24px] font-semibold text-sn-navy">{format(cursor, "MMMM yyyy")}</div>
           <button
             onClick={() => setCursor(addMonths(cursor, 1))}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition-all touch-manipulation text-foreground/80"
+            className="grid h-[42px] w-[42px] place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-navy shadow-[var(--shadow-pill)] active:scale-95 touch-manipulation"
             aria-label="Next month"
           >
             <ChevronRight size={18} />
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-[13px] font-semibold text-sn-ink">
           {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
             <div key={i}>{d}</div>
           ))}
@@ -574,7 +575,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 {isToday && (
-                  <div className="absolute inset-0 rounded-full ring-2 ring-foreground/60 bg-foreground/10" />
+                  <div className="absolute inset-0 rounded-full bg-[linear-gradient(180deg,#fde3ee,#f7bfd6)] shadow-[0_4px_10px_-4px_rgba(236,122,164,0.6)]" />
                 )}
 
                 {!dayPhoto && !isToday && (
@@ -582,7 +583,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 )}
 
                 <span
-                  className={`relative z-10 text-xs font-semibold
+                  className={`relative z-10 text-[14px] font-semibold tabular-nums
                   ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}
                 >
                   {d.getDate()}
@@ -598,21 +599,19 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* Events list */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5">
-        <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Moment list
-        </div>
+      <section className="sn-card p-5 sm:p-6 lg:col-start-1">
+        <h2 className="sn-label mb-4">Moment list</h2>
         {events.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic">Quiet month. Add some moments!</div>
+          <div className="font-serif text-[17px] italic text-sn-muted">A quiet month so far. Add a moment to look forward to.</div>
         ) : (
           <ul className="space-y-2">
             {events.map((e) => (
               <li
                 key={e.id}
-                className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3 border border-white/50"
+                className="flex items-center justify-between rounded-[18px] border border-white/90 bg-white/70 px-4 py-3 shadow-[var(--shadow-pill)]"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{e.title}</div>
+                  <div className="truncate font-serif text-[17px] font-semibold text-sn-navy">{e.title}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}
                   </div>
@@ -630,7 +629,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     className="text-foreground/35 hover:text-red-500 transition-colors p-1"
                     title="Delete event"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </li>
@@ -640,10 +639,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* Collapsible Memories Timeline Section */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 relative overflow-hidden">
+      <section className="sn-card relative overflow-hidden p-5 sm:p-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="display text-[16px] font-semibold text-foreground/80">Timeline</h2>
+            <h2 className="sn-label">Timeline</h2>
           </div>
           <div className="flex items-center gap-2">
             {isTimelineOpen && (
@@ -656,10 +655,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                     setSearchQuery(e.target.value);
                     setActiveSearchIndex(0);
                   }}
-                  className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                  className="w-full bg-transparent border-none outline-none text-[12px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                 />
                 {matchingDateGroups.length > 0 && (
-                  <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-foreground/60 select-none">
+                  <div className="flex items-center gap-1 shrink-0 text-[12px] font-bold text-foreground/60 select-none">
                     <span>
                       {activeSearchIndex + 1}/{matchingDateGroups.length}
                     </span>
@@ -792,10 +791,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                       setSearchQuery(e.target.value);
                       setActiveSearchIndex(0);
                     }}
-                    className="w-full bg-transparent border-none outline-none text-[10px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                    className="w-full bg-transparent border-none outline-none text-[12px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                   />
                   {matchingDateGroups.length > 0 && (
-                    <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold text-foreground/60 select-none">
+                    <div className="flex items-center gap-1 shrink-0 text-[12px] font-bold text-foreground/60 select-none">
                       <span>
                         {activeSearchIndex + 1}/{matchingDateGroups.length}
                       </span>
@@ -942,7 +941,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                           setIsFullscreenTimeline(false);
                           setActiveMemory(group.memories[0]);
                         }}
-                        className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md text-[10px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer text-center"
+                        className="mt-3 px-3 py-1 rounded-full border border-white/60 bg-white/45 backdrop-blur-md text-[12px] font-semibold text-foreground/90 truncate max-w-[120px] cursor-pointer text-center"
                       >
                         {group.memories[0].title}
                       </div>
@@ -958,7 +957,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
       {/* Story Details Dialog Overlay */}
       {activeMemory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-[4px]">
-          <div className="relative w-full max-w-sm rounded-3xl border border-white/50 bg-white/70 backdrop-blur-2xl shadow-[0_24px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-sm sn-card shadow-[0_24px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => {
                 confirm({

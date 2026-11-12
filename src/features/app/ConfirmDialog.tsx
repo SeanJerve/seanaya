@@ -14,7 +14,7 @@ export function ConfirmDialog() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeConfirm}
-            className="absolute inset-0 bg-black/20 backdrop-blur-[3px]"
+            className="absolute inset-0 bg-[#1f2a5c]/20 backdrop-blur-[3px]"
           />
 
           {/* Dialog Container */}
@@ -23,15 +23,15 @@ export function ConfirmDialog() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 15 }}
             transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
-            className="relative w-full max-w-[280px] rounded-3xl border border-white/50 bg-white/70 backdrop-blur-2xl p-5 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.18)] z-10 text-center"
+            className="sn-card relative z-10 w-full max-w-[340px] p-6 text-center"
           >
             {/* Title */}
-            <h3 className="display text-base font-semibold text-foreground leading-snug">
+            <h3 className="font-serif text-[22px] font-semibold leading-snug text-sn-navy">
               {confirmDialog.title}
             </h3>
 
             {/* Message body */}
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+            <p className="mt-2 text-[14.5px] leading-relaxed text-sn-ink">
               {confirmDialog.message}
             </p>
 
@@ -39,7 +39,7 @@ export function ConfirmDialog() {
             <div className="mt-5 grid grid-cols-2 gap-2.5">
               <button
                 onClick={closeConfirm}
-                className="px-4 py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-xs font-semibold text-foreground/70 active:scale-95 transition-all shadow-sm"
+                className="sn-pill h-11 text-[14px] font-semibold"
               >
                 Cancel
               </button>
@@ -48,7 +48,7 @@ export function ConfirmDialog() {
                   confirmDialog.onConfirm();
                   closeConfirm();
                 }}
-                className="px-4 py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-xs font-semibold text-white active:scale-95 transition-all shadow-md shadow-red-500/15"
+                className="h-11 rounded-full bg-[#d24f7a] text-[14px] font-semibold text-white shadow-[0_10px_20px_-12px_rgba(201,69,122,0.9)] transition hover:bg-[#c2416c] active:scale-95"
               >
                 Delete
               </button>

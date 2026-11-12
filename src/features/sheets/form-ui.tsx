@@ -9,7 +9,7 @@ import type {
 export function FieldWrap({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+      <span className="mb-2 block text-[13px] font-semibold text-sn-ink">
         {label}
       </span>
       {children}
@@ -18,7 +18,7 @@ export function FieldWrap({ label, children }: { label: string; children: ReactN
 }
 
 const fieldClass =
-  "font-sans w-full rounded-2xl border border-white/50 bg-white/60 backdrop-blur-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40";
+  "font-sans w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy outline-none placeholder:text-sn-faint transition-colors focus:border-sn-periwinkle focus:bg-white focus:ring-4 focus:ring-[#8faaf0]/15";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${fieldClass} ${props.className ?? ""}`} />;
@@ -33,7 +33,7 @@ export function PrimaryButton({ children, ...rest }: ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...rest}
-      className="font-sans font-semibold w-full rounded-full border border-white/50 bg-white/70 hover:bg-white/80 backdrop-blur-2xl py-3 text-sm text-foreground shadow-[0_8px_20px_-10px_rgba(80,110,160,0.25)] disabled:opacity-50 transition active:scale-[0.99] cursor-pointer"
+      className="font-sans font-semibold w-full rounded-full bg-sn-navy py-3.5 text-[15px] text-white shadow-[0_12px_24px_-14px_rgba(31,42,92,0.8)] transition hover:bg-[#28356f] active:scale-[0.99] disabled:opacity-50 cursor-pointer"
     >
       {children}
     </button>

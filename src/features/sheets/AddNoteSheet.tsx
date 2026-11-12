@@ -161,7 +161,7 @@ export function AddNoteSheet({ relationshipId }: { relationshipId: string }) {
                   placeholder={file ? "A little caption…" : "Say something soft…"}
                   maxLength={limit}
                 />
-                <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">
+                <div className="absolute bottom-2 right-3 text-[12px] text-muted-foreground">
                   {Math.max(0, limit - form.body.length)} characters left
                 </div>
               </>

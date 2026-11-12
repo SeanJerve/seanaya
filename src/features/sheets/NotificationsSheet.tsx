@@ -98,7 +98,7 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
                     <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
                       {SUB[n.kind]}
                     </div>
-                    <div className="mt-0.5 text-[10px] text-muted-foreground/80">
+                    <div className="mt-0.5 text-[12px] text-muted-foreground/80">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </div>
                   </div>

@@ -320,7 +320,7 @@ export function AddStickerSheet({
             className="text-foreground/45 mb-2 group-hover:scale-110 transition-transform"
           />
           <span className="text-xs font-semibold text-foreground/75">Upload photo for sticker</span>
-          <span className="text-[10px] text-muted-foreground mt-1">
+          <span className="text-[12px] text-muted-foreground mt-1">
             Smart background removal & custom touch-up tools
           </span>
           {/* Use sr-only instead of hidden for iOS Safari mobile compatibility */}
@@ -330,7 +330,7 @@ export function AddStickerSheet({
         <div className="space-y-4">
           {/* Mode Selector */}
           <div className="flex items-center justify-between bg-white/40 p-1.5 rounded-2xl border border-white/50 text-xs">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider pl-2">
+            <span className="text-[12px] uppercase font-bold text-muted-foreground tracking-wider pl-2">
               Cut Mode:
             </span>
             <div className="flex gap-1">
@@ -434,7 +434,7 @@ export function AddStickerSheet({
             {/* Brush Size for Restore/Eraser */}
             {activeTool !== "wand" && (
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                   <span>Brush Size</span>
                   <span>{brushSize}px</span>
                 </div>
@@ -451,7 +451,7 @@ export function AddStickerSheet({
 
             {/* Tolerance Adjuster */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                 <span className="flex items-center gap-1">
                   <Sliders size={10} /> Cut Sensitivity
                 </span>
@@ -469,7 +469,7 @@ export function AddStickerSheet({
 
             {/* Border Thickness */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                 <span className="flex items-center gap-1">
                   <Sliders size={10} /> Border Thickness
                 </span>
@@ -488,7 +488,7 @@ export function AddStickerSheet({
             {/* Outline Color Palette Selection */}
             {outlineSize > 0 && (
               <div className="space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <div className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                   Border Color
                 </div>
                 <div className="flex gap-2">

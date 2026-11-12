@@ -6,7 +6,16 @@ import { toast } from "sonner";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAppStore } from "@/features/app/store";
 import { pinStorage } from "@/features/pin/pin-utils";
-import { CuteBoyAvatar } from "@/components/kawaii/KawaiiIllustrations";
+import { chibiFor } from "@/components/seanaya/art";
+
+const SUBTITLES: Record<string, string> = {
+  Home: "another day, another page in our story",
+  Memories: "every little thing, kept by date",
+  Album: "the pages we keep coming back to",
+  "Love Wall": "notes we leave for each other",
+  Stickers: "tiny pieces of us",
+  "Pet Room": "where the little ones live",
+};
 
 export function AppHeader({
   title,
@@ -39,90 +48,89 @@ export function AppHeader({
   });
 
   const isHome = title.toLowerCase() === "home";
+  const heading = isHome ? `Welcome back, ${userName}.` : title;
+  const sub = subtitle ?? SUBTITLES[title];
+
+  const round =
+    "relative grid h-11 w-11 sm:h-[52px] sm:w-[52px] place-items-center rounded-full border border-white/95 transition active:scale-95 shadow-[var(--shadow-pill)]";
+
+  const actions = (
+    <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <button
+        onClick={() => openSheet("add-memory")}
+        className={`${round} bg-[#f6f6fe] text-sn-navy hover:bg-white`}
+        aria-label="Add a memory"
+        title="Add a memory"
+      >
+        <Search size={21} strokeWidth={1.7} />
+      </button>
+
+      <button
+        onClick={() => {
+          if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([30, 70]);
+          hug.mutate();
+        }}
+        disabled={hug.isPending}
+        className={`${round} bg-[#fbe6ef] hover:bg-[#fadbe8]`}
+        aria-label="Send a hug"
+        title="Send a warm hug"
+      >
+        <Heart size={21} strokeWidth={1.4} className="fill-[#f27fb0] text-[#e8639b]" />
+      </button>
+
+      <button
+        onClick={() => openSheet("notifications")}
+        className={`${round} bg-[#f6f6fe] text-sn-navy hover:bg-white`}
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+      >
+        <Bell size={21} strokeWidth={1.7} />
+        {unread > 0 && (
+          <span className="absolute right-[9px] top-[8px] h-[11px] w-[11px] rounded-full border-2 border-white bg-[#f2557e] sm:right-[11px] sm:top-[10px]" />
+        )}
+      </button>
+
+      <button
+        onClick={() => openSheet("settings")}
+        className="h-11 w-11 overflow-hidden rounded-full border-[3px] border-white shadow-[var(--shadow-pill)] transition active:scale-95 sm:h-[52px] sm:w-[52px]"
+        aria-label="Account and settings"
+        title="Account & Settings"
+      >
+        <img
+          src={chibiFor(userName)}
+          alt=""
+          className="h-full w-full scale-[1.45] object-cover object-[50%_32%]"
+        />
+      </button>
+    </div>
+  );
 
   return (
-    <header className="sticky top-0 z-20 px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-white/40 border-b border-white/60 shadow-[0_4px_20px_-4px_rgba(186,215,255,0.25)]">
-      <div className="mx-auto flex max-w-md md:max-w-4xl lg:max-w-6xl items-center justify-between gap-4">
-        {/* Left Side: Editorial Greeting / Title */}
-        <div className="min-w-0">
-          {isHome ? (
-            <div>
-              <h1 className="font-serif text-xl sm:text-2xl font-medium tracking-tight text-[#233554] flex items-center gap-1.5">
-                <span>Welcome back, {userName}.</span>
-                <span className="text-pink-400 font-normal">♡</span>
-              </h1>
-              <p className="font-serif italic text-xs sm:text-sm text-sky-800/70 tracking-wide">
-                another day, another page in our story ♡
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                Seanaya
-              </div>
-              <h1 className="font-serif text-xl sm:text-2xl font-semibold tracking-tight text-[#233554] flex items-center gap-1.5">
-                <span>{title}</span>
-                <span className="text-pink-400 font-normal">♡</span>
-              </h1>
-              {subtitle && <div className="text-xs text-sky-800/70 mt-0.5">{subtitle}</div>}
-            </div>
+    <header className="relative z-20 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5 xl:pl-[22px] xl:pr-6 xl:pt-[22px]">
+      {/* Phone: wordmark + actions on their own row */}
+      <div className="mb-4 flex items-center justify-between sm:hidden">
+        <span className="font-serif text-[19px] font-medium tracking-[0.16em] text-[#38457c]">
+          SEANAYA
+        </span>
+        {actions}
+      </div>
+      <div className="mx-auto flex max-w-[640px] items-start justify-between gap-4 lg:max-w-[1186px] xl:mx-0 xl:max-w-none">
+        <div className="min-w-0 pt-1 sm:pl-2 lg:pl-10">
+          <h1 className="flex items-center gap-2.5 font-serif text-[28px] font-semibold leading-[1.1] tracking-[-0.01em] text-sn-navy sm:text-[34px] lg:text-[40px]">
+            <span className="truncate">{heading}</span>
+            <Heart
+              strokeWidth={1.5}
+              className="h-6 w-6 shrink-0 fill-[#dfe5fb] text-[#6f86d6] lg:h-[30px] lg:w-[30px]"
+            />
+          </h1>
+          {sub && (
+            <p className="sn-hand mt-1.5 flex items-center gap-2 text-[19px] leading-tight text-[#646d93] sm:text-[22px] lg:text-[25px]">
+              <span className="truncate">{sub}</span>
+              <Heart size={18} strokeWidth={1.6} className="shrink-0 text-[#7a87bd]" />
+            </p>
           )}
         </div>
 
-        {/* Right Side: Header Control Capsule */}
-        <div className="flex items-center gap-2">
-          {/* Quick Search / Memory trigger */}
-          <button
-            onClick={() => openSheet("add-memory")}
-            className="w-9 h-9 rounded-full border border-white/80 bg-white/80 hover:bg-white text-slate-600 flex items-center justify-center transition active:scale-90 shadow-2xs cursor-pointer"
-            aria-label="Add memory or search"
-            title="Add memory or browse"
-          >
-            <Search size={16} />
-          </button>
-
-          {/* Pink Heart Hug Trigger */}
-          <button
-            onClick={() => {
-              if (typeof navigator !== "undefined" && navigator.vibrate) {
-                navigator.vibrate([30, 70]);
-              }
-              hug.mutate();
-            }}
-            disabled={hug.isPending}
-            className="w-9 h-9 rounded-full border border-pink-200 bg-pink-100/90 hover:bg-pink-200/90 text-pink-600 flex items-center justify-center transition active:scale-90 shadow-2xs cursor-pointer"
-            aria-label="Send a hug"
-            title="Send a warm hug ♡"
-          >
-            <Heart size={16} className="fill-pink-400 text-pink-500" />
-          </button>
-
-          {/* Notifications Button */}
-          <button
-            onClick={() => openSheet("notifications")}
-            className="relative w-9 h-9 rounded-full border border-white/80 bg-white/80 hover:bg-white text-slate-600 flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
-            aria-label="Notifications"
-          >
-            <Bell size={16} />
-            {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 min-w-[17px] h-[17px] rounded-full bg-pink-500 px-1 text-[9px] font-bold text-white flex items-center justify-center leading-none shadow-xs animate-pulse">
-                {unread > 9 ? "9+" : unread}
-              </span>
-            )}
-          </button>
-
-          {/* User Avatar Capsule -> Opens Settings */}
-          <button
-            onClick={() => openSheet("settings")}
-            className="w-9 h-9 rounded-full p-0.5 border border-white/80 bg-white shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer overflow-hidden flex items-center justify-center"
-            aria-label="Open settings"
-            title="Account & Settings"
-          >
-            <div className="w-full h-full rounded-full overflow-hidden scale-110">
-              <CuteBoyAvatar />
-            </div>
-          </button>
-        </div>
+        <div className="hidden sm:block">{actions}</div>
       </div>
     </header>
   );

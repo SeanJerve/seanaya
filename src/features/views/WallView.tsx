@@ -479,7 +479,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   </div>
                   {enlargedNote.body && enlargedNote.body !== "(photo)" && (
                     <div className="text-center px-1">
-                      <p className="text-xs text-foreground/80 leading-relaxed font-[Nunito] break-words whitespace-pre-wrap select-text selection:bg-primary/20">
+                      <p className="text-xs text-foreground/80 leading-relaxed font-sans break-words whitespace-pre-wrap select-text selection:bg-primary/20">
                         {enlargedNote.body}
                       </p>
                     </div>
@@ -492,7 +492,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                   style={{ background: enlargedNote.color ?? "oklch(0.95 0.07 90 / 0.85)" }}
                 >
                   <div>
-                    <p className="text-sm leading-relaxed text-foreground/85 font-[Nunito] break-words whitespace-pre-wrap select-text selection:bg-black/10">
+                    <p className="text-sm leading-relaxed text-foreground/85 font-sans break-words whitespace-pre-wrap select-text selection:bg-black/10">
                       {enlargedNote.body}
                     </p>
                   </div>
@@ -542,7 +542,7 @@ function PolaroidCard({
 
       {/* Caption area */}
       <div className="px-0.5 pt-2 pb-0.5 text-center pointer-events-none min-w-0">
-        <p className="text-[10px] text-foreground/75 leading-snug truncate font-[Nunito]">
+        <p className="text-[12px] text-foreground/75 leading-snug truncate font-sans">
           {note.body !== "(photo)" ? note.body : ""}
         </p>
       </div>
@@ -576,7 +576,7 @@ function StickyNote({ note, isNew }: { note: Note; isNew: boolean }) {
 
       <div className="px-3 pt-4.5 pb-2 relative flex-1 flex flex-col justify-between">
         <div>
-          <p className="text-xs leading-relaxed text-foreground/80 font-[Nunito] break-words line-clamp-5 overflow-hidden whitespace-pre-wrap select-none pointer-events-none">
+          <p className="text-xs leading-relaxed text-foreground/80 font-sans break-words line-clamp-5 overflow-hidden whitespace-pre-wrap select-none pointer-events-none">
             {note.body}
           </p>
         </div>

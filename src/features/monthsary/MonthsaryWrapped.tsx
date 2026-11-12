@@ -590,7 +590,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                 </div>
 
                 {/* Days Counter Card */}
-                <div className="w-full rounded-3xl border border-white/60 bg-white/55 backdrop-blur-xl p-5 shadow-soft text-center space-y-4">
+                <div className="w-full sn-card p-5 shadow-soft text-center space-y-4">
                   <div>
                     <div className="flex items-baseline justify-center gap-1.5">
                       <span className="display text-5xl sm:text-6xl font-black text-primary">
@@ -615,7 +615,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                       <div className="display text-2xl font-black text-foreground mt-1.5">
                         {stats?.hugsCount ?? 35}
                       </div>
-                      <div className="text-[10px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
+                      <div className="text-[12px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
                         hugs sent
                       </div>
                     </div>
@@ -625,7 +625,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                       <div className="display text-2xl font-black text-foreground mt-1.5">
                         {stats?.notes.length ?? 5}
                       </div>
-                      <div className="text-[10px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
+                      <div className="text-[12px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
                         notes on wall
                       </div>
                     </div>
@@ -686,7 +686,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                           )}
                         </div>
                         <div className="mt-1.5 text-left">
-                          <div className="text-[10px] font-bold text-foreground truncate">
+                          <div className="text-[12px] font-bold text-foreground truncate">
                             {m.title}
                           </div>
                           <div className="text-[8px] text-muted-foreground">
@@ -726,7 +726,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                 </div>
 
                 {/* Floating stickers board with all 9 stickers */}
-                <div className="relative w-full h-56 sm:h-64 rounded-3xl border border-white/60 bg-white/55 backdrop-blur-xl p-3 overflow-hidden flex items-center justify-center shadow-soft">
+                <div className="relative w-full h-56 sm:h-64 sn-card p-3 overflow-hidden flex items-center justify-center shadow-soft">
                   <div className="relative w-full h-full flex items-center justify-center">
                     {displayStickers.map((s, idx) => {
                       const positions = [
@@ -863,7 +863,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                 className="flex flex-col items-center justify-center w-full my-auto space-y-3.5"
               >
                 {/* Main Card in Blue & White frosted glass */}
-                <div className="w-full rounded-3xl border border-white/70 bg-white/75 backdrop-blur-2xl p-5 shadow-soft text-left space-y-3.5">
+                <div className="w-full sn-card p-5 shadow-soft text-left space-y-3.5">
                   {/* Header without Spotify Wrapped */}
                   <div className="flex items-start justify-between">
                     <div>
@@ -871,7 +871,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                         Sean & Aya's 3rd Monthsary
                       </div>
                     </div>
-                    <div className="text-[10px] font-bold text-muted-foreground bg-white/80 border border-white/60 px-2.5 py-1 rounded-full shadow-2xs shrink-0">
+                    <div className="text-[12px] font-bold text-muted-foreground bg-white/80 border border-white/60 px-2.5 py-1 rounded-full shadow-2xs shrink-0">
                       Sep 19, 2026
                     </div>
                   </div>
@@ -879,7 +879,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   {/* 4 Metric Pills Grid */}
                   <div className="grid grid-cols-2 gap-2 text-foreground">
                     <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">
+                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
                         Together
                       </div>
                       <div className="text-base font-black text-primary mt-0.5">
@@ -888,7 +888,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                     </div>
 
                     <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">
+                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
                         Milestones
                       </div>
                       <div className="text-base font-black text-primary mt-0.5">
@@ -897,7 +897,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                     </div>
 
                     <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">
+                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
                         Stickers
                       </div>
                       <div className="text-base font-black text-primary mt-0.5">
@@ -906,7 +906,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                     </div>
 
                     <div className="rounded-2xl bg-white/85 p-3 border border-white/60 shadow-2xs">
-                      <div className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground">
+                      <div className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
                         Cats
                       </div>
                       <div className="text-base font-black text-primary mt-0.5">3</div>
@@ -952,7 +952,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
         </div>
 
         {/* Bottom footer */}
-        <div className="relative z-30 pb-4 px-6 text-center text-muted-foreground/70 text-[10px]">
+        <div className="relative z-30 pb-4 px-6 text-center text-muted-foreground/70 text-[12px]">
           {currentSlide < TOTAL_SLIDES - 1 ? (
             <div className="flex items-center justify-center gap-1.5">
               <span>Tap left or right to browse</span>

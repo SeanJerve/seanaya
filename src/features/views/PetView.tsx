@@ -331,7 +331,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   return (
     <div className="mx-auto max-w-md space-y-5 px-5 py-6 pb-32 select-none relative">
       {/* ── Cat Sanctuary Card ── */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] text-center space-y-3 relative overflow-hidden">
+      <section className="sn-card p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] text-center space-y-3 relative overflow-hidden">
         <div className="absolute -top-12 -left-12 w-24 h-24 rounded-full bg-yellow-200/20 blur-xl" />
         <div className="absolute -bottom-12 -right-12 w-24 h-24 rounded-full bg-pink-200/20 blur-xl" />
 
@@ -346,7 +346,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       </section>
 
       {/* ── Cats List ── */}
-      <section className="rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] space-y-3">
+      <section className="sn-card p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Our Cats ({pets.length})
         </h3>
@@ -369,7 +369,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     <div className="w-7 h-7 rounded-full bg-foreground/10" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-white/10 pt-3">
+                <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/10 pt-3">
                   <div className="h-6 bg-foreground/5 rounded-2xl" />
                   <div className="h-6 bg-foreground/5 rounded-2xl" />
                 </div>
@@ -430,7 +430,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-2">
+                        <div className="text-[12px] text-muted-foreground flex items-center gap-2">
                           <span>Cat</span>
                           {ageInDays !== null && <span>• {ageInDays} days with us</span>}
                         </div>
@@ -471,7 +471,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   </div>
 
                   {/* Photo Updates (Outlines and solid colors completely abandoned) */}
-                  <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-white/20 pt-3">
+                  <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/20 pt-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground font-semibold">Face Image:</span>
                       <label className="font-semibold text-primary hover:text-primary-hover cursor-pointer flex items-center gap-1.5">
@@ -525,7 +525,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       {/* ── Add New Cat Bottom Sheet Modal ── */}
       {isAddingPet && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/10 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl border border-white/50 bg-white/85 backdrop-blur-2xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom-8 duration-300">
+          <div className="w-full max-w-sm sn-card p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom-8 duration-300">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Cat size={14} className="text-primary" /> Welcome new cat
@@ -548,7 +548,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
             <div className="space-y-3.5">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                <label className="block text-[12px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
                   Cat Name
                 </label>
                 <input
@@ -561,7 +561,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                <label className="block text-[12px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
                   Adopt Date / Birthday (Optional)
                 </label>
                 <input
@@ -573,7 +573,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               </div>
 
               {/* Mandatory File Uploaders */}
-              <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-white/20 pt-3.5">
+              <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/20 pt-3.5">
                 {/* Required Face Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center">
                   <span className="text-muted-foreground uppercase tracking-wider font-bold text-[8px]">
@@ -636,7 +636,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       {/* ── Custom Interactive Face Cropper Modal ── */}
       {croppingFileSrc && croppingTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm select-none">
-          <div className="w-full max-w-sm rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm sn-card p-5 shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-full flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Crop Face
@@ -681,7 +681,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             </div>
 
             <div className="w-full space-y-1.5">
-              <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
+              <div className="flex justify-between text-[12px] text-muted-foreground font-semibold">
                 <span>Scale / Zoom</span>
                 <span>{cropScale.toFixed(1)}x</span>
               </div>
@@ -696,7 +696,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               />
             </div>
 
-            <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed">
+            <p className="text-[12px] text-muted-foreground text-center px-4 leading-relaxed">
               Drag the cat picture and slide the zoom slider until your cat's face fits perfectly
               inside the circle!
             </p>

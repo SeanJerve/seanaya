@@ -554,26 +554,32 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="w-full max-w-md aspect-[1/1.4] rounded-[32px] bg-gradient-to-br from-primary via-primary/95 to-sky border-[5px] border-white/70 shadow-[inset_0_2px_6px_rgba(255,255,255,0.7)] flex flex-col justify-between p-10 text-center cursor-pointer relative overflow-hidden group select-none z-10"
+        className="group relative z-10 flex aspect-[1/1.4] w-full max-w-[400px] cursor-pointer select-none flex-col justify-between overflow-hidden rounded-[10px_28px_28px_10px] bg-[linear-gradient(160deg,#bccdf6_0%,#a3b9f0_55%,#aec2f3_100%)] p-10 text-center shadow-[0_30px_60px_-30px_rgba(50,70,150,0.7),inset_0_1px_0_rgba(255,255,255,0.6)]"
       >
-        <div className="absolute inset-0 bg-white/5 opacity-10 group-hover:opacity-20 transition-opacity" />
-        <div className="absolute left-3 top-0 bottom-0 w-[6px] bg-black/15 rounded-full" />
+        {/* cloth spine */}
+        <div className="absolute inset-y-0 left-0 w-[22px] bg-[linear-gradient(90deg,rgba(31,42,92,0.18),rgba(31,42,92,0.04))]" />
+        <div className="absolute inset-y-0 left-[22px] w-px bg-white/40" />
+        <img
+          src="/lily1.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -bottom-10 -right-12 w-[240px] rotate-[-14deg] opacity-95 transition-transform duration-500 group-hover:rotate-[-10deg]"
+        />
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-1 mt-8">
-          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
+        <div className="relative mt-10 flex flex-1 flex-col items-center justify-start gap-1">
+          <span className="sn-hand text-[22px] text-white/85">our little album</span>
+          <h2 className="mt-4 font-serif text-[48px] font-semibold leading-none text-white drop-shadow-[0_2px_6px_rgba(31,42,92,0.25)]">
             Sean
           </h2>
-          <span className="text-2xl text-white/70 font-semibold italic drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.15)]">
-            &
-          </span>
-          <h2 className="display text-[42px] text-white font-extrabold tracking-wide leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
+          <span className="font-serif text-[28px] italic text-white/80">&amp;</span>
+          <h2 className="font-serif text-[48px] font-semibold leading-none text-white drop-shadow-[0_2px_6px_rgba(31,42,92,0.25)]">
             Aya
           </h2>
         </div>
 
-        <div className="mb-4">
-          <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-bold block animate-pulse">
-            Tap to Open
+        <div className="relative mb-2 self-start pl-2">
+          <span className="text-[13px] font-semibold tracking-[0.12em] text-white/80">
+            Tap to open
           </span>
         </div>
       </motion.div>
@@ -584,9 +590,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           e.stopPropagation();
           setTab("photobooth");
         }}
-        className="absolute bottom-6 flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 backdrop-blur-xl border border-white/60 text-foreground text-xs font-semibold shadow-soft hover:bg-white/90 active:scale-95 transition z-20"
+        className="sn-pill absolute bottom-24 z-20 h-11 px-5 text-[14px] font-semibold"
       >
-        <Camera size={14} className="text-pink-500" />
+        <Camera size={17} strokeWidth={1.7} className="text-[#5b6aa6]" />
         <span>Open LDR Photo Booth</span>
       </button>
     </div>
@@ -597,7 +603,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return (
       <div className="mx-auto max-w-md px-4 py-4 flex flex-col items-center select-none pb-32 w-full min-h-screen overflow-y-auto">
         {/* Floating Page navigation sub-header with HORIZONTALLY SCROLLABLE numbers list */}
-        <div className="w-full rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 flex flex-col gap-2 shrink-0 z-20 mb-3 relative">
+        <div className="w-full sn-card p-4 flex flex-col gap-2 shrink-0 z-20 mb-3 relative">
           {showPageSearch && (
             <div className="flex items-center gap-1 border-b border-white/20 pb-2">
               <input
@@ -605,7 +611,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 value={pageSearchQuery}
                 onChange={(e) => setPageSearchQuery(e.target.value)}
                 placeholder="Search pages by name or number..."
-                className="w-full font-sans text-[10px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+                className="w-full font-sans text-[12px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
                 autoFocus
               />
               {pageSearchQuery && (
@@ -632,12 +638,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
             {/* center Page: 1 2 3 selector (Compact layout) */}
             <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden ml-1">
-              <span className="text-[10px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">
+              <span className="text-[12px] font-extrabold text-foreground/45 shrink-0 uppercase tracking-wider">
                 Page:
               </span>
               <div className="flex-1 overflow-x-auto scrollbar-none flex items-center gap-1 py-0.5">
                 {filteredPages.length === 0 ? (
-                  <span className="text-[10px] text-muted-foreground/60 italic px-1">
+                  <span className="text-[12px] text-muted-foreground/60 italic px-1">
                     No pages match
                   </span>
                 ) : (
@@ -651,7 +657,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           setCurrentPageIdx(idx);
                           setSelectedItemId(null);
                         }}
-                        className={`px-2 h-6 flex items-center justify-center text-[10px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
+                        className={`px-2 h-6 flex items-center justify-center text-[12px] font-extrabold rounded-full border transition-all shrink-0 active:scale-95 ${
                           active
                             ? "bg-white text-primary border-primary/20 shadow-sm"
                             : "bg-white/40 text-foreground/50 border-transparent hover:bg-white/60"
@@ -762,7 +768,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
                   <BookHeart size={32} className="text-foreground/20 mb-2" />
                   <div className="text-xs font-semibold text-foreground/50">This page is empty</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">
+                  <p className="text-[12px] text-muted-foreground mt-1">
                     Use Customize tools below to start decorating our space!
                   </p>
                 </div>
@@ -863,7 +869,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               transform: `rotate(${it.rotation}deg)`,
                             }}
                           >
-                            <p className="text-[10px] text-foreground/80 font-medium leading-tight whitespace-pre-wrap break-words">
+                            <p className="text-[12px] text-foreground/80 font-medium leading-tight whitespace-pre-wrap break-words">
                               {it.content}
                             </p>
                           </div>
@@ -935,8 +941,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
         {/* Customize Toolbar Area (Takes exactly w-full) */}
         {activePage && (
-          <div className="w-full flex flex-col gap-3 rounded-3xl border border-white/40 bg-white/50 backdrop-blur-xl p-4 shadow-xl mt-4">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+          <div className="w-full flex flex-col gap-3 sn-card p-4 shadow-xl mt-4">
+            <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
               <span>Customize</span>
               {activeTab && (
                 <button
@@ -960,7 +966,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setSelectedFile(null);
                   setPreviewUrl(null);
                 }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
+                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
                   activeTab === "stickers"
                     ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
                     : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
@@ -975,7 +981,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setSelectedFile(null);
                   setPreviewUrl(null);
                 }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
+                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
                   activeTab === "photos"
                     ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
                     : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
@@ -990,7 +996,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   setSelectedFile(null);
                   setPreviewUrl(null);
                 }}
-                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[10px] font-bold border transition-all ${
+                className={`flex-1 py-2 rounded-2xl flex flex-col items-center gap-1 text-[12px] font-bold border transition-all ${
                   activeTab === "note"
                     ? "bg-white/70 border-white/60 text-primary shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_4px_12px_-3px_rgba(80,110,160,0.25)] backdrop-blur-md scale-[1.01]"
                     : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
@@ -1014,7 +1020,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recently Added Stickers (Created in the last 24 hours) - Taxonomy tag outside */}
                   {recentStickers.length > 0 && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
                         Recently Added Stickers:
                       </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
@@ -1054,16 +1060,16 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* My Stickers (Older than 24 hours) */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-bold px-1">
                       My Stickers:
                     </div>
                     <div className="grid grid-cols-4 gap-3 p-1 max-h-44 overflow-y-auto">
                       {olderStickers.length === 0 && recentStickers.length === 0 ? (
-                        <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
+                        <div className="col-span-4 text-[12px] text-muted-foreground italic text-center p-2">
                           No stickers created on the Stickers page yet. Go create some!
                         </div>
                       ) : olderStickers.length === 0 ? (
-                        <div className="col-span-4 text-[10px] text-muted-foreground italic text-center p-2">
+                        <div className="col-span-4 text-[12px] text-muted-foreground italic text-center p-2">
                           All stickers are listed under Recently Added.
                         </div>
                       ) : (
@@ -1110,7 +1116,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recent Polaroids list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentPolaroids.length > 0 && !previewUrl && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
                         Recently Added Polaroids:
                       </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
@@ -1151,7 +1157,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* LIVE Interactive Drag & Crop Preview */}
                   {previewUrl && (
                     <div className="flex flex-col items-center justify-center p-3 border border-white/50 bg-white/40 rounded-2xl gap-3 animate-in fade-in duration-200 w-full">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
                         Preview (Drag inside to position):
                       </div>
 
@@ -1222,7 +1228,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                       {/* Zoom Slider */}
                       <div className="w-full space-y-1 px-2">
-                        <div className="flex justify-between text-[9px] text-muted-foreground font-semibold">
+                        <div className="flex justify-between text-[11px] text-muted-foreground font-semibold">
                           <span>Zoom scale:</span>
                           <span>{previewScale.toFixed(1)}x</span>
                         </div>
@@ -1272,7 +1278,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Frame & Shape selections with glass styling */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
                       Choose Frame:
                     </div>
                     <div className="flex gap-1 flex-wrap">
@@ -1280,7 +1286,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         <button
                           key={s}
                           onClick={() => setPhotoShape(s)}
-                          className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${
+                          className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
                             photoShape === s
                               ? "bg-white/75 border-white/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.8),0_4px_10px_-3px_rgba(80,110,160,0.2)] backdrop-blur-md"
                               : "bg-white/35 border-white/20 text-foreground/60 hover:bg-white/50 backdrop-blur-sm"
@@ -1294,7 +1300,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Frame Border Color Selector - pastel choices matching choose background */}
                   <div className="space-y-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
                       Frame Outline Color:
                     </div>
                     <div className="flex gap-1.5">
@@ -1343,7 +1349,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   {/* Recent Texts list (added in last 24 hours) - Taxonomy tag outside */}
                   {recentTexts.length > 0 && (
                     <div className="space-y-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
                         Recently Added Texts:
                       </div>
                       <div className="flex gap-3 overflow-x-auto scrollbar-none py-1">
@@ -1366,7 +1372,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               }}
                               className="w-24 h-16 p-2 rounded-xl bg-white/40 border border-white/50 hover:scale-105 active:scale-95 transition-all overflow-hidden text-left shadow-sm flex flex-col justify-between"
                             >
-                              <p className="text-[10px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">
+                              <p className="text-[12px] text-foreground/80 line-clamp-3 leading-snug whitespace-pre-wrap break-words">
                                 {t.body}
                               </p>
                             </button>
@@ -1381,7 +1387,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                   {/* Pastel Colors picker */}
                   <div className="space-y-1.5 border-t border-white/10 pt-2.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold px-1">
                       Choose Background:
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -1467,7 +1473,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="relative w-full max-w-[280px] rounded-3xl border border-white/50 bg-white/80 backdrop-blur-2xl p-5 shadow-2xl z-10 space-y-4"
+              className="relative w-full max-w-[280px] sn-card p-5 shadow-2xl z-10 space-y-4"
             >
               <h3 className="display text-sm font-semibold text-foreground/80">Rename Page Name</h3>
               <input

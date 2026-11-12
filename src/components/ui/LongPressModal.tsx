@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, HelpCircle } from "lucide-react";
+import { X } from "lucide-react";
 
 export function LongPressModal({
   isOpen,
@@ -15,32 +15,29 @@ export function LongPressModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 dark:bg-black/45 backdrop-blur-[3px] animate-in fade-in duration-200">
-          {/* Overlay backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2a5c]/20 p-4 backdrop-blur-[3px]">
           <div className="absolute inset-0" onClick={onClose} />
-
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lp-title"
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative w-full max-w-sm rounded-3xl border border-white/50 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl p-6 shadow-2xl space-y-4 z-10"
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            className="sn-card relative z-10 w-full max-w-[380px] px-7 pb-7 pt-6"
           >
-            {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 rounded-full bg-white dark:bg-neutral-800 border border-white/50 dark:border-neutral-700 p-1 text-foreground/50 hover:text-foreground transition-all cursor-pointer"
+              aria-label="Close"
+              className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-muted shadow-[var(--shadow-pill)] hover:text-sn-navy"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
-
-            <div className="flex items-center gap-2 text-primary dark:text-primary-foreground">
-              <HelpCircle size={18} />
-              <h3 className="display text-base font-semibold text-foreground/80 dark:text-foreground/90">
-                About: {title}
-              </h3>
-            </div>
-
-            <p className="text-xs leading-relaxed text-foreground/75 dark:text-foreground/80 font-medium font-[Nunito] whitespace-pre-line select-none">
+            <h3 id="lp-title" className="pr-10 font-serif text-[23px] font-semibold leading-tight text-sn-navy">
+              {title}
+            </h3>
+            <p className="mt-3 select-none whitespace-pre-line text-[15px] leading-[1.6] text-sn-ink">
               {description}
             </p>
           </motion.div>

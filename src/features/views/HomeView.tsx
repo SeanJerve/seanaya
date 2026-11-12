@@ -22,17 +22,18 @@ import {
   Camera,
   Heart,
   Calendar as CalendarIcon,
-  BookHeart,
-  PenSquare,
+  SquarePen,
   Clock,
   MapPin,
-  Sparkles,
   ArrowRight,
   RefreshCw,
   Gift,
   Star,
   X,
   Check,
+  Home as HomeIcon,
+  Route,
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Lightbox } from "@/lib/Lightbox";
@@ -52,13 +53,25 @@ import {
   getSolarState,
 } from "@/lib/location-service";
 import {
-  WashiTape,
-  LoopedHeartRibbon,
-  PeekingCat,
-  CuteBoyAvatar,
-  CuteGirlAvatar,
-  LilyBouquetAccent,
-} from "@/components/kawaii/KawaiiIllustrations";
+  ART,
+  Bow,
+  ChibiTile,
+  HeartRibbon,
+  Polaroid,
+  Sparkle,
+  TodayHeart,
+} from "@/components/seanaya/art";
+
+const ordinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+/** Small outlined heart used as a quiet accent beside headings. */
+function HeartMark({ className = "", size = 20 }: { className?: string; size?: number }) {
+  return <Heart size={size} strokeWidth={1.5} aria-hidden className={`shrink-0 ${className}`} />;
+}
 
 export function HomeView({
   relationshipId,
@@ -467,81 +480,111 @@ export function HomeView({
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
+  const meIsAya = name.trim().toLowerCase() === "aya";
+  const myChibi = meIsAya ? ART.ayaChibi : ART.seanChibi;
+  const partnerChibi = meIsAya ? ART.seanChibi : ART.ayaChibi;
+
+  // When nothing is scheduled, the next monthsary is the upcoming moment.
+  const monthsaryNumber = Math.max(
+    1,
+    (nextMonthsaryDate.getFullYear() - start.getFullYear()) * 12 +
+      (nextMonthsaryDate.getMonth() - start.getMonth()),
+  );
+  const upcoming = stats?.nextEvent
+    ? {
+        date: new Date(stats.nextEvent.starts_at),
+        title: stats.nextEvent.title as string,
+        detail: format(new Date(stats.nextEvent.starts_at), "EEEE, MMMM d · h:mm a"),
+      }
+    : {
+        date: nextMonthsaryDate,
+        title: `Our ${ordinal(monthsaryNumber)} monthsary`,
+        detail: `Together for ${Math.max(0, differenceInDays(nextMonthsaryDate, start))} days`,
+      };
+
+  const chroniclePhoto =
+    recentAction?.item?.cover_url || recentAction?.item?.image_url || ART.polaroidDusk;
+  const trailingCells = (7 - ((leading + gridDays.length) % 7)) % 7;
+
+  const openChronicle = () => {
+    if (!recentAction) return;
+    if (recentAction.kind === "wall" || recentAction.kind === "note") setTab("wall");
+    else if (recentAction.kind === "memory") setTab("memories");
+    else if (recentAction.kind === "event") setTab("calendar");
+  };
+
   return (
-    <div className="relative mx-auto max-w-md md:max-w-4xl lg:max-w-6xl px-3 sm:px-6 py-4 pb-32">
-      {/* ── 3rd Monthsary Special Story Banner ── */}
+    <div className="relative mx-auto w-full max-w-[640px] px-4 pb-32 pt-5 sm:px-6 lg:max-w-[1186px] lg:pt-4 xl:mx-0 xl:max-w-none xl:pl-[22px] xl:pr-9">
       {isMonthsary && (
-        <section
+        <button
           onClick={openMonthsary}
-          className="mb-6 cursor-pointer relative overflow-hidden rounded-3xl border-2 border-pink-200/80 bg-gradient-to-r from-pink-100/90 via-white/90 to-sky-100/80 backdrop-blur-xl p-4 sm:p-5 shadow-[0_8px_25px_rgba(251,207,232,0.45)] hover:border-pink-300 transition-all active:scale-[0.99] group"
+          className="sn-card mb-[18px] flex w-full items-center justify-between gap-4 p-5 text-left sm:px-7"
         >
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="font-serif text-base sm:text-lg font-medium text-[#233554] flex items-center gap-2">
-                <span>Happy Monthsary, {partnerName}!</span>
-                <span className="text-pink-500">♡</span>
-              </div>
-              <p className="text-xs text-sky-900/70 font-light">
-                Our milestone memory story is ready. Tap to open our little chapter.
-              </p>
+          <div>
+            <div className="font-serif text-[22px] font-semibold text-sn-navy">
+              Happy monthsary, {partnerName}
             </div>
-            <span className="text-xs font-medium text-pink-700 bg-white/90 px-4 py-1.5 rounded-full border border-pink-200 shadow-xs group-hover:bg-pink-50 transition-colors">
-              Open Story ♡
-            </span>
+            <p className="mt-0.5 text-[14px] text-sn-muted">
+              This month's little story is ready for you.
+            </p>
           </div>
-        </section>
+          <span className="sn-pill h-10 shrink-0 px-5 text-[14px] font-semibold text-sn-rose">
+            Open story
+          </span>
+        </button>
       )}
 
-      {/* ── Responsive 2-Column Spread (Matching Reference Image) ── */}
-      <div className="md:grid md:grid-cols-12 md:gap-6 space-y-6 md:space-y-0 items-start">
-        {/* Left Column (Col 7 on Desktop) */}
-        <div className="space-y-6 md:col-span-7">
-          {/* ── CARD 1: SYNCHRONOUS SPACE ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
-            {/* Header: Live sync pulse & Distance badge */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      <div className="grid items-stretch gap-[18px] lg:grid-cols-[minmax(0,1.225fr)_minmax(0,1fr)]">
+        {/* ───────── Left column ───────── */}
+        <div className="flex min-w-0 flex-col gap-[18px]">
+          {/* Synchronous space — a postcard between two places */}
+          <section className="sn-card @container px-5 pb-5 pt-5 sm:px-6 sm:pb-[16px] sm:pt-[15px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inset-0 rounded-full bg-sn-mint motion-safe:animate-[sn-breathe_2.4s_ease-in-out_infinite]" />
+                  <span className="relative h-3 w-3 rounded-full border-2 border-white bg-sn-mint" />
                 </span>
-                <span className="text-[11px] uppercase tracking-[0.22em] font-bold text-[#334e68]">
-                  Synchronous Space
-                </span>
+                <h2 className="sn-label whitespace-nowrap">Synchronous space</h2>
               </div>
-
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-[11px] font-mono tabular-nums text-[#334e68] px-3 py-1 rounded-full border border-sky-200/80 bg-sky-50/70 shadow-2xs">
-                  <span>{distanceKm} km apart</span>
-                </div>
+                <span className="sn-pill h-9 cursor-default whitespace-nowrap px-3 text-[13.5px] tabular-nums text-sn-ink hover:shadow-[var(--shadow-pill)] sm:px-3.5">
+                  <Route size={16} strokeWidth={1.7} className="text-[#5b6aa6]" />
+                  <span>
+                    {distanceKm} km<span className="hidden sm:inline"> apart</span>
+                  </span>
+                </span>
                 <button
                   onClick={() => setShowCityPicker((v) => !v)}
-                  className="text-[11px] text-sky-600 hover:text-sky-800 bg-white/80 px-2.5 py-1 rounded-full border border-sky-100 shadow-2xs transition-colors cursor-pointer"
+                  aria-expanded={showCityPicker}
+                  className="sn-pill h-9 px-3 text-[13.5px] text-sn-ink sm:px-4"
                 >
                   Edit
                 </button>
               </div>
             </div>
 
-            {/* In-place City Configuration Accordion */}
             {showCityPicker && (
-              <div className="p-3.5 rounded-2xl border border-sky-200 bg-sky-50/50 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-[#233554]">
-                  <span>Update Partner City</span>
+              <div className="mt-4 rounded-[20px] border border-white bg-white/60 p-4 shadow-[var(--shadow-press)]">
+                <div className="flex items-center justify-between">
+                  <span className="font-serif text-[17px] font-semibold text-sn-navy">
+                    Where is {partnerName} today?
+                  </span>
                   <button
                     onClick={() => setShowCityPicker(false)}
-                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                    aria-label="Close"
+                    className="grid h-8 w-8 place-items-center rounded-full text-sn-muted hover:bg-white"
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="mt-3 flex gap-2">
                   <input
                     type="text"
                     value={tempPartnerCity}
                     onChange={(e) => setTempPartnerCity(e.target.value)}
-                    placeholder="Enter city (e.g. Manila, Tokyo, Cebu)"
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-sky-200 bg-white text-xs outline-none focus:ring-1 focus:ring-pink-300"
+                    placeholder="City, e.g. Tokyo"
+                    className="h-10 min-w-0 flex-1 rounded-full border border-[#dfe3f6] bg-white px-4 text-[14px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
                   />
                   <button
                     onClick={() => {
@@ -551,13 +594,13 @@ export function HomeView({
                       setShowCityPicker(false);
                       toast.success(`Partner city set to ${c} ♡`);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-pink-500 text-white text-xs font-medium hover:bg-pink-600 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                    className="flex h-10 items-center gap-1.5 rounded-full bg-sn-navy px-4 text-[14px] font-semibold text-white active:scale-95"
                   >
-                    <Check size={12} />
+                    <Check size={15} />
                     Apply
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="mt-3 flex flex-wrap gap-1.5">
                   {["Manila", "Tokyo", "Cebu City", "Iloilo City", "Davao City", "Baguio", "Dumaguete", "Vancouver"].map(
                     (c) => (
                       <button
@@ -569,82 +612,60 @@ export function HomeView({
                           setShowCityPicker(false);
                           toast.success(`Partner city updated to ${c} ♡`);
                         }}
-                        className="text-[10px] px-2.5 py-0.5 rounded-full border border-sky-200/70 bg-white/80 hover:bg-white text-slate-700 transition-colors cursor-pointer"
+                        className="rounded-full px-3 py-1 text-[13px] text-sn-ink hover:bg-white"
                       >
                         {c}
                       </button>
-                    )
+                    ),
                   )}
                 </div>
               </div>
             )}
 
-            {/* Dual Profile & Looped Heart Ribbons (Matches reference image) */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-b from-sky-50/50 via-white/80 to-pink-50/30 border border-sky-100/80">
-              <div className="flex items-center justify-between gap-2 sm:gap-4">
-                {/* Sean Side (Left) */}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <CuteBoyAvatar />
-                  <div className="min-w-0">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
-                      Sean
-                    </span>
-                    <div className="flex items-center gap-1 font-serif text-sm sm:text-base font-semibold text-[#233554] truncate">
-                      <MapPin size={12} className="text-sky-500 shrink-0" />
-                      <span>{userCity}</span>
-                    </div>
-                    <div className="font-serif text-base sm:text-lg font-bold text-[#1e293b] tabular-nums mt-0.5">
-                      {localTime.timeStr}
-                    </div>
-                    <div className="text-[10px] text-sky-800/70 font-light truncate">
-                      {userSolar.phase} · {userSolar.mood}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Looped Heart Ribbon Transit (Center) */}
-                <div className="flex-1 flex flex-col items-center justify-center px-1 sm:px-3">
-                  <span className="font-serif italic text-xs text-pink-400 font-medium mb-0.5">
-                    to
-                  </span>
-                  <LoopedHeartRibbon />
-                </div>
-
-                {/* Partner Side (Right) */}
-                <div className="flex items-center gap-2.5 min-w-0 text-right justify-end">
-                  <div className="min-w-0">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
-                      Partner
-                    </span>
-                    <div className="flex items-center justify-end gap-1 font-serif text-sm sm:text-base font-semibold text-[#233554] truncate">
-                      <MapPin size={12} className="text-pink-500 shrink-0" />
-                      <span>{partnerCity}</span>
-                    </div>
-                    <div className="font-serif text-base sm:text-lg font-bold text-[#1e293b] tabular-nums mt-0.5">
-                      {partnerTime.timeStr}
-                    </div>
-                    <div className="text-[10px] text-pink-900/70 font-light truncate">
-                      {partnerSolar.phase} · {partnerSolar.mood}
-                    </div>
-                  </div>
-                  <CuteGirlAvatar />
-                </div>
+            {/* Two people, two clocks */}
+            <div className="relative mt-5 grid grid-cols-2 gap-4 @min-[570px]:-mx-2 @min-[570px]:mt-[14px] @min-[570px]:flex @min-[570px]:items-center @min-[570px]:justify-between">
+              <Person
+                side="left"
+                label={name}
+                city={userCity}
+                time={localTime.timeStr}
+                detail={`${userSolar.phase} · ${userSolar.mood}`}
+                portrait={myChibi}
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-[22px] flex w-[30%] -translate-x-1/2 flex-col items-center @min-[570px]:top-[4px] @min-[570px]:w-[27%]"
+              >
+                <HeartRibbon className="w-full" />
+                <span className="-mt-0.5 font-serif text-[18px] italic text-[#6f7fbd]">to</span>
+                <span className="mt-1 hidden h-10 w-px bg-gradient-to-b from-[#d9dcf1] to-transparent @min-[570px]:block" />
               </div>
+              <Person
+                side="right"
+                label="Partner"
+                city={partnerCity}
+                time={partnerTime.timeStr}
+                detail={`${partnerSolar.phase} · ${partnerSolar.mood}`}
+                portrait={partnerChibi}
+              />
             </div>
 
-            {/* Inset Timezone & Coordinate Capsule */}
-            <div className="rounded-full bg-sky-50/80 border border-sky-100 py-1.5 px-4 text-center text-[11px] text-slate-600 flex items-center justify-center gap-2 shadow-inner">
-              <Clock size={12} className="text-pink-400" />
-              <span className="font-medium text-[#233554]">{tzDifference}</span>
-              <span className="text-slate-300">·</span>
-              <span className="text-[10px] text-slate-500">
-                Coordinates: {userCityProfile.lat.toFixed(1)}°N · {partnerCityProfile.lat.toFixed(1)}°N
-              </span>
-              <Sparkles size={11} className="text-amber-400" />
+            <div className="relative mx-auto mt-5 flex w-full max-w-[470px] @min-[570px]:mt-[18px] items-center justify-center">
+              <HeartMark size={18} className="absolute -left-12 hidden text-[#f19cbd] @min-[570px]:block" />
+              <div className="flex min-h-[32px] w-full flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 rounded-full bg-[linear-gradient(90deg,rgba(251,226,236,0.55),#fbe2ec_20%,#fbe2ec_80%,rgba(251,226,236,0.55))] px-5 py-1.5 text-[13.5px] text-sn-ink">
+                <span className="flex items-center gap-2">
+                  <Clock size={16} strokeWidth={1.7} className="text-[#e7709e]" />
+                  {tzDifference}
+                </span>
+                <span className="text-sn-faint">·</span>
+                <span className="tabular-nums">
+                  Coordinates: {userCityProfile.lat.toFixed(1)}°N · {partnerCityProfile.lat.toFixed(1)}°N
+                </span>
+              </div>
+              <HeartMark size={18} className="absolute -right-12 hidden text-[#f19cbd] @min-[570px]:block" />
             </div>
 
-            {/* 3 Tactile Action Buttons (Send Hug, Leave Note, Add Memory) */}
-            <div className="grid grid-cols-3 gap-2.5 pt-1">
+            <div className="mt-4 grid grid-cols-3 gap-2.5 sm:gap-4 @min-[570px]:mt-[15px]">
               <button
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -653,420 +674,402 @@ export function HomeView({
                   hug.mutate();
                 }}
                 disabled={hug.isPending}
-                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-pink-200/90 bg-pink-100/90 hover:bg-pink-200/90 text-pink-700 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
+                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] bg-[linear-gradient(180deg,#fde4ee,#f8cddd)] px-2 text-[13px] font-semibold text-[#c23c71] sm:h-[46px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
               >
-                <Heart size={14} className="fill-pink-400 text-pink-500 shrink-0" />
-                <span>Send Hug</span>
+                <Heart size={19} strokeWidth={1.8} className="shrink-0 text-[#d9467f]" />
+                Send Hug
               </button>
-
               <button
                 onClick={() => openSheet("add-note")}
-                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-sky-100 bg-white/95 hover:bg-white text-slate-700 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
+                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] font-medium sm:h-[46px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
               >
-                <PenSquare size={14} className="text-slate-500 shrink-0" />
-                <span>Leave Note</span>
+                <SquarePen size={18} strokeWidth={1.7} className="shrink-0 text-[#5b6aa6]" />
+                Leave Note
               </button>
-
               <button
                 onClick={() => openSheet("add-memory")}
-                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-sky-200/70 bg-sky-50/90 hover:bg-sky-100 text-sky-800 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
+                className="sn-pill h-[62px] flex-col gap-1 rounded-[24px] px-2 text-[13px] font-medium sm:h-[46px] sm:flex-row sm:gap-2 sm:rounded-full sm:text-[15px]"
               >
-                <Plus size={14} className="text-sky-600 shrink-0" />
-                <span>Add Memory</span>
+                <Plus size={19} strokeWidth={1.7} className="shrink-0 text-[#5b6aa6]" />
+                Add Memory
               </button>
             </div>
           </section>
 
-          {/* ── CARD 2: WELCOME / TOGETHER & PARTNER CHRONICLE (Split Card) ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-sky-100/80">
-              {/* Left Side: Intimate Greeting & Milestone Ticker */}
-              <div
-                {...longPressProps}
-                className="p-5 sm:p-6 flex flex-col justify-between relative cursor-pointer hover:bg-sky-50/30 transition-colors"
-                title="Hold to view space guide"
-              >
-                <div className="space-y-1">
-                  <div className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                    Home
-                  </div>
-                  <div className="font-serif text-2xl font-normal text-[#233554] tracking-tight">
-                    Welcome back, {name}. <span className="text-pink-400 font-normal">♡</span>
-                  </div>
-                </div>
-
-                {timeTogether && (
-                  <div className="mt-5 pt-4 border-t border-sky-100/80 space-y-1">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
-                      Together
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-serif text-3xl sm:text-4xl font-bold text-[#1e293b] tracking-tight">
-                        {timeTogether.totalDays}
-                      </span>
-                      <span className="font-serif italic text-base text-pink-500 font-normal">
-                        days of devotion ♡
-                      </span>
-                    </div>
-                    <div className="font-mono text-xs tabular-nums text-slate-500 tracking-wider">
-                      {String(timeTogether.hours).padStart(2, "0")}h{" "}
-                      {String(timeTogether.mins).padStart(2, "0")}m{" "}
-                      {String(timeTogether.secs).padStart(2, "0")}s
-                    </div>
-                  </div>
-                )}
-
-                {/* Subtle Lily accent in corner */}
-                <div className="absolute -bottom-2 -left-2 opacity-25 pointer-events-none">
-                  <img src="/lily2.png" alt="" className="w-16 h-16 object-contain" />
-                </div>
+          {/* Together + partner chronicle */}
+          <section className="sn-card grid overflow-hidden sm:grid-cols-[0.9fr_1fr]">
+            <div
+              {...longPressProps}
+              title="Hold for a little guide"
+              className="relative flex flex-col overflow-hidden px-6 pb-6 pt-6 sm:pl-[34px] sm:pr-5 sm:pt-[24px]"
+            >
+              <div className="flex items-center gap-2.5">
+                <HomeIcon size={22} strokeWidth={1.6} className="text-[#5468b0]" />
+                <h2 className="sn-label">Home</h2>
               </div>
+              <p className="mt-4 font-serif text-[32px] font-semibold leading-[1.12] tracking-[-0.01em] text-sn-navy sm:text-[35px]">
+                Welcome back,
+                <br />
+                <span className="inline-flex items-center gap-3">
+                  {name}.
+                  <Heart
+                    strokeWidth={1.5}
+                    className="h-7 w-7 fill-[#cdd7f7] text-[#6f86d6]"
+                    aria-hidden
+                  />
+                </span>
+              </p>
+              <div className="mt-4 h-px w-full bg-gradient-to-r from-[#e3e5f5] via-[#e3e5f5] to-transparent" />
+              {timeTogether && (
+                <div className="relative z-10 mt-4">
+                  <h3 className="sn-label text-[12.5px]">Together</h3>
+                  <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
+                    <span className="font-serif text-[50px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums">
+                      {timeTogether.totalDays}
+                    </span>
+                    <span className="flex items-center gap-2 font-serif text-[21px] italic text-sn-ink">
+                      days of devotion
+                      <HeartMark size={22} className="text-[#7a87bd]" />
+                    </span>
+                  </div>
+                  <div className="mt-2.5 text-[16px] font-semibold tracking-[0.03em] text-sn-ink tabular-nums">
+                    {String(timeTogether.hours).padStart(2, "0")}h{" "}
+                    {String(timeTogether.mins).padStart(2, "0")}m{" "}
+                    {String(timeTogether.secs).padStart(2, "0")}s
+                  </div>
+                </div>
+              )}
+              <img
+                src={ART.lilyOpen}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute -bottom-12 -right-8 w-[150px] rotate-[-28deg] select-none"
+              />
+            </div>
 
-              {/* Right Side: Partner Chronicle with Tactile Polaroid & Washi Tape */}
-              <div
-                onClick={() => {
-                  if (!recentAction) return;
-                  if (recentAction.kind === "wall" || recentAction.kind === "note") {
-                    setTab("wall");
-                  } else if (recentAction.kind === "memory") {
-                    setTab("memories");
-                  } else if (recentAction.kind === "event") {
-                    setTab("calendar");
-                  }
-                }}
-                className="p-5 sm:p-6 flex flex-col justify-between cursor-pointer hover:bg-sky-50/30 transition-colors group relative"
+            <div
+              onClick={openChronicle}
+              className={`relative flex flex-col border-t border-[#ebe8f6] px-6 pb-5 pt-6 sm:border-l sm:border-t-0 sm:px-[24px] sm:pb-[10px] sm:pt-[24px] ${recentAction ? "cursor-pointer" : ""}`}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="sn-label">Partner chronicle</h2>
+                <ArrowRight size={20} strokeWidth={1.7} className="text-[#4a5687]" />
+              </div>
+              <div className="relative mt-[18px] flex items-start pl-3">
+                <Polaroid
+                  src={chroniclePhoto}
+                  alt={recentAction ? "Latest shared photo" : ""}
+                  tape="pink"
+                  tilt={-8}
+                  className="w-[128px] sm:w-[134px]"
+                  photoClassName="aspect-[116/94]"
+                />
+                <HeartMark size={22} className="ml-6 mt-6 text-[#f19cbd]" />
+              </div>
+              {recentAction && (
+                <p className="mt-5 text-[13px] text-sn-muted">
+                  {recentAction.partnerName} {recentAction.text} ·{" "}
+                  {format(new Date(recentAction.createdAt), "MMM d, h:mm a")}
+                </p>
+              )}
+              <p
+                className={`${recentAction ? "mt-1.5" : "mt-4"} line-clamp-3 text-[15.5px] leading-[1.5] text-sn-navy`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                    Partner Chronicle
-                  </span>
-                  <ArrowRight size={14} className="text-sky-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-
-                {/* Tactile Polaroid Card with Washi Tape */}
-                <div className="my-3 flex flex-col items-center">
-                  <div className="relative p-2.5 pb-3 bg-white rounded-xl shadow-[0_6px_20px_rgba(186,215,255,0.45)] border border-slate-100 max-w-[210px] w-full transform -rotate-1 group-hover:rotate-0 transition-transform">
-                    {/* Cute Washi Tape Strip */}
-                    <WashiTape color="pink" pattern="gingham" />
-
-                    {/* Polaroid Photo Window */}
-                    <div className="w-full h-24 sm:h-28 rounded-lg overflow-hidden bg-gradient-to-br from-sky-200 via-pink-100 to-amber-100 flex items-center justify-center relative shadow-inner">
-                      {recentAction?.item?.cover_url || recentAction?.item?.image_url ? (
-                        <img
-                          src={recentAction.item.cover_url || recentAction.item.image_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center p-2">
-                          <Heart size={20} className="text-pink-400 fill-pink-200 mx-auto mb-1 animate-pulse" />
-                          <span className="font-serif italic text-[11px] text-slate-600 block">
-                            Our Sky Together
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Polaroid Caption */}
-                    <div className="mt-2 text-center">
-                      <p className="text-[10px] sm:text-[11px] text-slate-600 font-serif italic line-clamp-2 px-1">
-                        "{recentAction?.item?.body || "No moments shared yet today. Leave a note or send a hug."}"
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Synchronize Button */}
-                <div className="flex items-center justify-center pt-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-[10px] font-medium border border-sky-100 shadow-2xs group-hover:bg-sky-100 transition-colors">
-                    <RefreshCw size={10} className="text-sky-500" />
-                    <span>Synchronize</span>
-                  </div>
-                </div>
+                “{recentAction?.item?.body ||
+                  recentAction?.item?.title ||
+                  "No moments shared yet today. Leave a note or send a hug."}
+                ”
+              </p>
+              <div className="mt-auto flex justify-center pt-5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
+                    toast.success("Synced with your partner's latest");
+                  }}
+                  disabled={loadingAction}
+                  className="sn-pill h-[42px] bg-[linear-gradient(180deg,#eef1fe,#dfe6fb)] px-8 text-[15px] font-medium"
+                >
+                  <RefreshCw
+                    size={17}
+                    strokeWidth={1.8}
+                    className={`text-sn-navy ${loadingAction ? "animate-spin" : ""}`}
+                  />
+                  Synchronize
+                </button>
               </div>
             </div>
           </section>
 
-          {/* ── CARD 3: UPCOMING MOMENTS ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)]">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <CalendarIcon size={14} className="text-pink-400" />
-                <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                  Upcoming Moments
-                </span>
+          {/* Upcoming moments — a planner note */}
+          <section className="sn-card flex flex-1 flex-col px-5 pb-5 pt-5 sm:px-7 sm:pb-[8px] sm:pt-[19px]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CalendarIcon size={21} strokeWidth={1.6} className="text-[#5468b0]" />
+                <h2 className="sn-label">Upcoming moments</h2>
               </div>
               <button
                 onClick={() => setTab("calendar")}
-                className="text-xs font-medium text-sky-600 hover:text-sky-800 transition-colors cursor-pointer flex items-center gap-1"
+                className="flex items-center gap-1.5 text-[15px] text-sn-ink hover:text-sn-navy"
               >
-                <span>Calendar</span>
-                <ArrowRight size={12} />
+                Calendar
+                <ArrowRight size={18} strokeWidth={1.7} />
               </button>
             </div>
 
-            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-pink-50/60 via-white to-sky-50/40 border border-pink-100/70">
-              {/* Left Date Stamp Badge */}
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-white border border-pink-200 shadow-xs flex flex-col items-center justify-center shrink-0">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-pink-600">
-                    {stats?.nextEvent
-                      ? format(new Date(stats.nextEvent.starts_at), "MMM")
-                      : "NOV"}
+            <div className="relative mt-2 flex-1 overflow-hidden rounded-[22px] border border-white/80 bg-[linear-gradient(90deg,#fdeef4,#fbf2f7_55%,#f3f0fb)] px-4 pb-4 pt-4 sm:pb-[8px] sm:pt-[10px] sm:pr-[190px]">
+              <div className="flex items-center gap-4">
+                <div className="relative flex h-[64px] w-[84px] shrink-0 flex-col items-start justify-center rounded-[18px] pl-[17px] bg-[linear-gradient(180deg,#fde4ee,#f8d0df)] shadow-[0_8px_16px_-10px_rgba(201,69,122,0.55)]">
+                  <span className="text-[13px] font-semibold uppercase leading-none tracking-[0.04em] text-[#cf4c80]">
+                    {format(upcoming.date, "MMM")}
                   </span>
-                  <div className="flex items-center gap-0.5">
-                    <span className="font-serif text-lg font-bold text-[#233554] leading-none">
-                      {stats?.nextEvent
-                        ? format(new Date(stats.nextEvent.starts_at), "d")
-                        : "19"}
-                    </span>
-                    <span className="text-pink-400 text-xs">♡</span>
-                  </div>
+                  <span className="mt-1 font-serif text-[27px] font-semibold leading-none text-[#c23c71]">
+                    {format(upcoming.date, "d")}
+                  </span>
+                  <HeartMark size={16} className="absolute right-[13px] top-[32px] text-[#e7709e]" />
                 </div>
-
-                <div>
-                  <h4 className="font-serif text-base font-semibold text-[#233554] flex items-center gap-1.5">
-                    <span>{stats?.nextEvent?.title || "Our 5th monthsary"}</span>
-                    <span className="text-pink-400">♡</span>
-                  </h4>
-                  <p className="text-xs text-slate-500 font-light mt-0.5">
-                    {stats?.nextEvent
-                      ? format(new Date(stats.nextEvent.starts_at), "EEEE, MMMM d · h:mm a")
-                      : `Together for ${timeTogether?.totalDays || 146} days!`}
-                  </p>
+                <div className="min-w-0">
+                  <h3 className="flex items-center gap-2 font-serif text-[20px] font-semibold leading-tight text-sn-navy sm:text-[21px]">
+                    <span className="line-clamp-2">{upcoming.title}</span>
+                    <HeartMark size={18} className="text-sn-navy" />
+                  </h3>
+                  <p className="mt-1 text-[14.5px] text-sn-ink">{upcoming.detail}</p>
                 </div>
               </div>
-
-              {/* Bouquet decoration in corner */}
-              <LilyBouquetAccent className="hidden sm:block absolute right-2 -bottom-2" />
+              <button
+                onClick={() => openSheet("add-event")}
+                className="mt-3 flex h-[36px] w-full items-center sm:mt-[11px] sm:h-[37px] justify-center gap-2 rounded-full border border-dashed border-[#d8cbe0] bg-white/30 text-[14px] text-[#566091] transition-colors hover:bg-white/60"
+              >
+                <Plus size={16} strokeWidth={1.7} />
+                Schedule a shared date or call
+              </button>
+              <img
+                src={ART.bouquet}
+                alt="A bouquet of white lilies"
+                className="pointer-events-none absolute -bottom-4 right-0 hidden w-[184px] select-none sm:block"
+              />
             </div>
-
-            {/* Schedule trigger capsule */}
-            <button
-              onClick={() => openSheet("add-event")}
-              className="mt-3 w-full py-2.5 rounded-full border border-dashed border-sky-300/80 bg-sky-50/40 hover:bg-sky-50 text-sky-700 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <Plus size={13} className="text-sky-500" />
-              <span>Schedule a shared date or call</span>
-            </button>
           </section>
         </div>
 
-        {/* Right Column (Col 5 on Desktop) */}
-        <div className="space-y-6 md:col-span-5">
-          {/* ── CARD 4: STUDIO (Remote LDR Photo Booth) ── */}
+        {/* ───────── Right column ───────── */}
+        <div className="flex min-w-0 flex-col gap-[18px]">
+          {/* Studio — the photo booth */}
           <section
             onClick={() => setTab("photobooth")}
-            className="cursor-pointer relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] hover:shadow-lg transition-all active:scale-[0.99] group"
+            className="sn-card sn-card-lavender group cursor-pointer px-5 pb-5 pt-5 sm:px-[26px] sm:pb-[22px] sm:pt-[16px]"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <Star size={13} className="text-amber-400 fill-amber-300" />
-                <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                  Studio
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Star size={21} strokeWidth={1.5} className="fill-[#fbd59a] text-sn-honey" />
+                <h2 className="sn-label">Studio</h2>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Synchronized</span>
-              </div>
+              <span className="sn-pill h-[34px] cursor-default bg-[#f6f6fe] px-4 text-[14px] text-sn-ink hover:shadow-[var(--shadow-pill)]">
+                <span className="h-2.5 w-2.5 rounded-full bg-sn-mint" />
+                Synchronized
+              </span>
             </div>
-
-            <div className="flex items-center gap-4">
-              {/* Tactile Polaroid Keepsake with Washi Tape */}
-              <div className="relative p-2 pb-2.5 bg-white rounded-xl shadow-[0_4px_14px_rgba(186,215,255,0.5)] border border-slate-100 w-24 shrink-0 transform -rotate-3 group-hover:rotate-0 transition-transform">
-                <WashiTape color="blue" pattern="gingham" />
-                <div className="w-full h-20 rounded-lg overflow-hidden bg-gradient-to-b from-sky-300 via-sky-200 to-indigo-100 flex items-center justify-center shadow-inner">
-                  <div className="w-9 h-9 rounded-full border border-white/80 flex items-center justify-center text-white">
-                    <Heart size={16} className="fill-white/80" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Text Info */}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-serif text-base font-semibold text-[#233554] tracking-tight truncate">
+            <div className="relative mt-3 flex items-start gap-5">
+              <Polaroid
+                src={ART.polaroidSky}
+                tape="blue"
+                tilt={-6}
+                className="ml-1 mt-2 w-[118px] shrink-0 group-hover:rotate-[-3deg] sm:w-[150px]"
+                photoClassName="aspect-[128/138]"
+              />
+              <div className="min-w-0 flex-1 pt-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[23px]">
                     Remote LDR Photo Booth
                   </h3>
-                  <Camera size={14} className="text-pink-500 shrink-0" />
+                  <span className="-mr-1 -mt-1 hidden h-[40px] w-[40px] shrink-0 place-items-center rounded-full border border-white bg-[#f6f6fe] text-sn-navy shadow-[var(--shadow-pill)] sm:grid">
+                    <Camera size={20} strokeWidth={1.7} />
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-light leading-relaxed line-clamp-3">
-                  Connect dual live cameras across Bacolod and {partnerCity}. Snap synchronized 4-cut strips, co-decorate with stamps, and preserve your keepsake.
+                <p className="mt-2.5 text-[14px] leading-[1.6] text-[#5b6489] sm:text-[14.5px]">
+                  Connect dual live cameras across {userCity} and {partnerCity}. Snap synchronized
+                  4-cut strips, co-decorate with stamps, and preserve your keepsake.
                 </p>
-                <div className="pt-1 flex items-center gap-1 text-xs font-medium text-sky-700 group-hover:text-pink-600 transition-colors">
-                  <span>Enter Booth</span>
-                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                </div>
+                <span className="mt-5 inline-flex items-center gap-2 border-b border-[#9aa2c4] pb-1 text-[16px] font-semibold text-sn-navy">
+                  Enter Booth
+                  <ArrowRight
+                    size={18}
+                    strokeWidth={1.8}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                </span>
               </div>
+              <Bow className="absolute -bottom-2 right-0 hidden h-10 w-12 text-[#a9b4e4] sm:block" />
+              <Sparkle className="absolute -bottom-3 right-14 hidden h-4 w-4 text-[#b9c3ec] sm:block" />
             </div>
           </section>
 
-          {/* ── CARD 5: MONTHLY MILESTONE ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
-                Monthly Milestone
-              </span>
-              <span className="text-[11px] font-mono text-slate-500">
-                19th of each month
-              </span>
+          {/* Monthly milestone */}
+          <section className="sn-card @container px-5 pb-5 pt-5 sm:px-[30px] sm:pb-[16px] sm:pt-[20px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Trophy size={21} strokeWidth={1.6} className="fill-[#f8d79e] text-[#e3a24f]" />
+                <h2 className="sn-label">Monthly milestone</h2>
+              </div>
+              <span className="text-[14px] text-[#5b6489] sm:text-[15px]">19th of each month</span>
             </div>
 
-            <div className="relative pt-6">
-              {/* Adorable Peeking Cat on the Progress Bar */}
-              <div
-                className="absolute -top-3.5 transition-all duration-700 ease-out"
-                style={{
-                  left: `clamp(10%, ${cycleProgress}%, 85%)`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <PeekingCat />
-              </div>
-
-              {/* Header inside: Days remaining & percent */}
-              <div className="flex items-baseline justify-between mb-1.5">
-                <span className="font-serif text-lg font-bold text-[#233554] flex items-center gap-1.5">
-                  <span>
-                    {daysToNextMonthsary === 0
-                      ? "Happy Monthsary Day!"
-                      : `${daysToNextMonthsary} days remaining`}
-                  </span>
-                  <span className="text-pink-400">♡</span>
+            <div className="relative mt-4">
+              <div className="flex items-end justify-between gap-3">
+                <span className="flex items-center gap-3 font-serif text-[26px] font-semibold leading-none text-sn-navy @min-[440px]:text-[31px]">
+                  {daysToNextMonthsary === 0
+                    ? "Happy monthsary!"
+                    : `${daysToNextMonthsary} ${daysToNextMonthsary === 1 ? "day" : "days"} remaining`}
+                  <HeartMark size={24} className="hidden text-[#f19cbd] sm:block" />
                 </span>
-                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200">
+                <span className="text-[20px] font-semibold leading-none text-[#e0609a] tabular-nums sm:text-[22px]">
                   {cycleProgress}%
                 </span>
               </div>
 
-              {/* Soft Pillowy Progress Bar */}
-              <div className="w-full h-3 rounded-full bg-pink-100/70 overflow-hidden shadow-inner p-0.5">
-                <div
-                  className="h-full bg-gradient-to-r from-pink-300 via-rose-400 to-pink-500 rounded-full transition-all duration-700 ease-out shadow-xs"
-                  style={{ width: `${cycleProgress}%` }}
+              <div className="relative mt-3">
+                <img
+                  src={ART.catPeek}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-[12px] right-[52px] hidden w-[100px] select-none @min-[340px]:block @min-[440px]:right-[56px] @min-[440px]:w-[124px]"
                 />
+                <div
+                  className="relative h-[18px] rounded-full border border-white bg-[#f6eef6] shadow-[inset_0_1px_3px_rgba(120,128,190,0.15)]"
+                  role="progressbar"
+                  aria-valuenow={cycleProgress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Progress to next monthsary"
+                >
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#f8b9d4,#f38ab6)] transition-[width] duration-700"
+                    style={{ width: `${cycleProgress}%` }}
+                  />
+                  <span
+                    className="absolute top-1/2 h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${cycleProgress}%` }}
+                  >
+                    <TodayHeart className="h-full w-full drop-shadow-[0_2px_3px_rgba(201,69,122,0.35)]" />
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* 3 Soft Inset Metric Pills */}
-            <div className="grid grid-cols-3 gap-2 pt-2">
-              <div className="text-center p-2 rounded-2xl bg-sky-50/60 border border-sky-100 shadow-2xs">
-                <Heart size={14} className="text-pink-400 fill-pink-200 mx-auto mb-0.5" />
-                <div className="font-serif text-base font-bold text-[#233554]">
-                  {stats?.memories ?? 0}
+            <div className="mt-[30px] grid grid-cols-3 gap-3 sm:gap-4">
+              {[
+                {
+                  label: "Memories",
+                  value: stats?.memories ?? 0,
+                  icon: <Heart size={19} strokeWidth={1.5} className="fill-[#f48fbc] text-[#e8639b]" />,
+                },
+                {
+                  label: "Embraces",
+                  value: stats?.hugs ?? 0,
+                  icon: <Star size={19} strokeWidth={1.6} className="text-[#5b6aa6]" />,
+                },
+                {
+                  label: "Places",
+                  value: stats?.trips ?? 0,
+                  icon: <Gift size={19} strokeWidth={1.6} className="text-[#9a6fc8]" />,
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="flex h-[70px] flex-col items-center justify-center rounded-[34px] border border-white/95 bg-[linear-gradient(180deg,#fbf8ff,#f2f0fb)] shadow-[var(--shadow-pill)]"
+                >
+                  {s.icon}
+                  <span className="mt-1 font-serif text-[18px] font-semibold leading-none text-sn-navy tabular-nums">
+                    {loadingStats ? "–" : s.value}
+                  </span>
+                  <span className="mt-1 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-sn-ink">
+                    {s.label}
+                  </span>
                 </div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
-                  Memories
-                </div>
-              </div>
-
-              <div className="text-center p-2 rounded-2xl bg-pink-50/60 border border-pink-100 shadow-2xs">
-                <Star size={14} className="text-amber-400 fill-amber-200 mx-auto mb-0.5" />
-                <div className="font-serif text-base font-bold text-[#233554]">
-                  {stats?.hugs ?? 0}
-                </div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
-                  Embraces
-                </div>
-              </div>
-
-              <div className="text-center p-2 rounded-2xl bg-indigo-50/60 border border-indigo-100 shadow-2xs">
-                <Gift size={14} className="text-indigo-400 fill-indigo-200 mx-auto mb-0.5" />
-                <div className="font-serif text-base font-bold text-[#233554]">
-                  {stats?.trips ?? 0}
-                </div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
-                  Places
-                </div>
-              </div>
+              ))}
             </div>
           </section>
 
-          {/* ── CARD 6: CALENDAR (Pastel Planner Aesthetic) ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
+          {/* Planner calendar */}
+          <section className="sn-card relative flex-1 px-4 pb-4 pt-4 sm:px-[26px] sm:pb-[10px] sm:pt-[13px]">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setCursor(subMonths(cursor, 1))}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-sky-100 active:scale-95 transition-all text-slate-600 cursor-pointer"
+                className="grid h-[42px] w-[42px] place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-navy shadow-[var(--shadow-pill)] active:scale-95"
                 aria-label="Previous month"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={20} strokeWidth={1.8} />
               </button>
               <button
                 onClick={() => setTab("calendar")}
-                className="font-serif text-base font-semibold text-[#233554] tracking-tight hover:text-pink-600 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="flex items-center gap-3 font-serif text-[24px] font-semibold text-sn-navy hover:text-[#33438a] sm:text-[26px]"
               >
-                <span>{format(cursor, "MMMM yyyy")}</span>
-                <span className="text-pink-400 font-normal">♡</span>
+                {format(cursor, "MMMM yyyy")}
+                <HeartMark size={22} className="text-[#f19cbd]" />
               </button>
               <button
                 onClick={() => setCursor(addMonths(cursor, 1))}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-sky-100 active:scale-95 transition-all text-slate-600 cursor-pointer"
+                className="grid h-[42px] w-[42px] place-items-center rounded-full border border-white bg-[#f7f7fe] text-sn-navy shadow-[var(--shadow-pill)] active:scale-95"
                 aria-label="Next month"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={20} strokeWidth={1.8} />
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-wider text-slate-400 font-bold uppercase">
+            <div className="mt-3 grid grid-cols-7 text-center text-[14px] font-semibold text-sn-ink">
               {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                <div key={i}>{d}</div>
+                <div key={i} className="pb-2.5">
+                  {d}
+                </div>
               ))}
             </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center text-xs">
+            <div className="grid grid-cols-7 text-center">
               {Array.from({ length: leading }).map((_, i) => (
-                <div key={`b${i}`} />
+                <div key={`b${i}`} className="h-[42px] border-t border-l border-[#ebe8f6] first:border-l-0" />
               ))}
-              {gridDays.map((d) => {
+              {gridDays.map((d, idx) => {
                 const hasEvent = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
                 const dayPhoto = monthPhotos.find(
-                  (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d)
+                  (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d),
                 );
                 const isToday = isSameDay(d, today);
+                const col = (leading + idx) % 7;
                 return (
                   <div
                     key={d.toISOString()}
-                    className={`relative aspect-square flex items-center justify-center rounded-2xl overflow-hidden transition-all ${
-                      isToday
-                        ? "bg-gradient-to-tr from-pink-200 to-rose-200 text-rose-900 font-bold shadow-[0_2px_10px_rgba(244,114,182,0.4)] border border-pink-300"
-                        : "hover:bg-sky-50 text-slate-700"
-                    } ${!isSameMonth(d, cursor) ? "opacity-25" : ""}`}
+                    title={dayPhoto?.title || undefined}
+                    className={`relative flex h-[42px] items-center justify-center border-t border-[#ebe8f6] ${col === 0 ? "" : "border-l"} ${!isSameMonth(d, cursor) ? "opacity-30" : ""}`}
                   >
-                    {dayPhoto?.url && (
+                    {isToday && (
                       <>
-                        <img
-                          src={dayPhoto.url}
-                          alt=""
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-white/20 border border-white/40 rounded-2xl" />
+                        <TodayHeart className="absolute left-1/2 top-1/2 h-[50px] w-[50px] -translate-x-1/2 -translate-y-[46%] drop-shadow-[0_4px_8px_rgba(236,122,164,0.35)]" />
+                        <HeartMark size={13} className="absolute bottom-[1px] right-[10%] fill-white text-[#e7709e]" />
                       </>
                     )}
                     <span
-                      className={`relative z-10 text-[11px] tabular-nums ${
-                        isToday
-                          ? "text-rose-950 font-bold"
-                          : dayPhoto
-                          ? "text-slate-900 font-bold"
-                          : "text-slate-700"
-                      }`}
+                      className={`relative z-10 text-[15.5px] tabular-nums ${isToday ? "font-bold text-sn-navy" : "text-sn-navy/90"}`}
                     >
                       {d.getDate()}
                     </span>
-                    {hasEvent && (
-                      <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-pink-500 z-10 shadow-xs" />
+                    {(hasEvent || dayPhoto) && !isToday && (
+                      <span className="absolute bottom-[5px] left-1/2 flex -translate-x-1/2 gap-[3px]">
+                        {hasEvent && <span className="h-[5px] w-[5px] rounded-full bg-[#ec7aa4]" />}
+                        {dayPhoto && <span className="h-[5px] w-[5px] rounded-full bg-[#8faaf0]" />}
+                      </span>
                     )}
                   </div>
                 );
               })}
+              {Array.from({ length: trailingCells }).map((_, i) => (
+                <div key={`t${i}`} className="h-[42px] border-t border-l border-[#ebe8f6]" />
+              ))}
             </div>
-
-            {/* Corner lily accent */}
-            <div className="absolute -bottom-3 -right-3 opacity-20 pointer-events-none">
-              <img src="/main-lily.png" alt="" className="w-20 h-20 object-contain" />
-            </div>
+            <img
+              src={ART.lilyStem}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute -bottom-10 -right-12 hidden w-[170px] -rotate-[24deg] select-none xl:block"
+            />
           </section>
         </div>
       </div>
@@ -1079,6 +1082,54 @@ export function HomeView({
       />
 
       <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
+    </div>
+  );
+}
+
+function Person({
+  side,
+  label,
+  city,
+  time,
+  detail,
+  portrait,
+}: {
+  side: "left" | "right";
+  label: string;
+  city: string;
+  time: string;
+  detail: string;
+  portrait: string;
+}) {
+  const right = side === "right";
+  return (
+    <div
+      className={`flex min-w-0 flex-col items-center gap-3 text-center @min-[570px]:flex-row @min-[570px]:gap-4 ${
+        right ? "@min-[570px]:flex-row-reverse @min-[570px]:text-right" : "@min-[570px]:text-left"
+      }`}
+    >
+      <ChibiTile
+        src={portrait}
+        alt={label}
+        className="h-[96px] w-[84px] @min-[420px]:h-[110px] @min-[420px]:w-[96px] @min-[570px]:h-[128px] @min-[570px]:w-[112px]"
+      />
+      <div className="min-w-0">
+        <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#6b7397] @min-[570px]:text-[13px]">
+          {label}
+        </div>
+        <div
+          className={`mt-1 flex items-center justify-center gap-1.5 font-serif text-[18px] font-semibold text-sn-navy @min-[570px]:mt-1.5 @min-[570px]:text-[21px] ${right ? "@min-[570px]:justify-end" : "@min-[570px]:justify-start"}`}
+        >
+          <MapPin size={17} strokeWidth={1.7} className="shrink-0 text-sn-navy" />
+          <span className="max-w-[8.5rem] truncate">{city}</span>
+        </div>
+        <div className="mt-1 font-serif text-[25px] font-bold leading-tight text-sn-navy tabular-nums @min-[570px]:mt-1.5 @min-[570px]:text-[31px]">
+          {time}
+        </div>
+        <div className="mt-0.5 text-[12.5px] leading-snug text-[#545e88] @min-[570px]:whitespace-nowrap @min-[570px]:text-[13.5px]">
+          {detail}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1080,7 +1080,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         {/* Page 2: Name input onboarding with Monthsary congrats and cycling compliments */}
         {stage === "partner-name-input" && (
           <Screen key="pname-input">
-            <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground flex items-center justify-center flex-wrap gap-x-1 min-h-[16px]">
+            <div className="text-[12px] uppercase tracking-[0.22em] text-muted-foreground flex items-center justify-center flex-wrap gap-x-1 min-h-[16px]">
               <span>You must be the</span>
               <span className="font-semibold text-primary inline-flex min-w-[70px] justify-center">
                 <AnimatePresence mode="wait">
@@ -1217,7 +1217,7 @@ function Screen({ children }: { children: React.ReactNode }) {
 function Title({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
   return (
     <>
-      <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{kicker}</div>
+      <div className="text-[12px] uppercase tracking-[0.25em] text-muted-foreground">{kicker}</div>
       <div className="display mt-2 text-4xl leading-tight">{title}</div>
       {sub && <p className="mt-2 text-sm text-muted-foreground">{sub}</p>}
     </>

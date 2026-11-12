@@ -391,7 +391,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                   muted
                   className={`w-full h-full object-cover ${isMirror ? "scale-x-[-1]" : ""}`}
                 />
-                <div className="absolute top-2.5 left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[10px] text-white/80 border border-white/10 font-medium">
+                <div className="absolute top-2.5 left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[12px] text-white/80 border border-white/10 font-medium">
                   {userName} ({getUserCity()})
                 </div>
               </div>
@@ -409,14 +409,14 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                   <div className="flex flex-col items-center justify-center p-6 text-center text-white/50">
                     <WifiOff size={24} className="mb-2 opacity-60" />
                     <p className="text-xs font-medium">Live Partner Camera</p>
-                    <p className="text-[10px] text-white/40 mt-0.5">
+                    <p className="text-[12px] text-white/40 mt-0.5">
                       {partnerOnline
                         ? "Syncing video connection…"
                         : "She can join via her device anytime!"}
                     </p>
                   </div>
                 )}
-                <div className="absolute bottom-2.5 left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[10px] text-white/80 border border-white/10 font-medium">
+                <div className="absolute bottom-2.5 left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[12px] text-white/80 border border-white/10 font-medium">
                   {partnerName} (Remote)
                 </div>
               </div>
@@ -435,7 +435,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                     <span className="font-serif text-5xl font-bold text-white tabular-nums">
                       {countdownValue}
                     </span>
-                    <span className="text-[10px] text-white/70 uppercase tracking-widest mt-1">
+                    <span className="text-[12px] text-white/70 uppercase tracking-widest mt-1">
                       Cut {activeCutNum}/4
                     </span>
                   </motion.div>
@@ -500,7 +500,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
               {/* Strip Footer */}
               <div className="pt-3 pb-1 text-center flex flex-col items-center">
                 <span className="font-serif text-sm font-semibold tracking-tight">Seanaya</span>
-                <span className="text-[9px] opacity-70">
+                <span className="text-[11px] opacity-70">
                   {customCaption.trim()
                     ? customCaption.trim()
                     : activeFrameConfig.hasLdrTag
@@ -615,7 +615,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
 
               {/* Sticker Stamp Pad */}
               <div className="flex items-center gap-2 overflow-x-auto pt-1 no-scrollbar border-t border-white/10">
-                <span className="text-[10px] text-white/40 uppercase tracking-wider shrink-0">
+                <span className="text-[12px] text-white/40 uppercase tracking-wider shrink-0">
                   Stickers:
                 </span>
                 {BOOTH_STICKERS.map((stk) => (
