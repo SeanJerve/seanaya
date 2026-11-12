@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { addMonths, differenceInDays, format } from "date-fns";
+import {
+  differenceInCalendarDays,
+  format,
+  getDaysInMonth,
+  isSameDay,
+  parseISO,
+  startOfDay,
+} from "date-fns";
 import { useAppStore } from "@/features/app/store";
 import { Plus, Heart, SquarePen, MapPin, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -50,8 +57,12 @@ export function HomeView({
   });
 
   // ── Time together ──
+  // No anniversary yet → we don't invent one; the count/milestone sections are
+  // replaced by a prompt to set it in Settings. `start` still needs a value so
+  // the hooks below stay unconditional, but it is never shown.
+  const hasAnniversary = !!anniversary;
   const start = useMemo(
-    () => new Date((anniversary || "2026-06-19") + "T00:00:00"),
+    () => (anniversary ? parseISO(anniversary) : startOfDay(new Date())),
     [anniversary],
   );
   const [now, setNow] = useState(() => new Date());
@@ -60,27 +71,33 @@ export function HomeView({
     return () => clearInterval(t);
   }, []);
   const together = useMemo(() => {
-    const ms = Math.max(0, now.getTime() - start.getTime());
-    const s = Math.floor(ms / 1000);
+    // Calendar days in local time; the clock part is time since local midnight.
+    if (now.getTime() < start.getTime()) return { days: 0, hours: 0, mins: 0, secs: 0 };
     return {
-      days: Math.floor(s / 86400),
-      hours: Math.floor(s / 3600) % 24,
-      mins: Math.floor(s / 60) % 60,
-      secs: s % 60,
+      days: differenceInCalendarDays(now, start),
+      hours: now.getHours(),
+      mins: now.getMinutes(),
+      secs: now.getSeconds(),
     };
   }, [now, start]);
 
   // ── Monthsary cycle (anniversary day of every month) ──
+  // Anniversaries on the 29th–31st land on the last day of shorter months.
   const monthDay = start.getDate();
-  const { nextMonthsary, prevMonthsary } = useMemo(() => {
+  const monthsaryIn = (year: number, month: number) =>
+    new Date(year, month, Math.min(monthDay, getDaysInMonth(new Date(year, month, 1))));
+  const dayKey = format(now, "yyyy-MM-dd");
+  const { nextMonthsary, prevMonthsary, thisMonthsary } = useMemo(() => {
     const today = new Date();
-    let next = new Date(today.getFullYear(), today.getMonth(), monthDay);
-    if (today >= next) next = addMonths(next, 1);
-    return { nextMonthsary: next, prevMonthsary: addMonths(next, -1) };
+    const current = monthsaryIn(today.getFullYear(), today.getMonth());
+    const next =
+      today >= current ? monthsaryIn(today.getFullYear(), today.getMonth() + 1) : current;
+    const prev = monthsaryIn(next.getFullYear(), next.getMonth() - 1);
+    return { nextMonthsary: next, prevMonthsary: prev, thisMonthsary: current };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthDay, now.getDate()]);
-  const daysLeft = Math.max(0, differenceInDays(nextMonthsary, now));
-  const isMonthsaryToday = now.getDate() === monthDay;
+  }, [monthDay, dayKey]);
+  const daysLeft = Math.max(0, differenceInCalendarDays(nextMonthsary, now));
+  const isMonthsaryToday = hasAnniversary && isSameDay(now, thisMonthsary);
   const progress = Math.round(
     Math.min(
       100,
@@ -103,11 +120,13 @@ export function HomeView({
         title: nextEvent.title as string,
         detail: format(new Date(nextEvent.starts_at), "EEEE, MMMM d · h:mm a"),
       }
-    : {
-        date: nextMonthsary,
-        title: `Our ${ordinal(monthsaryNumber)} monthsary`,
-        detail: `${format(nextMonthsary, "EEEE, MMMM d")} · ${differenceInDays(nextMonthsary, start)} days together`,
-      };
+    : hasAnniversary
+      ? {
+          date: nextMonthsary,
+          title: `Our ${ordinal(monthsaryNumber)} monthsary`,
+          detail: `${format(nextMonthsary, "EEEE, MMMM d")} · ${differenceInCalendarDays(nextMonthsary, start)} days together`,
+        }
+      : null;
 
   // ── Hug ──
   const hug = useMutation({
@@ -226,6 +245,25 @@ export function HomeView({
           </div>
         </section>
 
+        {!hasAnniversary ? (
+          <section className="flex flex-col justify-center lg:col-span-2">
+            <h2 className="sn-label">Together</h2>
+            <h3 className="mt-3 font-serif text-[22px] font-semibold leading-tight text-sn-navy">
+              When did your story start?
+            </h3>
+            <p className="mt-1 text-[14.5px] text-sn-muted">
+              Set your anniversary to count your days together and your monthsaries.
+            </p>
+            <button
+              onClick={() => openSheet("settings")}
+              className="sn-pill mt-4 h-11 self-start px-5 text-[14.5px]"
+            >
+              Set anniversary
+              <ArrowRight size={17} strokeWidth={2} />
+            </button>
+          </section>
+        ) : (
+        <>
         {/* ───── Together ───── */}
         <section
           {...longPressProps}
@@ -301,6 +339,8 @@ export function HomeView({
             </div>
           </div>
         </section>
+        </>
+        )}
 
         {/* ───── Upcoming moments ───── */}
         <section className="lg:col-span-2">
@@ -313,20 +353,31 @@ export function HomeView({
           </div>
           <div className="relative mt-5 sm:pr-[190px]">
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex h-[64px] w-[72px] shrink-0 flex-col items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#fde4ee,#f8d0df)] shadow-[0_8px_16px_-10px_rgba(201,69,122,0.55)]">
-                <span className="text-[13px] font-semibold uppercase leading-none tracking-[0.04em] text-[#cf4c80]">
-                  {format(upcoming.date, "MMM")}
-                </span>
-                <span className="mt-1 font-serif text-[27px] font-semibold leading-none text-[#c23c71]">
-                  {format(upcoming.date, "d")}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1 basis-[150px]">
-                <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy">
-                  {upcoming.title}
-                </h3>
-                <p className="mt-1 text-[14.5px] text-sn-ink">{upcoming.detail}</p>
-              </div>
+              {upcoming ? (
+                <>
+                  <div className="flex h-[64px] w-[72px] shrink-0 flex-col items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#fde4ee,#f8d0df)] shadow-[0_8px_16px_-10px_rgba(201,69,122,0.55)]">
+                    <span className="text-[13px] font-semibold uppercase leading-none tracking-[0.04em] text-[#cf4c80]">
+                      {format(upcoming.date, "MMM")}
+                    </span>
+                    <span className="mt-1 font-serif text-[27px] font-semibold leading-none text-[#c23c71]">
+                      {format(upcoming.date, "d")}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 basis-[150px]">
+                    <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy">
+                      {upcoming.title}
+                    </h3>
+                    <p className="mt-1 text-[14.5px] text-sn-ink">{upcoming.detail}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="min-w-0 flex-1 basis-[150px]">
+                  <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy">
+                    Nothing planned yet
+                  </h3>
+                  <p className="mt-1 text-[14.5px] text-sn-ink">Add a moment to count down to.</p>
+                </div>
+              )}
               <button onClick={() => openSheet("add-event")} className="sn-pill h-11 w-full px-5 text-[14.5px] sm:w-auto">
                 <Plus size={17} strokeWidth={2} />
                 Add moment

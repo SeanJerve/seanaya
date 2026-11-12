@@ -6,7 +6,10 @@ export type SavedStrip = { url: string; itemId: string | null; memoryId: string 
 
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not render the strip"))), "image/png"),
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Could not render the strip"))),
+      "image/png",
+    ),
   );
 }
 
@@ -18,10 +21,12 @@ export async function saveStripToAlbumBook({
   canvas,
   relationshipId,
   title,
+  description = "Taken in the photo booth.",
 }: {
   canvas: HTMLCanvasElement;
   relationshipId: string;
   title: string;
+  description?: string;
 }): Promise<SavedStrip> {
   const blob = await canvasToBlob(canvas);
   const { url } = await uploadImage("wall", relationshipId, blob, `album/booth-${Date.now()}`);
@@ -35,7 +40,7 @@ export async function saveStripToAlbumBook({
     .order("page_index", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const { data: page } = await db
+  const { data: page, error: pageError } = await db
     .from("album_pages")
     .insert({
       relationship_id: relationshipId,
@@ -45,9 +50,11 @@ export async function saveStripToAlbumBook({
     .select("id")
     .single();
 
+  if (pageError || !page?.id) throw pageError ?? new Error("Could not add an album page");
+
   let itemId: string | null = null;
-  if (page?.id) {
-    const { data: item } = await db
+  {
+    const { data: item, error: itemError } = await db
       .from("album_items")
       .insert({
         page_id: page.id,
@@ -62,7 +69,12 @@ export async function saveStripToAlbumBook({
       })
       .select("id")
       .single();
-    itemId = item?.id ?? null;
+    if (itemError || !item?.id) {
+      // Don't leave an empty page behind.
+      await db.from("album_pages").delete().eq("id", page.id);
+      throw itemError ?? new Error("Could not add the picture");
+    }
+    itemId = item.id;
   }
 
   let memoryId: string | null = null;
@@ -74,7 +86,7 @@ export async function saveStripToAlbumBook({
         relationship_id: relationshipId,
         created_by: user.user.id,
         title,
-        description: "Taken together in the photo booth.",
+        description,
         category: "random",
         cover_url: url,
         memory_date: format(new Date(), "yyyy-MM-dd"),
@@ -99,6 +111,7 @@ export async function updateSavedStrip(
   const { url } = await uploadImage("wall", relationshipId, blob, `album/booth-${Date.now()}`);
   const db = supabase as any;
   if (saved.itemId) await db.from("album_items").update({ image_url: url }).eq("id", saved.itemId);
-  if (saved.memoryId) await supabase.from("memories").update({ cover_url: url }).eq("id", saved.memoryId);
+  if (saved.memoryId)
+    await supabase.from("memories").update({ cover_url: url }).eq("id", saved.memoryId);
   return { ...saved, url };
 }

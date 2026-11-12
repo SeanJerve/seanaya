@@ -185,6 +185,15 @@
 
 /* ── Surfaces ── */
 
+/* Horizontal chip rows scroll by touch without showing a bar */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @utility glass-panel {
   background: var(--paper-blush);
   backdrop-filter: blur(18px) saturate(115%);

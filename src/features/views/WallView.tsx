@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useLayoutEffect, type ReactNode, type RefObject } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Palette, Trash2, Eye, X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,7 +7,7 @@ import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/storage";
 import { Lightbox } from "@/lib/Lightbox";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { format } from "date-fns";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
@@ -183,7 +183,8 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         relationship_id: relationshipId,
         author_id: user.id,
         body: "(photo)",
-        kind: "photo",
+        // DB CHECK only allows note/compliment/promise/gratitude; a photo note is a note with image_url.
+        kind: "note",
         image_url: url,
         image_path: path,
         color: PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)].value,
@@ -234,7 +235,7 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         </div>
       )}
 
-      <div className="relative mx-auto max-w-md px-4 pt-6 flex flex-col">
+      <div className="relative mx-auto flex w-full max-w-[640px] flex-col px-4 pt-6 sm:px-6 lg:max-w-[1186px]">
         {/* Board header with Chevron Month Switcher */}
         {(() => {
           const idx = availableMonths.indexOf(selectedMonth);
@@ -309,34 +310,14 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
               const isSelected = selectedNoteId === n.id;
 
               return (
-                <motion.div
+                <DraggableCard
                   key={n.id}
-                  drag
-                  dragConstraints={boardRef}
-                  dragElastic={0.15}
-                  dragMomentum={false}
-                  onDragEnd={(event) => {
-                    if (!boardRef.current) return;
-                    const board = boardRef.current.getBoundingClientRect();
-                    const el = event.target as HTMLElement;
-                    const card = el.closest(".card-drag-target") as HTMLElement;
-                    if (card) {
-                      const rect = card.getBoundingClientRect();
-                      const xPct = (rect.left - board.left) / board.width;
-                      const yPct = (rect.top - board.top) / board.height;
-                      // Allow notes to bleed off-screen up to 15% on each edge
-                      const newX = Math.min(Math.max(xPct, -0.15), 0.85);
-                      const newY = Math.min(Math.max(yPct, -0.15), 0.85);
-                      updatePosition.mutate({ id: n.id, pos_x: newX, pos_y: newY });
-                    }
-                  }}
-                  className="card-drag-target absolute cursor-grab active:cursor-grabbing touch-none select-none z-10"
-                  style={{
-                    left: `${px * 100}%`,
-                    top: `${py * 100}%`,
-                    transform: `rotate(${tilt}deg)`,
-                  }}
-                  whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
+                  px={px}
+                  py={py}
+                  tilt={tilt}
+                  cardW={n.image_url ? POLAROID_MAX_W : STICKY_MAX_W}
+                  boardRef={boardRef}
+                  onMove={(pos_x, pos_y) => updatePosition.mutate({ id: n.id, pos_x, pos_y })}
                 >
                   <div
                     className="relative"
@@ -383,10 +364,11 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                               setEnlargedNote(n);
                               setSelectedNoteId(null);
                             }}
-                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white text-foreground/75 hover:text-foreground transition-all active:scale-95"
+                            className="sn-pill sn-icon-btn h-10 w-10"
                             title="Enlarge note"
+                            aria-label="Enlarge note"
                           >
-                            <Eye size={14} />
+                            <Eye size={16} />
                           </button>
                           <button
                             onClick={() => {
@@ -398,16 +380,17 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
                               });
                               setSelectedNoteId(null);
                             }}
-                            className="w-8 h-8 rounded-full flex items-center justify-center bg-red-50 border border-red-200/50 text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                            className="sn-pill sn-icon-btn h-10 w-10"
                             title="Delete note"
+                            aria-label="Delete note"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} className="!text-[#c2416c]" />
                           </button>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
-                </motion.div>
+                </DraggableCard>
               );
             })}
           </div>
@@ -447,10 +430,12 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
             >
               {/* Close button */}
               <button
+                type="button"
                 onClick={() => setEnlargedNote(null)}
-                className="absolute -top-3 -right-3 rounded-full bg-white border border-white/50 p-1 text-foreground/60 shadow-lg hover:text-foreground transition-all z-50"
+                aria-label="Close"
+                className="sn-pill sn-icon-btn absolute -top-4 -right-4 z-50 h-10 w-10"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
 
               {enlargedNote.image_url ? (
@@ -492,6 +477,85 @@ export function WallView({ relationshipId }: { relationshipId: string }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// Widest / tallest a card gets (md breakpoint). Used to keep cards fully on the board at
+// render time, since positions are stored as fractions of whatever board they were dropped on.
+const POLAROID_MAX_W = 130;
+const STICKY_MAX_W = 155;
+const CARD_MAX_H = 165;
+
+// ── Draggable wrapper for one board card ─────────────────────────────────────────
+function DraggableCard({
+  px,
+  py,
+  tilt,
+  cardW,
+  boardRef,
+  onMove,
+  children,
+}: {
+  px: number;
+  py: number;
+  tilt: number;
+  cardW: number;
+  boardRef: RefObject<HTMLDivElement | null>;
+  onMove: (x: number, y: number) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Once the new left/top has rendered, drop framer's leftover drag translate (before paint)
+  // so the card doesn't move a second time.
+  useLayoutEffect(() => {
+    x.jump(0);
+    y.jump(0);
+  }, [px, py, x, y]);
+
+  return (
+    <motion.div
+      ref={ref}
+      drag
+      dragConstraints={boardRef}
+      dragElastic={0.15}
+      dragMomentum={false}
+      onDragEnd={() => {
+        const board = boardRef.current;
+        const el = ref.current;
+        if (!board || !el) return;
+        const bw = board.clientWidth;
+        const bh = board.clientHeight;
+        if (!bw || !bh) return;
+        // offsetLeft/Top are the laid-out position (unaffected by rotate/scale transforms).
+        const maxLeft = Math.max(0, bw - el.offsetWidth);
+        const maxTop = Math.max(0, bh - el.offsetHeight);
+        const left = Math.min(Math.max(el.offsetLeft + x.get(), 0), maxLeft);
+        const top = Math.min(Math.max(el.offsetTop + y.get(), 0), maxTop);
+        const newX = left / bw;
+        const newY = top / bh;
+        if (Math.abs(newX - px) < 1e-4 && Math.abs(newY - py) < 1e-4) {
+          x.jump(0);
+          y.jump(0);
+          return;
+        }
+        onMove(newX, newY);
+      }}
+      className="card-drag-target absolute cursor-grab active:cursor-grabbing touch-none select-none z-10"
+      style={{
+        x,
+        y,
+        rotate: tilt,
+        // Clamp so the whole card stays on the board, however narrow the screen.
+        left: `clamp(0px, ${px * 100}%, calc(100% - ${cardW}px))`,
+        top: `clamp(0px, ${py * 100}%, calc(100% - ${CARD_MAX_H}px))`,
+      }}
+      whileDrag={{ scale: 1.05, zIndex: 50, rotate: 0 }}
+    >
+      {children}
+    </motion.div>
   );
 }
 

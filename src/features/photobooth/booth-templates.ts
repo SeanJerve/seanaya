@@ -14,7 +14,10 @@ export const LAYOUTS: Record<LayoutId, { name: string; shots: number }> = {
   polaroid: { name: "Polaroid", shots: 1 },
 };
 
-export const STYLES: Record<StyleId, { name: string; bg: string; ink: string; sub: string; lily: boolean }> = {
+export const STYLES: Record<
+  StyleId,
+  { name: string; bg: string; ink: string; sub: string; lily: boolean }
+> = {
   paper: { name: "Paper", bg: "#fbf8f4", ink: "#1f2a5c", sub: "#6b7397", lily: true },
   periwinkle: { name: "Periwinkle", bg: "#cdd9f8", ink: "#1f2a5c", sub: "#4a5687", lily: true },
   blush: { name: "Blush", bg: "#fbe3ec", ink: "#7d2e52", sub: "#a5577a", lily: true },
@@ -32,6 +35,11 @@ export const FILTERS: { id: string; name: string; css: string }[] = [
 const imgCache = new Map<string, Promise<HTMLImageElement>>();
 function loadImage(src: string) {
   if (!imgCache.has(src)) {
+    // Frames are big data URLs; keep only the recent ones so long sessions don't pile up.
+    if (imgCache.size >= 24) {
+      const oldest = [...imgCache.keys()].find((k) => k.startsWith("data:"));
+      if (oldest) imgCache.delete(oldest);
+    }
     imgCache.set(
       src,
       new Promise((resolve, reject) => {
@@ -46,7 +54,14 @@ function loadImage(src: string) {
   return imgCache.get(src)!;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -56,7 +71,14 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
   const s = Math.max(w / img.width, h / img.height);
   const sw = w / s;
   const sh = h / s;
@@ -117,7 +139,11 @@ export async function renderBooth({
   const st = STYLES[style];
   const filter = FILTERS.find((f) => f.id === filterId)?.css ?? "none";
   const empty = style === "midnight" ? "#2b3058" : "rgba(31,42,92,0.08)";
-  const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const date = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   const line = caption.trim() || `${names} · ${date}`;
 
   const canvas = document.createElement("canvas");
@@ -125,12 +151,18 @@ export async function renderBooth({
   let footerTop = 0;
 
   if (layout === "strip") {
-    const W = 600, pad = 32, gap = 18, cw = W - pad * 2, ch = Math.round(cw * 0.75), footer = 190;
+    const W = 600,
+      pad = 32,
+      gap = 18,
+      cw = W - pad * 2,
+      ch = Math.round(cw * 0.75),
+      footer = 190;
     canvas.width = W;
     canvas.height = pad + 4 * ch + 3 * gap + footer;
     ctx.fillStyle = st.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < 4; i++) await drawShot(ctx, shots[i], pad, pad + i * (ch + gap), cw, ch, 10, filter, empty);
+    for (let i = 0; i < 4; i++)
+      await drawShot(ctx, shots[i], pad, pad + i * (ch + gap), cw, ch, 10, filter, empty);
     footerTop = pad + 4 * ch + 3 * gap;
     ctx.fillStyle = st.ink;
     ctx.textAlign = "center";
@@ -140,14 +172,29 @@ export async function renderBooth({
     ctx.font = '600 22px "Nunito Sans", system-ui, sans-serif';
     ctx.fillText(line, W / 2, footerTop + 128, W - 80);
   } else if (layout === "grid") {
-    const W = 1200, pad = 44, gap = 24, cw = (W - pad * 2 - gap) / 2, footer = 190;
+    const W = 1200,
+      pad = 44,
+      gap = 24,
+      cw = (W - pad * 2 - gap) / 2,
+      footer = 190;
     canvas.width = W;
     canvas.height = pad + 2 * cw + gap + footer;
     ctx.fillStyle = st.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < 4; i++) {
-      const col = i % 2, row = Math.floor(i / 2);
-      await drawShot(ctx, shots[i], pad + col * (cw + gap), pad + row * (cw + gap), cw, cw, 14, filter, empty);
+      const col = i % 2,
+        row = Math.floor(i / 2);
+      await drawShot(
+        ctx,
+        shots[i],
+        pad + col * (cw + gap),
+        pad + row * (cw + gap),
+        cw,
+        cw,
+        14,
+        filter,
+        empty,
+      );
     }
     footerTop = pad + 2 * cw + gap;
     ctx.fillStyle = st.ink;
@@ -158,7 +205,10 @@ export async function renderBooth({
     ctx.font = '600 26px "Nunito Sans", system-ui, sans-serif';
     ctx.fillText(line, pad + 8, footerTop + 144, W - pad * 2 - 260);
   } else {
-    const W = 900, pad = 54, cw = W - pad * 2, footer = 250;
+    const W = 900,
+      pad = 54,
+      cw = W - pad * 2,
+      footer = 250;
     canvas.width = W;
     canvas.height = pad + cw + footer;
     ctx.fillStyle = st.bg;
@@ -205,16 +255,28 @@ export function downloadCanvas(canvas: HTMLCanvasElement, name: string) {
   }, "image/png");
 }
 
-/** One frame on its own: the pair side by side (landscape), or a single photo (portrait). */
+/**
+ * One frame on its own, uncropped: a single photo at its own shape, or the two of you
+ * side by side at a shared height.
+ */
 export async function renderShotImage(shot: Shot, filterId: string): Promise<HTMLCanvasElement> {
-  const pair = !!(shot.a && shot.b);
+  const frames = await Promise.all(([shot.a, shot.b].filter(Boolean) as string[]).map(loadImage));
+  const filter = FILTERS.find((f) => f.id === filterId)?.css ?? "none";
   const canvas = document.createElement("canvas");
-  canvas.width = pair ? 1440 : 900;
-  canvas.height = pair ? 960 : 1200;
   const ctx = canvas.getContext("2d")!;
+  if (!frames.length) return canvas;
+  const H = Math.min(1200, Math.max(...frames.map((f) => f.height)) * 1.5);
+  const gap = frames.length > 1 ? 12 : 0;
+  const widths = frames.map((f) => Math.round((H * f.width) / f.height));
+  canvas.width = widths.reduce((a, b) => a + b, 0) + gap;
+  canvas.height = Math.round(H);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const filter = FILTERS.find((f) => f.id === filterId)?.css ?? "none";
-  await drawShot(ctx, shot, 0, 0, canvas.width, canvas.height, 0, filter, "#eef1fb");
+  ctx.filter = filter;
+  let x = 0;
+  frames.forEach((f, i) => {
+    ctx.drawImage(f, x, 0, widths[i], canvas.height);
+    x += widths[i] + gap;
+  });
   return canvas;
 }

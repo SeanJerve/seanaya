@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Eye, EyeOff, Camera, X, Cat, Upload } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
-import { differenceInDays } from "date-fns";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 import { uploadImage } from "@/lib/storage";
 import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
@@ -52,13 +52,18 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [patternFile, setPatternFile] = useState<File | null>(null);
   const [patternPreviewUrl, setPatternPreviewUrl] = useState<string | null>(null);
 
-  // Revoke object URLs on unmount to prevent memory leaks
+  // Revoke each object URL when it is replaced or on unmount (separately, so
+  // changing one preview doesn't revoke the other while it's still shown).
   useEffect(() => {
     return () => {
       if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
+    };
+  }, [facePreviewUrl]);
+  useEffect(() => {
+    return () => {
       if (patternPreviewUrl) URL.revokeObjectURL(patternPreviewUrl);
     };
-  }, [facePreviewUrl, patternPreviewUrl]);
+  }, [patternPreviewUrl]);
 
   // Cropper states (handles "new" cat face or an existing Pet face update)
   const [croppingTarget, setCroppingTarget] = useState<"new" | Pet | null>(null);
@@ -182,7 +187,6 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setPatternFile(file);
-    if (patternPreviewUrl) URL.revokeObjectURL(patternPreviewUrl);
     setPatternPreviewUrl(URL.createObjectURL(file));
   };
 
@@ -242,15 +246,17 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const saveCroppedFace = async () => {
     if (!croppingTarget || !croppingFileSrc) return;
     setIsUploading(true);
+    // Once toBlob takes over, its callback owns resetting isUploading.
+    let handedOff = false;
     try {
-      const img = document.getElementById("crop-target-img") as HTMLImageElement;
-      if (!img) return;
+      const img = document.getElementById("crop-target-img") as HTMLImageElement | null;
+      if (!img) throw new Error("Couldn't read the image, try again");
 
       const canvas = document.createElement("canvas");
       canvas.width = 200;
       canvas.height = 200;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) throw new Error("Couldn't crop the image on this device");
 
       ctx.beginPath();
       ctx.arc(100, 100, 100, 0, Math.PI * 2);
@@ -267,6 +273,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
       ctx.drawImage(img, canvas_img_left, canvas_img_top, canvas_img_width, canvas_img_height);
 
+      handedOff = true;
       canvas.toBlob(async (blob) => {
         if (!blob) {
           toast.error("Failed to crop image");
@@ -279,7 +286,6 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         // If target is "new", we save to state without uploading yet
         if (croppingTarget === "new") {
           setFaceFile(file);
-          if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
           setFacePreviewUrl(URL.createObjectURL(blob));
           setCroppingTarget(null);
           setCroppingFileSrc(null);
@@ -315,8 +321,10 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         }
       }, "image/png");
     } catch (e: any) {
+      handedOff = false;
       toast.error(e?.message || String(e));
-      setIsUploading(false);
+    } finally {
+      if (!handedOff) setIsUploading(false);
     }
   };
 
@@ -328,7 +336,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   };
 
   return (
-    <div className="relative mx-auto max-w-[640px] select-none px-4 pb-32 pt-6 sm:px-6 lg:max-w-[1186px]">
+    <div className="relative mx-auto max-w-[640px] select-none px-4 pb-44 pt-6 sm:px-6 lg:max-w-[1186px]">
       <section>
 
         {loadingPets ? (
@@ -365,7 +373,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
           <ul className="grid gap-[18px] lg:grid-cols-2">
             {pets.map((p) => {
               const ageInDays = p.birthday
-                ? differenceInDays(new Date(), new Date(p.birthday))
+                ? Math.max(0, differenceInCalendarDays(new Date(), parseISO(p.birthday)))
                 : null;
               const hasFace = p.photos && p.photos.length > 0 && !!p.photos[0];
               const isActive = activeRoamingPetIds.includes(p.id);
@@ -376,8 +384,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   key={p.id}
                   className="sn-card flex flex-col gap-4 p-5"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div className="relative w-11 h-11 rounded-full bg-white/60 border border-white/50 flex items-center justify-center text-foreground/45 shadow-inner overflow-hidden select-none pointer-events-none">
                         {hasFace ? (
                           <img src={p.photos[0]} alt="" className="w-full h-full object-cover" />
@@ -397,16 +405,18 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                           />
                         </label>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 font-serif text-[20px] font-semibold text-sn-navy">
-                          {p.name}
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2 font-serif text-[20px] font-semibold text-sn-navy">
+                          <span className="min-w-0 truncate" title={p.name}>
+                            {p.name}
+                          </span>
                           {isCurrentlyVisible && (
-                            <span className="font-sans text-[13px] font-semibold text-[#3a9c7a]">
+                            <span className="shrink-0 font-sans text-[13px] font-semibold text-[#3a9c7a]">
                               Roaming
                             </span>
                           )}
                           {isActive && !isPetVisible && (
-                            <span className="font-sans text-[13px] font-semibold text-sn-muted">
+                            <span className="shrink-0 font-sans text-[13px] font-semibold text-sn-muted">
                               Hidden
                             </span>
                           )}
@@ -417,13 +427,17 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => handleEyeToggle(p, isActive)}
                         className={`sn-pill sn-icon-btn h-10 w-10 ${isCurrentlyVisible ? "sn-active" : ""}`}
                         title={
                           isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"
                         }
+                        aria-label={
+                          isCurrentlyVisible ? `Hide ${p.name} from navbar` : `Let ${p.name} roam on navbar`
+                        }
+                        aria-pressed={isCurrentlyVisible}
                       >
                         {isCurrentlyVisible ? <Eye size={17} /> : <EyeOff size={17} />}
                       </button>
@@ -502,8 +516,8 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/10 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm sn-card p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom-8 duration-300">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                <Cat size={14} className="text-primary" /> Welcome new cat
+              <h3 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <Cat size={15} className="text-primary" /> Welcome new cat
               </h3>
               <button
                 onClick={() => {
@@ -515,43 +529,52 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   setPatternPreviewUrl(null);
                   setIsAddingPet(false);
                 }}
-                className="rounded-full bg-white border border-white/50 p-1 text-foreground/50 hover:text-foreground transition-all"
+                className="sn-pill sn-icon-btn h-10 w-10 shrink-0"
+                aria-label="Close"
               >
-                <X size={14} />
+                <X size={17} />
               </button>
             </div>
 
             <div className="space-y-3.5">
               <div>
-                <label className="block text-[12px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                <label
+                  htmlFor="new-cat-name"
+                  className="mb-1 block text-[13px] font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Cat Name
                 </label>
                 <input
+                  id="new-cat-name"
                   type="text"
                   placeholder="Mocha, Lily, etc..."
                   value={petName}
                   onChange={(e) => setPetName(e.target.value)}
-                  className="font-sans w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
+                  className="font-sans w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[16px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
                 />
               </div>
 
               <div>
-                <label className="block text-[12px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">
+                <label
+                  htmlFor="new-cat-birthday"
+                  className="mb-1 block text-[13px] font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Adopt Date / Birthday (Optional)
                 </label>
                 <input
+                  id="new-cat-birthday"
                   type="date"
                   value={birthday}
                   onChange={(e) => setBirthday(e.target.value)}
-                  className="font-sans w-full rounded-2xl border border-white/60 bg-white/40 px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all shadow-inner"
+                  className="font-sans w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[16px] text-sn-navy outline-none focus:border-sn-periwinkle"
                 />
               </div>
 
               {/* Mandatory File Uploaders */}
-              <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/20 pt-3.5">
+              <div className="grid grid-cols-2 gap-2 text-[13px] border-t border-white/20 pt-3.5">
                 {/* Required Face Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[11px]">
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[12.5px]">
                     Face Image (Required)
                   </span>
                   <label className="w-16 h-16 rounded-full border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
@@ -560,7 +583,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     ) : (
                       <>
                         <Upload size={16} className="text-foreground/40" />
-                        <span className="text-[11px] text-foreground/50 mt-1">Upload photo</span>
+                        <span className="mt-1 text-[12.5px] text-foreground/60">Upload photo</span>
                       </>
                     )}
                     <input
@@ -574,7 +597,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
 
                 {/* Required Pattern Image Picker */}
                 <div className="flex flex-col gap-1.5 items-center text-center border-l border-white/10 pl-2">
-                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[11px]">
+                  <span className="text-muted-foreground uppercase tracking-wider font-bold text-[12.5px]">
                     Coat Pattern (Required)
                   </span>
                   <label className="w-16 h-16 rounded-2xl border border-dashed border-white/80 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 transition-all overflow-hidden shadow-inner">
@@ -583,7 +606,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                     ) : (
                       <>
                         <Upload size={16} className="text-foreground/40" />
-                        <span className="text-[11px] text-foreground/50 mt-1">Upload photo</span>
+                        <span className="mt-1 text-[12.5px] text-foreground/60">Upload photo</span>
                       </>
                     )}
                     <input
@@ -621,9 +644,10 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                   setCroppingTarget(null);
                   setCroppingFileSrc(null);
                 }}
-                className="rounded-full bg-white border border-white/50 p-1 text-foreground/50 hover:text-foreground transition-all"
+                className="sn-pill sn-icon-btn h-10 w-10 shrink-0"
+                aria-label="Close"
               >
-                <X size={14} />
+                <X size={17} />
               </button>
             </div>
 

@@ -15,12 +15,11 @@ const ICON: Record<NotifKind, React.ReactNode> = {
   capsule: <BookHeart size={17} strokeWidth={1.7} />,
 };
 
+// Memories live on the calendar tab. Kinds without a dedicated tab fall back to home.
 const TAB_FOR: Partial<Record<NotifKind, TabKey>> = {
-  memory: "memories",
+  memory: "calendar",
   event: "calendar",
   note: "wall",
-  trip: "pet",
-  song: "pet",
 };
 
 const TITLE: Record<NotifKind, string> = {
@@ -76,7 +75,7 @@ export function NotificationsSheet({ relationshipId }: { relationshipId: string 
                 <button
                   onClick={() => {
                     markOneRead(n.id);
-                    if (tab) setTab(tab);
+                    setTab(tab ?? "home");
                     closeSheet();
                   }}
                   className="flex w-full items-center gap-3.5 py-3.5 text-left"

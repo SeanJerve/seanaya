@@ -11,7 +11,7 @@ import {
   isSameMonth,
   getDay,
 } from "date-fns";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
-import { useLongPress } from "@/hooks/useLongPress";
 import { LongPressModal } from "@/components/ui/LongPressModal";
 import { LevelPath, LEVEL_ROW } from "./LevelPath";
 import { Lightbox } from "@/lib/Lightbox";
@@ -58,6 +57,9 @@ export const isWrappedMemory = (m?: Memory | null) => {
   );
 };
 
+// Most avatars shown per timeline day before collapsing the rest into a "+N" pill.
+const MAX_AVATARS = 3;
+
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [cursor, setCursor] = useState(new Date());
   const { openSheet, confirm, openMonthsary } = useAppStore();
@@ -69,14 +71,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(360);
-
-  const longPressProps = useLongPress({
-    onLongPress: () => setShowLongPressInfo(true),
-    onClick: () => openSheet("add-event"),
-  });
 
   useEffect(() => {
     const key = "intro-dismissed-calendar";
@@ -186,19 +180,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     return groupedMemories.map((g) => g.date).filter((d): d is string => d !== null);
   }, [groupedMemories]);
 
-  // Track container width for timeline S-curve rendering
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        // Subtract padding to fit grid
-        setContainerWidth(entries[0].contentRect.width - 40);
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [isTimelineOpen, isFullscreenTimeline]);
-
   // Fetch memories & note photos this month to show in calendar circles
   const { data: monthPhotos = [] } = useQuery({
     queryKey: ["photos-cal", relationshipId, cursor.getFullYear(), cursor.getMonth()],
@@ -220,7 +201,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           .from("notes")
           .select("id,created_at,image_url,body")
           .eq("relationship_id", relationshipId)
-          .eq("kind", "photo")
+          // Photo notes are stored as kind "note" with an image_url, so filter on the image.
           .gte("created_at", sStart)
           .lte("created_at", sEnd)
           .not("image_url", "is", null),
@@ -293,10 +274,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           "transition-all",
           "duration-500",
         );
+        const highlight = ["ring-4", "ring-primary", "ring-offset-2", "scale-105"];
         const timer = setTimeout(() => {
-          el.classList.remove("ring-4", "ring-primary", "ring-offset-2", "scale-105");
+          el.classList.remove(...highlight);
         }, 2000);
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(timer);
+          el.classList.remove(...highlight);
+        };
       }
     }
   }, [activeSearchIndex, searchQuery, isFullscreenTimeline, matchingDateGroups]);
@@ -307,6 +292,34 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
     if (rem === 1 || rem === 3) return "col-start-2 justify-self-center";
     return "col-start-3 justify-self-center";
   };
+
+  // Search result stepper, on its own row so the 40px buttons don't squeeze the header.
+  const renderSearchNav = () =>
+    matchingDateGroups.length > 0 ? (
+      <div className="mt-3 flex items-center justify-end gap-2 select-none">
+        <span className="text-[13px] font-semibold text-sn-muted tabular-nums">
+          {activeSearchIndex + 1} of {matchingDateGroups.length}
+        </span>
+        <button
+          onClick={() =>
+            setActiveSearchIndex(
+              (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
+            )
+          }
+          className="sn-pill sn-icon-btn h-10 w-10"
+          aria-label="Previous search result"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <button
+          onClick={() => setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)}
+          className="sn-pill sn-icon-btn h-10 w-10"
+          aria-label="Next search result"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    ) : null;
 
   const renderTimeline = () => (
     <div
@@ -366,7 +379,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                 >
                   <div className="flex items-center justify-center -space-x-3.5">
-                    {group.memories.map((m, mIdx) => {
+                    {group.memories.slice(0, MAX_AVATARS).map((m, mIdx) => {
                       const isMain = mIdx === 0;
                       const sizeClass = isMain
                         ? "w-20 h-20 z-20"
@@ -410,18 +423,18 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                               >
                                 {formattedMDate ? (
                                   <>
-                                    <span className="text-[10px] uppercase tracking-widest text-foreground/80 font-bold leading-none">
+                                    <span className="text-[12px] uppercase tracking-wider text-foreground/80 font-bold leading-none">
                                       {format(formattedMDate, "MMM")}
                                     </span>
                                     <span className="display text-xl font-bold mt-0.5 leading-none">
                                       {format(formattedMDate, "d")}
                                     </span>
-                                    <span className="text-[9.5px] text-foreground/70 mt-0.5 leading-none">
+                                    <span className="text-[12px] text-foreground/70 mt-0.5 leading-none">
                                       {format(formattedMDate, "yyyy")}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-[11px] uppercase tracking-wider text-foreground/60 font-semibold">
+                                  <span className="text-[12px] uppercase tracking-wider text-foreground/60 font-semibold">
                                     Special
                                   </span>
                                 )}
@@ -443,6 +456,11 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                         </div>
                       );
                     })}
+                    {group.memories.length > MAX_AVATARS && (
+                      <span className="relative z-30 grid h-9 min-w-9 place-items-center rounded-full border-2 border-white bg-white/85 px-1.5 text-[12px] font-bold text-sn-navy shadow-sm tabular-nums">
+                        +{group.memories.length - MAX_AVATARS}
+                      </span>
+                    )}
                   </div>
 
                   <div
@@ -463,7 +481,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
   );
 
   return (
-    <div ref={containerRef} className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-32 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0">
+    <div className="mx-auto max-w-[640px] space-y-[18px] px-4 pb-44 pt-5 sm:px-6 lg:grid lg:max-w-[1186px] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-[18px] lg:space-y-0">
       {/* Calendar section */}
       <section className="sn-glass p-5 sm:p-6 lg:col-start-1">
         <div className="flex items-center justify-between">
@@ -559,7 +577,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-serif text-[17px] font-semibold text-sn-navy">{e.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-[12px] text-muted-foreground">
                     {format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}
                   </div>
                 </div>
@@ -573,10 +591,11 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                         onConfirm: () => deleteEvent.mutate(e.id),
                       });
                     }}
-                    className="text-foreground/35 hover:text-red-500 transition-colors p-1"
+                    className="sn-pill sn-icon-btn h-10 w-10"
                     title="Delete event"
+                    aria-label={`Delete ${e.title}`}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} className="!text-[#c2416c]" />
                   </button>
                 </div>
               </li>
@@ -597,40 +616,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                 <input
                   type="text"
                   placeholder="Search..."
+                  aria-label="Search the timeline"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setActiveSearchIndex(0);
                   }}
-                  className="w-full bg-transparent border-none outline-none text-[12px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                  className="w-full bg-transparent border-none outline-none text-[16px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                 />
-                {matchingDateGroups.length > 0 && (
-                  <div className="flex items-center gap-1 shrink-0 text-[12px] font-bold text-foreground/60 select-none">
-                    <span>
-                      {activeSearchIndex + 1}/{matchingDateGroups.length}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setActiveSearchIndex(
-                          (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
-                        )
-                      }
-                      className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
-                      aria-label="Previous search result"
-                    >
-                      <ChevronLeft size={12} />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
-                      }
-                      className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
-                      aria-label="Next search result"
-                    >
-                      <ChevronRight size={12} />
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -653,6 +646,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
           </div>
         </div>
 
+        {isTimelineOpen && renderSearchNav()}
         {isTimelineOpen && renderTimeline()}
       </section>
 
@@ -738,45 +732,20 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                       setSearchQuery(e.target.value);
                       setActiveSearchIndex(0);
                     }}
-                    className="w-full bg-transparent border-none outline-none text-[12px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
+                    aria-label="Search the timeline"
+                    className="w-full bg-transparent border-none outline-none text-[16px] text-foreground font-semibold placeholder:text-muted-foreground/60 p-1"
                   />
-                  {matchingDateGroups.length > 0 && (
-                    <div className="flex items-center gap-1 shrink-0 text-[12px] font-bold text-foreground/60 select-none">
-                      <span>
-                        {activeSearchIndex + 1}/{matchingDateGroups.length}
-                      </span>
-                      <button
-                        onClick={() =>
-                          setActiveSearchIndex(
-                            (i) => (i - 1 + matchingDateGroups.length) % matchingDateGroups.length,
-                          )
-                        }
-                        className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
-                        aria-label="Previous result"
-                      >
-                        <ChevronLeft size={12} />
-                      </button>
-                      <button
-                        onClick={() =>
-                          setActiveSearchIndex((i) => (i + 1) % matchingDateGroups.length)
-                        }
-                        className="w-6 h-6 flex items-center justify-center hover:bg-black/5 rounded-full text-foreground/75 active:scale-90 transition-all touch-manipulation"
-                        aria-label="Next result"
-                      >
-                        <ChevronRight size={12} />
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <button
                   onClick={() => setIsFullscreenTimeline(false)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white/60 border border-white/50 text-foreground/60 hover:text-foreground active:scale-90 transition-all shadow-sm touch-manipulation"
+                  className="sn-pill sn-icon-btn h-10 w-10"
                   aria-label="Exit fullscreen"
                 >
                   <Minimize2 size={16} />
                 </button>
               </div>
             </div>
+            {matchingDateGroups.length > 0 && <div className="-mt-3 mb-4">{renderSearchNav()}</div>}
 
             {/* Render full screen bubbles */}
             <div
@@ -802,7 +771,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                       style={{ height: `${rowHeight}px`, gridRowStart: rowStart }}
                     >
                       <div className="flex items-center justify-center -space-x-3.5">
-                        {group.memories.map((m, mIdx) => {
+                        {group.memories.slice(0, MAX_AVATARS).map((m, mIdx) => {
                           const isMain = mIdx === 0;
                           const sizeClass = isMain ? "w-20 h-20 z-20" : "w-13 h-13 z-10";
                           const formattedMDate = m.memory_date
@@ -838,13 +807,13 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 <div className="relative z-10 flex flex-col items-center text-foreground font-bold">
                                   {formattedMDate ? (
                                     <>
-                                      <span className="text-[10px] uppercase">
+                                      <span className="text-[12px] uppercase">
                                         {format(formattedMDate, "MMM")}
                                       </span>
                                       <span className="text-xl leading-none mt-0.5">
                                         {format(formattedMDate, "d")}
                                       </span>
-                                      <span className="text-[9.5px] opacity-70 mt-0.5">
+                                      <span className="text-[12px] opacity-70 mt-0.5">
                                         {format(formattedMDate, "yyyy")}
                                       </span>
                                     </>
@@ -864,6 +833,11 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                             </button>
                           );
                         })}
+                        {group.memories.length > MAX_AVATARS && (
+                          <span className="relative z-30 grid h-9 min-w-9 place-items-center rounded-full border-2 border-white bg-white/85 px-1.5 text-[12px] font-bold text-sn-navy shadow-sm tabular-nums">
+                            +{group.memories.length - MAX_AVATARS}
+                          </span>
+                        )}
                       </div>
                       <div
                         onClick={() => {
@@ -895,15 +869,18 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   onConfirm: () => deleteMemory.mutate(activeMemory.id),
                 });
               }}
-              className="absolute right-14 top-4 z-20 rounded-full bg-red-50/90 border border-red-200/50 p-1.5 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+              className="sn-pill sn-icon-btn absolute right-16 top-4 z-20 h-10 w-10"
               title="Delete memory"
+              aria-label="Delete memory"
               disabled={deleteMemory.isPending}
             >
-              <Trash2 size={16} />
+              <Trash2 size={16} className="!text-[#c2416c]" />
             </button>
             <button
               onClick={() => setActiveMemory(null)}
-              className="absolute right-4 top-4 z-20 rounded-full bg-white/80 p-1.5 text-foreground/60 hover:text-foreground hover:bg-white border border-white/50 transition-colors shadow-sm"
+              className="sn-pill sn-icon-btn absolute right-4 top-4 z-20 h-10 w-10"
+              aria-label="Close"
+              title="Close"
             >
               <X size={16} />
             </button>
@@ -948,7 +925,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   className="sn-pill w-full h-12 text-[15px]"
                 >
                   <Play size={13} fill="currentColor" />
-                  Play 3rd Monthsary Wrapped
+                  Play monthsary story
                 </button>
               )}
 
@@ -965,7 +942,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               {activeMemory.cover_url && (
                 <button
                   onClick={() => setLightbox(activeMemory.cover_url)}
-                  className="w-full py-2.5 rounded-full border border-white/60 bg-white/40 hover:bg-white/60 text-xs font-semibold text-foreground/80 transition-all text-center shadow-sm"
+                  className="sn-ghost h-11 w-full text-[14px]"
                 >
                   View Full Photo
                 </button>

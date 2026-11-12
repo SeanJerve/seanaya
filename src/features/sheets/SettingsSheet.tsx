@@ -42,7 +42,8 @@ export function SettingsSheet({
     try {
       setUploadingAvatar(true);
       const { url } = await uploadImage("wall", relationshipId, file, `avatars/${user.id}`);
-      await supabase.from("profiles").upsert({ id: user.id, avatar_url: url });
+      const { error } = await supabase.from("profiles").upsert({ id: user.id, avatar_url: url });
+      if (error) throw error;
       toast.success("Profile picture updated!");
       refetchProfile();
       qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
@@ -56,7 +57,11 @@ export function SettingsSheet({
   const handleRemoveAvatar = async () => {
     if (!user) return;
     try {
-      await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", user.id);
+      if (error) throw error;
       toast.success("Profile picture removed!");
       refetchProfile();
       qc.invalidateQueries({ queryKey: ["recent-partner-action"] });
@@ -82,8 +87,14 @@ export function SettingsSheet({
       if (!n) throw new Error("Name is required");
       pinStorage.setName(n);
       const nameCol = slot === "a" ? { name_a: n } : { name_b: n };
-      await supabase.from("relationships").update(nameCol).eq("id", relationshipId);
-      if (user) await supabase.from("profiles").upsert({ id: user.id, display_name: n });
+      const { error } = await supabase.from("relationships").update(nameCol).eq("id", relationshipId);
+      if (error) throw error;
+      if (user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({ id: user.id, display_name: n });
+        if (profileError) throw profileError;
+      }
     },
     onSuccess: () => {
       toast.success("Name updated");
@@ -110,7 +121,11 @@ export function SettingsSheet({
   const saveAnn = useMutation({
     mutationFn: async () => {
       if (!anniversary) throw new Error("Pick a date");
-      await supabase.from("relationships").update({ anniversary }).eq("id", relationshipId);
+      const { error } = await supabase
+        .from("relationships")
+        .update({ anniversary })
+        .eq("id", relationshipId);
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Anniversary saved");
@@ -139,7 +154,7 @@ export function SettingsSheet({
   return (
     <div className="divide-y divide-[#e7e4f3]">
       <Group label="Profile">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
           <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-white bg-[#e6eafc] shadow-[var(--shadow-pill)]">
             {myProfile?.avatar_url ? (
               <img src={myProfile.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -157,12 +172,12 @@ export function SettingsSheet({
             onChange={handleAvatarUpload}
             disabled={uploadingAvatar}
           />
-          <label htmlFor="profile-pic-upload" className="sn-pill h-10 px-4 text-[14px]">
+          <label htmlFor="profile-pic-upload" className="sn-pill h-10 shrink-0 px-4 text-[14px]">
             <Upload size={15} strokeWidth={1.9} />
             {uploadingAvatar ? "Uploading…" : myProfile?.avatar_url ? "Change photo" : "Add photo"}
           </label>
           {myProfile?.avatar_url && (
-            <button onClick={handleRemoveAvatar} className="sn-ghost h-10 px-4 text-[14px]">
+            <button onClick={handleRemoveAvatar} className="sn-ghost h-10 shrink-0 px-4 text-[14px]">
               Remove
             </button>
           )}
@@ -196,7 +211,7 @@ export function SettingsSheet({
         <Row>
           <Input
             value={newPin}
-            onChange={(e) => setNewPin(e.target.value.replace(/D/g, "").slice(0, 4))}
+            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
             inputMode="numeric"
             placeholder="New 4-digit PIN"
           />

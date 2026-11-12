@@ -1,9 +1,17 @@
-import { useRef, useState, useEffect, useMemo } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Plus, Trash2, LayoutGrid, Eye, PlusCircle, Trash, Search, X } from "lucide-react";
 import { Lightbox } from "@/lib/Lightbox";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -58,6 +66,83 @@ const PAD_BACKGROUNDS = [
     btnStyle: "bg-[#faf6eb] border-amber-200",
   },
 ];
+
+// Rendered sticker box: h-24 w-24 image plus p-2 padding.
+const STICKER_BOX = 112;
+
+function DraggableSticker({
+  px,
+  py,
+  isSelected,
+  sheetRef,
+  onDragStart,
+  onMove,
+  children,
+}: {
+  px: number;
+  py: number;
+  isSelected: boolean;
+  sheetRef: RefObject<HTMLDivElement | null>;
+  onDragStart: () => void;
+  onMove: (x: number, y: number) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Once the new left/top has rendered, drop framer's leftover drag translate (before paint)
+  // so the sticker doesn't move a second time.
+  useLayoutEffect(() => {
+    x.jump(0);
+    y.jump(0);
+  }, [px, py, x, y]);
+
+  return (
+    <motion.div
+      ref={ref}
+      drag
+      dragConstraints={sheetRef}
+      dragMomentum={false}
+      dragElastic={0.1}
+      onDragStart={onDragStart}
+      onDragEnd={() => {
+        const sheet = sheetRef.current;
+        const el = ref.current;
+        if (!sheet || !el) return;
+        const sw = sheet.clientWidth;
+        const sh = sheet.clientHeight;
+        if (!sw || !sh) return;
+        // offsetLeft/Top are the laid-out position (unaffected by scale transforms).
+        const maxLeft = Math.max(0, sw - el.offsetWidth);
+        const maxTop = Math.max(0, sh - el.offsetHeight);
+        const left = Math.min(Math.max(el.offsetLeft + x.get(), 0), maxLeft);
+        const top = Math.min(Math.max(el.offsetTop + y.get(), 0), maxTop);
+        const xPct = (left / sw) * 100;
+        const yPct = (top / sh) * 100;
+        if (Math.abs(xPct - px) < 0.01 && Math.abs(yPct - py) < 0.01) {
+          x.jump(0);
+          y.jump(0);
+          return;
+        }
+        onMove(xPct, yPct);
+      }}
+      whileHover={{ scale: 1.03 }}
+      whileDrag={{ scale: 1.03, zIndex: 100 }}
+      className="sticker-drag-target absolute touch-none select-none"
+      style={{
+        x,
+        y,
+        // Clamp so the whole sticker stays on the pad, however narrow the screen.
+        left: `clamp(0px, ${px}%, calc(100% - ${STICKER_BOX}px))`,
+        top: `clamp(0px, ${py}%, calc(100% - ${STICKER_BOX}px))`,
+        zIndex: isSelected ? 50 : 10,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export function StickersView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
@@ -266,25 +351,29 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-140px)] w-full overflow-hidden flex flex-col select-none mx-auto max-w-md px-4 pt-6">
+    <div className="relative mx-auto flex min-h-[calc(100vh-140px)] w-full max-w-[640px] flex-col overflow-x-clip select-none px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+9rem)] sm:px-6 lg:max-w-[1186px] lg:flex-row lg:items-start lg:gap-8">
       {/* ── Sticker Book Pages Navigation (Floating Glass Pill Layout) ── */}
-      <div className="sn-card p-4 flex flex-col gap-2 shrink-0 z-20 relative">
+      <div className="sn-card relative z-20 flex shrink-0 flex-col gap-3 p-4 lg:w-[400px]">
         {showPageSearch && (
-          <div className="flex items-center gap-1 border-b border-white/20 pb-2">
+          <div className="flex items-center gap-2 border-b border-white/20 pb-3">
             <input
               type="text"
               value={pageSearchQuery}
               onChange={(e) => setPageSearchQuery(e.target.value)}
-              placeholder="Search pages by name or number..."
-              className="w-full font-sans text-[12px] rounded-full border border-white/50 bg-white/60 px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary/40 text-foreground placeholder:text-muted-foreground/50"
+              placeholder="Search pages by name or number"
+              aria-label="Search pages"
+              className="h-10 w-full rounded-full border border-white/50 bg-white/60 px-4 font-sans text-[16px] text-foreground outline-none placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-primary/40"
               autoFocus
             />
             {pageSearchQuery && (
               <button
+                type="button"
                 onClick={() => setPageSearchQuery("")}
-                className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                className="sn-pill sn-icon-btn h-10 w-10"
+                title="Clear search"
+                aria-label="Clear search"
               >
-                <X size={12} />
+                <X size={16} />
               </button>
             )}
           </div>
@@ -292,10 +381,10 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
         {/* Row 1: Tabs List */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1">
+          <div className="flex flex-1 items-center gap-2 overflow-x-auto scrollbar-none py-1">
             {filteredPages.length === 0 ? (
-              <span className="text-[12px] text-muted-foreground/60 italic px-1">
-                No pages match search
+              <span className="px-1 text-[13px] italic text-muted-foreground">
+                {pageSearchQuery.trim() ? "No pages match that" : "No pages yet"}
               </span>
             ) : (
               filteredPages.map((p) => {
@@ -304,15 +393,13 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                 return (
                   <button
                     key={p.id}
+                    type="button"
                     onClick={() => {
                       setActivePageId(p.id);
                       setSelectedStickerId(null);
                     }}
-                    className={`relative px-3.5 py-1.5 text-[11px] font-semibold rounded-full border transition-all shrink-0 active:scale-95 ${
-                      active
-                        ? "bg-white text-primary border-white shadow-[0_2px_8px_-3px_rgba(0,0,0,0.1)] font-bold scale-105"
-                        : "bg-white/40 text-foreground/60 border-transparent hover:bg-white/60 hover:text-foreground"
-                    }`}
+                    aria-pressed={active}
+                    className={`sn-pill h-9 shrink-0 px-4 text-[13.5px] ${active ? "sn-active" : ""}`}
                   >
                     {p.name ? `${p.name} (${idx + 1})` : idx + 1}
                   </button>
@@ -324,48 +411,54 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
 
         {/* Row 2: Page Tools */}
         {activePage && (
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[12px]">
-            <div className="flex items-center gap-2 text-foreground/55 font-medium">
-              <span>Pad Color:</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 text-[13px]">
+            <div className="flex items-center gap-2 font-medium text-foreground/60">
+              <span>Pad colour</span>
               <div className="flex items-center gap-1.5">
                 {PAD_BACKGROUNDS.map((b) => (
                   <button
                     key={b.key}
+                    type="button"
                     onClick={() => updatePageBg.mutate(b.key)}
-                    className={`h-6 w-6 rounded-full border shadow-2xs transition-all hover:scale-110 active:scale-90 touch-manipulation ${
+                    className={`h-9 w-9 shrink-0 rounded-full border shadow-2xs transition-all active:scale-90 touch-manipulation ${
                       activePage.bg_theme === b.key
-                        ? "ring-2 ring-primary ring-offset-1 scale-110"
+                        ? "ring-2 ring-primary ring-offset-1"
                         : "border-white/50"
                     } ${b.btnStyle}`}
                     title={`Pad: ${b.label}`}
                     aria-label={`Pad: ${b.label}`}
+                    aria-pressed={activePage.bg_theme === b.key}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => {
                   setShowPageSearch(!showPageSearch);
                   if (showPageSearch) setPageSearchQuery("");
                 }}
-                className={`w-7 h-7 flex items-center justify-center rounded-full active:scale-90 transition-all touch-manipulation ${showPageSearch ? "bg-white/60 text-primary" : "text-foreground/50 hover:text-foreground hover:bg-white/40"}`}
-                title="Search Page"
-                aria-label="Search Page"
+                className={`sn-pill sn-icon-btn h-10 w-10 ${showPageSearch ? "sn-active" : ""}`}
+                title="Search pages"
+                aria-label="Search pages"
+                aria-pressed={showPageSearch}
               >
-                <Search size={15} />
+                <Search size={16} />
               </button>
               <button
+                type="button"
                 onClick={() => setNewPageOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/40 text-foreground/50 hover:text-foreground active:scale-90 transition-all touch-manipulation"
-                title="New Page"
-                aria-label="New Page"
+                className="sn-pill sn-icon-btn h-10 w-10"
+                title="New page"
+                aria-label="New page"
               >
-                <PlusCircle size={15} />
+                <PlusCircle size={16} />
               </button>
               {pages.length > 1 && (
                 <button
+                  type="button"
                   onClick={() => {
                     confirm({
                       title: "Delete page?",
@@ -373,11 +466,11 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                       onConfirm: () => deletePage.mutate(activePage.id),
                     });
                   }}
-                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-red-500/80 hover:text-red-600 active:scale-90 transition-all touch-manipulation"
-                  title="Delete Page"
-                  aria-label="Delete Page"
+                  className="sn-pill sn-icon-btn h-10 w-10"
+                  title="Delete page"
+                  aria-label="Delete page"
                 >
-                  <Trash size={14} />
+                  <Trash size={16} className="!text-[#c2416c]" />
                 </button>
               )}
             </div>
@@ -386,7 +479,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
       </div>
 
       {/* ── Center Sticker Sheet Container ── */}
-      <div className="relative flex-1 w-full flex items-center justify-center py-4 bg-transparent select-none min-h-[500px]">
+      <div className="relative flex min-h-[500px] w-full flex-1 select-none items-center justify-center bg-transparent py-4 lg:py-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={activePage?.id || "empty"}
@@ -395,7 +488,7 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
             animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, rotate: 2, y: -15 }}
             transition={{ type: "spring", damping: 20, stiffness: 130 }}
-            className={`relative w-full aspect-[1/1.4] rounded-[32px] border border-white/60 overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
+            className={`relative w-full max-w-[520px] aspect-[1/1.4] rounded-[32px] border border-white/60 overflow-hidden flex flex-col justify-between ${activeBg.bgClass}`}
             onClick={() => setSelectedStickerId(null)}
           >
             {loadingPages || loadingStickers ? (
@@ -405,9 +498,9 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               </div>
             ) : pageStickers.length === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none">
-                <div className="text-sm font-medium text-foreground/60">This page is empty.</div>
-                <p className="mt-1 text-xs text-muted-foreground max-w-xs">
-                  Click the float button below to create and place a sticker!
+                <div className="font-serif text-[19px] font-semibold text-sn-navy">An empty page</div>
+                <p className="mt-1 max-w-xs text-[14px] text-sn-ink">
+                  {activePage ? "Add a sticker and drag it anywhere." : "It fills up as you add stickers."}
                 </p>
               </div>
             ) : (
@@ -418,37 +511,14 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                 const isSelected = selectedStickerId === s.id;
 
                 return (
-                  <motion.div
+                  <DraggableSticker
                     key={s.id}
-                    drag
-                    dragConstraints={sheetRef}
-                    dragMomentum={false}
-                    dragElastic={0.1}
-                    onDragEnd={(event) => {
-                      if (!sheetRef.current) return;
-                      const sheet = sheetRef.current.getBoundingClientRect();
-                      const el = event.target as HTMLElement;
-                      const card = el.closest(".sticker-drag-target") as HTMLElement;
-                      if (card) {
-                        const rect = card.getBoundingClientRect();
-                        let xPct = ((rect.left - sheet.left) / sheet.width) * 100;
-                        let yPct = ((rect.top - sheet.top) / sheet.height) * 100;
-
-                        xPct = Math.max(0, Math.min(70, xPct));
-                        yPct = Math.max(0, Math.min(80, yPct));
-
-                        updatePosition.mutate({ id: s.id, pos_x: xPct, pos_y: yPct });
-                      }
-                    }}
+                    px={px}
+                    py={py}
+                    isSelected={isSelected}
+                    sheetRef={sheetRef}
                     onDragStart={() => setSelectedStickerId(null)}
-                    whileHover={{ scale: 1.03 }}
-                    whileDrag={{ scale: 1.03, zIndex: 100 }}
-                    className="sticker-drag-target absolute touch-none select-none"
-                    style={{
-                      left: `${px}%`,
-                      top: `${py}%`,
-                      zIndex: isSelected ? 50 : 10,
-                    }}
+                    onMove={(pos_x, pos_y) => updatePosition.mutate({ id: s.id, pos_x, pos_y })}
                   >
                     <div
                       className="relative p-2"
@@ -480,10 +550,11 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                                 setLightbox(s.image_url);
                                 setSelectedStickerId(null);
                               }}
-                              className="p-1.5 rounded-full hover:bg-white text-foreground/75 hover:text-foreground transition-all"
+                              className="sn-pill sn-icon-btn h-10 w-10"
                               title="View large"
+                              aria-label="View large"
                             >
-                              <Eye size={12} />
+                              <Eye size={16} />
                             </button>
                             <button
                               onClick={() => {
@@ -494,16 +565,17 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                                   onConfirm: () => deleteSticker.mutate(s),
                                 });
                               }}
-                              className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-all"
+                              className="sn-pill sn-icon-btn h-10 w-10"
                               title="Delete sticker"
+                              aria-label="Delete sticker"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={16} className="!text-[#c2416c]" />
                             </button>
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
-                  </motion.div>
+                  </DraggableSticker>
                 );
               })
             )}
@@ -546,10 +618,10 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="relative w-full max-w-[280px] sn-card p-5 shadow-2xl z-10 space-y-4"
+              className="relative w-full max-w-[340px] sn-card p-5 shadow-2xl z-10 space-y-4"
             >
-              <h3 className="display text-sm font-semibold text-foreground/80">
-                New Sticker Sheet Name
+              <h3 className="font-serif text-[22px] font-semibold text-sn-navy">
+                New sticker sheet
               </h3>
               <input
                 type="text"
@@ -557,7 +629,8 @@ export function StickersView({ relationshipId }: { relationshipId: string }) {
                 placeholder="e.g. Doodles, Cute Cats"
                 value={newPageName}
                 onChange={(e) => setNewPageName(e.target.value)}
-                className="w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[15px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
+                aria-label="Sticker sheet name"
+                className="w-full rounded-[16px] border border-[#e1e4f5] bg-white/85 px-4 py-3 text-[16px] text-sn-navy placeholder:text-sn-faint outline-none focus:border-sn-periwinkle"
               />
               <div className="flex gap-2 text-xs font-semibold pt-1">
                 <button

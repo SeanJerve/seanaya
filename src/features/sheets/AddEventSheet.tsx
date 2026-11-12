@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
 import { FieldWrap, FormStack, Input, OfflineNote, PrimaryButton, Toggle } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
-import { CloudOff, Save } from "lucide-react";
+import { format, getDate, parseISO } from "date-fns";
+import { useRelationship } from "@/hooks/useRelationship";
 
 const CATS = [
   "relationship",
@@ -32,10 +33,11 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
   const { closeSheet } = useAppStore();
   const qc = useQueryClient();
   const online = useOnline();
+  const { data: rel } = useRelationship();
 
   const [form, setForm] = useState<Form>({
     title: "",
-    when: new Date().toISOString().slice(0, 16),
+    when: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     cat: "relationship",
     countdown: false,
     recurring: false,
@@ -46,14 +48,18 @@ export function AddEventSheet({ relationshipId }: { relationshipId: string }) {
   const create = useMutation({
     mutationFn: async () => {
       if (!user || !form.title.trim()) throw new Error("Title is required");
+      // Monthsary day comes from the anniversary; fall back to the event's own day.
+      const monthDay = rel?.anniversary
+        ? getDate(parseISO(rel.anniversary))
+        : getDate(new Date(form.when));
       const { error } = await supabase.from("events").insert({
         relationship_id: relationshipId,
         created_by: user.id,
         title: form.title,
         starts_at: new Date(form.when).toISOString(),
-        category: "relationship",
+        category: form.cat,
         countdown: form.countdown,
-        recurrence: form.recurring ? "MONTHLY:19" : null,
+        recurrence: form.recurring ? `MONTHLY:${monthDay}` : null,
       });
       if (error) throw error;
     },

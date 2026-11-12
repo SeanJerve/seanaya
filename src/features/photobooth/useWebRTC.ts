@@ -33,9 +33,21 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   const pendingIce = useRef<RTCIceCandidateInit[]>([]);
   const wantOffer = useRef(false);
   const partnerSeen = useRef(false);
+  const camGen = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const send = (event: string, payload: Record<string, unknown>) =>
-    channelRef.current?.send({ type: "broadcast", event, payload: { ...payload, sender: userSlot } });
+    channelRef.current?.send({
+      type: "broadcast",
+      event,
+      payload: { ...payload, sender: userSlot },
+    });
 
   const dropRemote = () => {
     setRemoteStream(null);
@@ -48,7 +60,9 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "connected") setPeerConnected(true);
-      if (["failed", "disconnected", "closed"].includes(pc.connectionState)) dropRemote();
+      // "disconnected" often recovers on its own; only drop the stream when it's really gone.
+      if (pc.connectionState === "disconnected") setPeerConnected(false);
+      if (pc.connectionState === "failed" || pc.connectionState === "closed") dropRemote();
     };
     pc.ontrack = (e) => {
       if (e.streams?.[0]) setRemoteStream(e.streams[0]);
@@ -92,12 +106,18 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   }, [makePc]);
 
   const startCamera = useCallback(async () => {
+    const gen = ++camGen.current;
     try {
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
         audio: false,
       });
+      // Left the booth (or flipped the camera again) while the permission prompt was up.
+      if (gen !== camGen.current || !mounted.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       localStreamRef.current = stream;
       setLocalStream(stream);
       setCameraError(null);
@@ -110,6 +130,7 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
       // B can't offer; ask A to renegotiate now that there's a camera to send.
       else if (userSlot === "b" && partnerSeen.current) send("hello", { reply: true });
     } catch (err: any) {
+      if (gen !== camGen.current || !mounted.current) return;
       setCameraError(err?.name === "NotAllowedError" ? "denied" : "unavailable");
     }
   }, [facingMode, userSlot, sendOffer]);
@@ -118,7 +139,9 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     if (!enabled) return;
     startCamera();
     return () => {
+      camGen.current++;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
     };
   }, [enabled, startCamera]);
 
@@ -196,9 +219,11 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
 
   /** Grab the current frame, scaled down so it travels over realtime. */
   const captureLocalFrame = (videoEl: HTMLVideoElement): string => {
-    const vw = videoEl.videoWidth || 640;
-    const vh = videoEl.videoHeight || 480;
-    const scale = Math.min(1, 720 / Math.max(vw, vh));
+    // Not playing yet: a blank frame isn't a photo.
+    if (!videoEl.videoWidth || videoEl.readyState < 2) return "";
+    const vw = videoEl.videoWidth;
+    const vh = videoEl.videoHeight;
+    const scale = Math.min(1, 640 / Math.max(vw, vh));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(vw * scale);
     canvas.height = Math.round(vh * scale);
@@ -209,7 +234,7 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
       ctx.scale(-1, 1);
     }
     ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+    return canvas.toDataURL("image/jpeg", 0.78);
   };
 
   return {

@@ -25,6 +25,10 @@ const OUTLINE_COLORS = [
 
 type Tool = "wand" | "restore" | "erase";
 
+// Longest side the cut-out works at. Plenty for a 96px sticker, and keeps the
+// synchronous pixel passes from freezing phones on full-size camera photos.
+const MAX_STICKER_SIDE = 1024;
+
 export function AddStickerSheet({
   relationshipId,
   pageId,
@@ -34,7 +38,9 @@ export function AddStickerSheet({
 }) {
   const { user } = useUser();
   const qc = useQueryClient();
-  const { closeSheet } = useAppStore();
+  const { closeSheet, activeStickerPageId } = useAppStore();
+  // StickersView publishes the page being viewed; new stickers land there, not on page 1.
+  const targetPageId = pageId ?? activeStickerPageId;
 
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<BGRemovalMode>("exterior");
@@ -44,7 +50,8 @@ export function AddStickerSheet({
   const [activeTool, setActiveTool] = useState<Tool>("wand");
   const [brushSize, setBrushSize] = useState(16);
 
-  const [rawImage, setRawImage] = useState<HTMLImageElement | null>(null);
+  // Source image, already downscaled to MAX_STICKER_SIDE so the pixel loops stay fast on phones.
+  const [rawImage, setRawImage] = useState<HTMLCanvasElement | null>(null);
   const [processing, setProcessing] = useState(false);
 
   // Undo history stack of ImageData
@@ -68,8 +75,23 @@ export function AddStickerSheet({
     img.src = url;
 
     img.onload = () => {
-      setRawImage(img);
       URL.revokeObjectURL(url);
+      // A 12MP photo is ~48M bytes of pixels; the background-removal loops below are synchronous,
+      // so shrink to MAX_STICKER_SIDE on the longest side first.
+      const nw = img.naturalWidth;
+      const nh = img.naturalHeight;
+      const scale = Math.min(1, MAX_STICKER_SIDE / Math.max(nw, nh));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(nw * scale));
+      c.height = Math.max(1, Math.round(nh * scale));
+      const cctx = c.getContext("2d");
+      if (!cctx) {
+        toast.error("Could not load selected image");
+        return;
+      }
+      cctx.imageSmoothingQuality = "high";
+      cctx.drawImage(img, 0, 0, c.width, c.height);
+      setRawImage(c);
     };
     img.onerror = () => {
       toast.error("Could not load selected image");
@@ -83,14 +105,17 @@ export function AddStickerSheet({
 
     setProcessing(true);
 
-    const w = rawImage.naturalWidth;
-    const h = rawImage.naturalHeight;
+    const w = rawImage.width;
+    const h = rawImage.height;
 
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
+    if (!ctx) {
+      setProcessing(false);
+      return;
+    }
 
     ctx.drawImage(rawImage, 0, 0);
     const imgData = ctx.getImageData(0, 0, w, h);
@@ -290,7 +315,7 @@ export function AddStickerSheet({
         pos_x: x,
         pos_y: y,
         rotation: rot,
-        page_id: pageId || null,
+        page_id: targetPageId || null,
       });
 
       if (error) throw error;

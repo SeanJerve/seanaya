@@ -7,6 +7,7 @@ import { useAppStore } from "@/features/app/store";
 import { FieldWrap, FormStack, Input, OfflineNote, PhotoPicker, PrimaryButton, Textarea, Toggle } from "./form-ui";
 import { useDraft, useOnline } from "@/lib/idb-drafts";
 import { uploadImage } from "@/lib/storage";
+import { format } from "date-fns";
 
 type Form = {
   title: string;
@@ -24,7 +25,7 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
   const [form, setForm] = useState<Form>({
     title: "",
     description: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: format(new Date(), "yyyy-MM-dd"),
     location: "",
   });
   const [file, setFile] = useState<File | null>(null);
@@ -68,10 +69,11 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
             file,
             `${mem.id}/cover`,
           );
-          await supabase
+          const { error: coverError } = await supabase
             .from("memories")
             .update({ cover_url: url, cover_path: path })
             .eq("id", mem.id);
+          if (coverError) throw coverError;
         } catch (e) {
           console.warn("Photo upload failed", e);
           toast.error("Memory saved, but the photo didn't upload");
@@ -88,6 +90,7 @@ export function AddMemorySheet({ relationshipId }: { relationshipId: string }) {
     onSuccess: () => {
       toast.success("Memory saved");
       qc.invalidateQueries({ queryKey: ["memories"] });
+      qc.invalidateQueries({ queryKey: ["photos-cal"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
       clear();
       closeSheet();

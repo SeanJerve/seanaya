@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "./useUser";
@@ -80,22 +80,31 @@ export function useNotifications(relationshipId: string | undefined) {
   const list = q.data ?? [];
   const unread = list.filter((n) => !n.read).length;
 
-  return {
-    list,
-    unread,
-    markAllRead: async () => {
-      if (!relationshipId || !user) return;
-      await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("relationship_id", relationshipId)
-        .eq("user_id", user.id)
-        .eq("read", false);
-      qc.invalidateQueries({ queryKey: ["notifications"] });
-    },
-    markOneRead: async (id: string) => {
+  // Stable identities so consumers can safely list these as effect deps.
+  const userId = user?.id;
+  const markAllRead = useCallback(async () => {
+    if (!relationshipId || !userId) return;
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("relationship_id", relationshipId)
+      .eq("user_id", userId)
+      .eq("read", false);
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  }, [relationshipId, userId, qc]);
+
+  const markOneRead = useCallback(
+    async (id: string) => {
       await supabase.from("notifications").update({ read: true }).eq("id", id);
       qc.invalidateQueries({ queryKey: ["notifications"] });
     },
+    [qc],
+  );
+
+  return {
+    list,
+    unread,
+    markAllRead,
+    markOneRead,
   };
 }

@@ -68,6 +68,8 @@ const OUTLINE_COLORS = [
   { label: "Sky", value: "oklch(0.94 0.05 230 / 0.85)" },
 ];
 
+const UNSUPPORTED_IMAGE = "unsupported-image";
+
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
@@ -108,6 +110,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     data: pages = [],
     refetch: refetchPages,
     isLoading: loadingPages,
+    isSuccess: pagesLoaded,
   } = useQuery({
     queryKey: ["album-pages", relationshipId],
     queryFn: async () => {
@@ -136,15 +139,27 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       });
   }, [pages, pageSearchQuery]);
 
-  // Fetch album items
+  // Fetch album items, scoped to this relationship's pages
+  const pageIds = useMemo(() => pages.map((p) => p.id), [pages]);
+  const itemsKey = useMemo(
+    () => ["album-items", relationshipId, pageIds.join(",")] as const,
+    [relationshipId, pageIds],
+  );
   const {
     data: items = [],
     refetch: refetchItems,
     isLoading: loadingItems,
   } = useQuery({
-    queryKey: ["album-items", relationshipId],
+    queryKey: itemsKey,
+    enabled: pagesLoaded,
+    // Keep showing the current items while a page add/remove changes the key
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("album_items").select("*");
+      if (pageIds.length === 0) return [] as AlbumItem[];
+      const { data, error } = await (supabase as any)
+        .from("album_items")
+        .select("*")
+        .in("page_id", pageIds);
       if (error) throw error;
       return data as AlbumItem[];
     },
@@ -180,16 +195,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   // Filter 24-hours threshold helper
   const oneDayAgo = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000), []);
 
+  // Photo notes are saved as kind "note" with an image_url (captioned or not),
+  // so any note carrying an image counts as a photo.
   const recentPolaroids = useMemo(() => {
     return recentNotes.filter(
-      (n: any) => n.kind === "photo" && n.image_url && new Date(n.created_at) > oneDayAgo,
+      (n: any) => !!n.image_url && new Date(n.created_at) > oneDayAgo,
     );
   }, [recentNotes, oneDayAgo]);
 
   const recentTexts = useMemo(() => {
     return recentNotes.filter(
       (n: any) =>
-        n.kind === "note" && n.body && n.body !== "(photo)" && new Date(n.created_at) > oneDayAgo,
+        n.kind === "note" &&
+        !n.image_url &&
+        n.body &&
+        n.body !== "(photo)" &&
+        new Date(n.created_at) > oneDayAgo,
     );
   }, [recentNotes, oneDayAgo]);
 
@@ -201,34 +222,65 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     return userStickers.filter((st: any) => new Date(st.created_at) <= oneDayAgo);
   }, [userStickers, oneDayAgo]);
 
-  // Create a default page if none exist
+  // Create a default page if none exist. Only once the pages query has actually
+  // succeeded (not while it is still loading the default []), and only once.
+  const creatingDefaultPageRef = useRef(false);
   useEffect(() => {
-    if (pages.length === 0 && isOpen) {
-      (async () => {
-        await (supabase as any).from("album_pages").insert({
-          relationship_id: relationshipId,
-          page_index: 0,
-        });
-        refetchPages();
-      })();
-    }
-  }, [pages, isOpen]);
+    if (!isOpen || !pagesLoaded || pages.length > 0 || creatingDefaultPageRef.current) return;
+    creatingDefaultPageRef.current = true;
+    (async () => {
+      const { error } = await (supabase as any).from("album_pages").insert({
+        relationship_id: relationshipId,
+        page_index: 0,
+      });
+      if (error) {
+        toast.error(error.message || "Couldn't create the first page");
+        creatingDefaultPageRef.current = false;
+        return;
+      }
+      refetchPages();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages.length, pagesLoaded, isOpen, relationshipId]);
 
-  // Real-time synchronization
+  // Keep the selected page in range if a page disappears (e.g. partner deleted it)
+  useEffect(() => {
+    if (pages.length === 0) return;
+    setCurrentPageIdx((idx) => Math.max(0, Math.min(idx, pages.length - 1)));
+  }, [pages.length]);
+
+  // Real-time synchronization, scoped to this relationship
+  const pageIdsRef = useRef<string[]>(pageIds);
+  pageIdsRef.current = pageIds;
   useEffect(() => {
     const channel = supabase
-      .channel("album-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "album_pages" }, () => {
-        refetchPages();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "album_items" }, () => {
+      .channel(`album-realtime-${relationshipId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "album_pages",
+          filter: `relationship_id=eq.${relationshipId}`,
+        },
+        () => {
+          refetchPages();
+        },
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "album_items" }, (payload: any) => {
+        // album_items has no relationship_id; only react to rows on our pages.
+        // Deletes may only carry the primary key, so refetch when page_id is unknown.
+        const pageId = payload?.new?.page_id ?? payload?.old?.page_id;
+        if (pageId && !pageIdsRef.current.includes(pageId)) return;
         refetchItems();
       })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+    // refetch functions are stable per observer; resubscribe only when the relationship changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relationshipId]);
 
   useEffect(() => {
     const key = "intro-dismissed-album";
@@ -328,6 +380,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       refetchPages();
       toast.success("Page added to album!");
     },
+    onError: (e: any) => toast.error(e?.message || "Something went wrong"),
   });
 
   const deletePage = useMutation({
@@ -340,6 +393,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       setCurrentPageIdx((prev) => Math.max(0, prev - 1));
       toast.success("Page deleted");
     },
+    onError: (e: any) => toast.error(e?.message || "Something went wrong"),
   });
 
   const renamePage = useMutation({
@@ -351,6 +405,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       refetchPages();
       toast.success("Page renamed!");
     },
+    onError: (e: any) => toast.error(e?.message || "Something went wrong"),
   });
 
   const handleRenameSubmit = (e: React.FormEvent) => {
@@ -369,6 +424,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
     onSuccess: () => {
       refetchItems();
     },
+    onError: (e: any) => toast.error(e?.message || "Something went wrong"),
   });
 
   const updateItemPosition = useMutation({
@@ -380,16 +436,16 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       if (error) throw error;
     },
     onMutate: async ({ id, pos_x, pos_y }) => {
-      await qc.cancelQueries({ queryKey: ["album-items", relationshipId] });
-      const previous = qc.getQueryData<AlbumItem[]>(["album-items", relationshipId]);
-      qc.setQueryData<AlbumItem[]>(["album-items", relationshipId], (old) => {
+      await qc.cancelQueries({ queryKey: itemsKey });
+      const previous = qc.getQueryData<AlbumItem[]>(itemsKey);
+      qc.setQueryData<AlbumItem[]>(itemsKey, (old) => {
         if (!old) return [];
         return old.map((it) => (it.id === id ? { ...it, pos_x, pos_y } : it));
       });
       return { previous };
     },
     onError: (e, vars, ctx) => {
-      if (ctx?.previous) qc.setQueryData(["album-items", relationshipId], ctx.previous);
+      if (ctx?.previous) qc.setQueryData(itemsKey, ctx.previous);
     },
     onSuccess: () => {
       refetchItems();
@@ -405,16 +461,16 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       if (error) throw error;
     },
     onMutate: async ({ id, rotation }) => {
-      await qc.cancelQueries({ queryKey: ["album-items", relationshipId] });
-      const previous = qc.getQueryData<AlbumItem[]>(["album-items", relationshipId]);
-      qc.setQueryData<AlbumItem[]>(["album-items", relationshipId], (old) => {
+      await qc.cancelQueries({ queryKey: itemsKey });
+      const previous = qc.getQueryData<AlbumItem[]>(itemsKey);
+      qc.setQueryData<AlbumItem[]>(itemsKey, (old) => {
         if (!old) return [];
         return old.map((it) => (it.id === id ? { ...it, rotation } : it));
       });
       return { previous };
     },
     onError: (e, vars, ctx) => {
-      if (ctx?.previous) qc.setQueryData(["album-items", relationshipId], ctx.previous);
+      if (ctx?.previous) qc.setQueryData(itemsKey, ctx.previous);
     },
     onSuccess: () => {
       refetchItems();
@@ -431,6 +487,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       setSelectedItemId(null);
       toast.success("Item removed");
     },
+    onError: (e: any) => toast.error(e?.message || "Something went wrong"),
   });
 
   // Upload and bake canvas crop
@@ -451,19 +508,22 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       offsetY: number;
     }) => {
       const activePage = pages[currentPageIdx];
-      if (!activePage) return;
+      if (!activePage) throw new Error("Open a page first");
 
       // 1. Create a helper image element
       const img = new Image();
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
+        reader.onerror = () => reject(new Error("Couldn't read that file"));
         reader.readAsDataURL(file);
       });
-      img.src = dataUrl;
-      await new Promise((resolve) => {
-        img.onload = resolve;
+      // Handlers go on before src so a cached/instant load or failure is never missed.
+      // Unsupported formats (e.g. HEIC) fire onerror instead of hanging forever.
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(UNSUPPORTED_IMAGE));
+        img.src = dataUrl;
       });
 
       // 2. Setup canvas dimensions
@@ -516,7 +576,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       const croppedFile = new File([blob], `album_cropped_${itemId}.png`, { type: "image/png" });
       const { url } = await uploadImage("wall", relationshipId, croppedFile, `album/${itemId}`);
 
-      await addItem.mutateAsync({
+      // Insert directly (not via addItem) so a failure produces one toast, not two
+      const { error } = await (supabase as any).from("album_items").insert({
         page_id: activePage.id,
         item_type: "picture",
         content: null,
@@ -527,14 +588,24 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         scale: 1,
         rotation: 0,
       });
+      if (error) throw error;
     },
     onSuccess: () => {
+      refetchItems();
       toast.success("Picture added!");
       setSelectedFile(null);
       setPreviewUrl(null);
       setActiveTab(null);
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to add picture"),
+    onError: (e: any) => {
+      if (e?.message === UNSUPPORTED_IMAGE) {
+        toast.error("That image type isn't supported");
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        return;
+      }
+      toast.error(e?.message || "Failed to add picture");
+    },
   });
 
   const activePage = pages[currentPageIdx];
@@ -607,8 +678,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       pos_y: 30,
       scale: 1,
       rotation: 0,
-    });
-    toast.success("Sticker added");
+    }, { onSuccess: () => toast.success("Sticker added") });
   };
   const SHAPE_LABEL: Record<string, string> = {
     rect: "Portrait",
@@ -819,9 +889,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               >
                                 {it.image_url ? (
                                   <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
-                                ) : (
-                                  <div className="text-5xl">{it.content}</div>
-                                )}
+                                ) : it.content?.trim() ? (
+                                  // Legacy sticker stored as an emoji/text string: keep it, but as a small quiet tag
+                                  <div className="max-w-[96px] truncate rounded-full border border-white bg-white/80 px-2.5 py-1 text-[14px] leading-none text-sn-muted">
+                                    {it.content}
+                                  </div>
+                                ) : null}
                               </div>
                             )}
 
@@ -1024,8 +1097,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                       pos_y: 30,
                                       scale: 1,
                                       rotation: (Math.random() - 0.5) * 8,
-                                    });
-                                    toast.success("Polaroid added");
+                                    }, { onSuccess: () => toast.success("Polaroid added") });
                                   }}
                                   aria-label="Add this polaroid"
                                   className="w-16 shrink-0 rounded-[3px] bg-white p-1 pb-3 shadow-[0_8px_14px_-8px_rgba(50,70,150,0.55)] transition active:scale-95"
@@ -1072,6 +1144,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   id="preview-img-target"
                                   src={previewUrl}
                                   alt=""
+                                  onError={() => {
+                                    toast.error("That image type isn't supported");
+                                    setSelectedFile(null);
+                                    setPreviewUrl(null);
+                                  }}
                                   className="max-w-none origin-center"
                                   style={{
                                     width: "140px",
@@ -1190,8 +1267,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                       pos_y: 30,
                                       scale: 1,
                                       rotation: 0,
-                                    });
-                                    toast.success("Note added");
+                                    }, { onSuccess: () => toast.success("Note added") });
                                   }}
                                   className="h-20 w-28 shrink-0 overflow-hidden rounded-[8px] p-2.5 text-left shadow-[0_8px_14px_-10px_rgba(50,70,150,0.55)] transition active:scale-95"
                                   style={{ background: t.color || PASTEL_COLORS[0] }}
