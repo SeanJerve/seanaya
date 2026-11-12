@@ -75,7 +75,7 @@ export function AppHeader({
         <img
           src={chibiFor(userName)}
           alt=""
-          className="h-full w-full scale-[1.45] object-cover object-[50%_32%]"
+          className="h-full w-full scale-[1.3] object-cover object-[50%_62%]"
         />
       </button>
     </div>
