@@ -1,5 +1,6 @@
 -- Daily location each member shares with their partner.
 -- One row per (space, slot); a device that re-claims a slot simply overwrites it.
+-- Safe to run more than once.
 
 create table if not exists public.member_locations (
   relationship_id uuid not null references public.relationships (id) on delete cascade,
@@ -14,6 +15,7 @@ create table if not exists public.member_locations (
 alter table public.member_locations enable row level security;
 
 -- Either member of the space can read both rows.
+drop policy if exists "members read locations" on public.member_locations;
 create policy "members read locations"
   on public.member_locations for select
   using (
@@ -25,6 +27,7 @@ create policy "members read locations"
   );
 
 -- Each member writes only the row for the slot they currently hold.
+drop policy if exists "member writes own slot" on public.member_locations;
 create policy "member writes own slot"
   on public.member_locations for insert
   with check (
@@ -38,6 +41,7 @@ create policy "member writes own slot"
     )
   );
 
+drop policy if exists "member updates own slot" on public.member_locations;
 create policy "member updates own slot"
   on public.member_locations for update
   using (
@@ -51,5 +55,13 @@ create policy "member updates own slot"
     )
   );
 
--- Live updates on the partner's screen.
-alter publication supabase_realtime add table public.member_locations;
+-- Live updates on the partner's screen (only added if not already there).
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'member_locations'
+  ) then
+    alter publication supabase_realtime add table public.member_locations;
+  end if;
+end $$;
