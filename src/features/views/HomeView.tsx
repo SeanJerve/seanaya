@@ -25,8 +25,12 @@ import {
   BookHeart,
   PenSquare,
   Clock,
-  Compass,
-  ArrowUpRight,
+  MapPin,
+  Sparkles,
+  ArrowRight,
+  RefreshCw,
+  Gift,
+  Star,
   X,
   Check,
 } from "lucide-react";
@@ -46,8 +50,15 @@ import {
   getLiveTimeInTimezone,
   getTimezoneOffsetDescription,
   getSolarState,
-  KNOWN_CITIES,
 } from "@/lib/location-service";
+import {
+  WashiTape,
+  LoopedHeartRibbon,
+  PeekingCat,
+  CuteBoyAvatar,
+  CuteGirlAvatar,
+  LilyBouquetAccent,
+} from "@/components/kawaii/KawaiiIllustrations";
 
 export function HomeView({
   relationshipId,
@@ -61,8 +72,8 @@ export function HomeView({
   const { user } = useUser();
   const { data: rel } = useRelationship();
   const partnerName = rel
-    ? (rel.user_a_id === user?.id ? rel.name_b : rel.name_a) || "Partner"
-    : "Partner";
+    ? (rel.user_a_id === user?.id ? rel.name_b : rel.name_a) || "Aya"
+    : "Aya";
 
   // Dynamic Location State
   const [userCity, setUserCityLocal] = useState(() => getUserCity());
@@ -87,7 +98,7 @@ export function HomeView({
       userCityProfile.lat,
       userCityProfile.lng,
       partnerCityProfile.lat,
-      partnerCityProfile.lng,
+      partnerCityProfile.lng
     );
   }, [userCityProfile, partnerCityProfile]);
 
@@ -113,7 +124,7 @@ export function HomeView({
     return getTimezoneOffsetDescription(
       userCityProfile.timezone,
       partnerCityProfile.timezone,
-      nowDate,
+      nowDate
     );
   }, [userCityProfile.timezone, partnerCityProfile.timezone, nowDate]);
 
@@ -124,13 +135,13 @@ export function HomeView({
     queryKey: ["recent-partner-action", relationshipId, user?.id],
     enabled: !!user && !!relationshipId,
     queryFn: async () => {
-      const { data: rel } = await supabase
+      const { data: r } = await supabase
         .from("relationships")
         .select("*")
         .eq("id", relationshipId)
         .single();
-      if (!rel) return null;
-      const partnerId = rel.user_a_id === user!.id ? rel.user_b_id : rel.user_a_id;
+      if (!r) return null;
+      const partnerId = r.user_a_id === user!.id ? r.user_b_id : r.user_a_id;
       if (!partnerId) return null;
 
       const { data: partnerProfile } = await supabase
@@ -138,7 +149,7 @@ export function HomeView({
         .select("*")
         .eq("id", partnerId)
         .maybeSingle();
-      const pName = rel.user_a_id === user!.id ? rel.name_b : rel.name_a;
+      const pName = r.user_a_id === user!.id ? r.name_b : r.name_a;
 
       const { data: latestNotif } = await supabase
         .from("notifications")
@@ -166,7 +177,7 @@ export function HomeView({
             kind: "note",
             createdAt: latestNote.created_at,
             item: latestNote,
-            text: "pinned a quiet thought",
+            text: "pinned a note",
           };
         }
         return null;
@@ -215,7 +226,7 @@ export function HomeView({
           .eq("id", latestNotif.ref_id)
           .maybeSingle();
         item = data;
-        text = "shared a melody";
+        text = "shared a song";
       } else if (latestNotif.kind === "hug") {
         const { data } = await supabase
           .from("hugs")
@@ -223,7 +234,7 @@ export function HomeView({
           .eq("id", latestNotif.ref_id)
           .maybeSingle();
         item = data;
-        text = "sent a warm embrace";
+        text = "sent a warm hug";
       }
 
       return {
@@ -314,10 +325,10 @@ export function HomeView({
   const { data: monthPhotos = [] } = useQuery({
     queryKey: ["photos-cal-home", relationshipId, cursor.getFullYear(), cursor.getMonth()],
     queryFn: async () => {
-      const sStart = startOfMonth(cursor).toISOString();
-      const sEnd = endOfMonth(cursor).toISOString();
       const sDateStart = format(startOfMonth(cursor), "yyyy-MM-dd");
       const sDateEnd = format(endOfMonth(cursor), "yyyy-MM-dd");
+      const sStart = startOfMonth(cursor).toISOString();
+      const sEnd = endOfMonth(cursor).toISOString();
 
       const [mems, notes] = await Promise.all([
         supabase
@@ -399,7 +410,7 @@ export function HomeView({
       tempDate.setFullYear(start.getFullYear() + years);
       tempDate.setMonth(start.getMonth() + months);
       const remainingDays = Math.floor(
-        (now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24),
+        (now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       setTimeTogether({
@@ -450,63 +461,62 @@ export function HomeView({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(`A quiet embrace sent to ${partnerName}`);
+      toast.success(`A warm hug sent to ${partnerName} ♡`);
       qc.invalidateQueries({ queryKey: ["stats"] });
     },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
   });
 
   return (
-    <div className="mx-auto max-w-md md:max-w-4xl lg:max-w-5xl px-4 sm:px-6 py-6 pb-32">
-      {/* ── Monthsary Celebration Banner ── */}
+    <div className="relative mx-auto max-w-md md:max-w-4xl lg:max-w-6xl px-3 sm:px-6 py-4 pb-32">
+      {/* ── 3rd Monthsary Special Story Banner ── */}
       {isMonthsary && (
         <section
           onClick={openMonthsary}
-          className="mb-6 cursor-pointer relative overflow-hidden rounded-2xl border border-rose-300/40 bg-gradient-to-r from-rose-50/80 via-white/80 to-amber-50/60 backdrop-blur-2xl p-4 shadow-sm hover:border-rose-400/50 transition-all active:scale-[0.99] group"
+          className="mb-6 cursor-pointer relative overflow-hidden rounded-3xl border-2 border-pink-200/80 bg-gradient-to-r from-pink-100/90 via-white/90 to-sky-100/80 backdrop-blur-xl p-4 sm:p-5 shadow-[0_8px_25px_rgba(251,207,232,0.45)] hover:border-pink-300 transition-all active:scale-[0.99] group"
         >
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="font-serif text-base font-medium tracking-tight text-foreground flex items-center gap-2">
-                <span>Happy Monthsary, {partnerName}</span>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <div className="space-y-1">
+              <div className="font-serif text-base sm:text-lg font-medium text-[#233554] flex items-center gap-2">
+                <span>Happy Monthsary, {partnerName}!</span>
+                <span className="text-pink-500">♡</span>
               </div>
-              <p className="text-xs text-muted-foreground font-light">
-                Our milestone story is ready to unfold. Tap to view.
+              <p className="text-xs text-sky-900/70 font-light">
+                Our milestone memory story is ready. Tap to open our little chapter.
               </p>
             </div>
-            <span className="text-xs font-medium tracking-wide text-foreground/80 px-3 py-1.5 rounded-full border border-foreground/10 bg-white/70 shadow-2xs group-hover:bg-white transition-colors">
-              Open Story
+            <span className="text-xs font-medium text-pink-700 bg-white/90 px-4 py-1.5 rounded-full border border-pink-200 shadow-xs group-hover:bg-pink-50 transition-colors">
+              Open Story ♡
             </span>
           </div>
         </section>
       )}
 
-      {/* ── Responsive 2-Column Spread ── */}
-      <div className="md:grid md:grid-cols-12 md:gap-7 space-y-6 md:space-y-0 items-start">
-        {/* Left Column: Transit Bar, Daily Greeting, What Matters Today */}
+      {/* ── Responsive 2-Column Spread (Matching Reference Image) ── */}
+      <div className="md:grid md:grid-cols-12 md:gap-6 space-y-6 md:space-y-0 items-start">
+        {/* Left Column (Col 7 on Desktop) */}
         <div className="space-y-6 md:col-span-7">
-          {/* ── Architectural Dual-City LDR Transit Bar ── */}
-          <section className="relative overflow-hidden rounded-3xl border border-black/[0.06] bg-white/75 backdrop-blur-2xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] space-y-4">
+          {/* ── CARD 1: SYNCHRONOUS SPACE ── */}
+          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
             {/* Header: Live sync pulse & Distance badge */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-foreground/70">
+                <span className="text-[11px] uppercase tracking-[0.22em] font-bold text-[#334e68]">
                   Synchronous Space
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono tabular-nums text-foreground/75 px-2.5 py-0.5 rounded-full border border-black/[0.06] bg-black/[0.02]">
-                  {distanceKm} km apart
-                </span>
+                <div className="flex items-center gap-1 text-[11px] font-mono tabular-nums text-[#334e68] px-3 py-1 rounded-full border border-sky-200/80 bg-sky-50/70 shadow-2xs">
+                  <span>{distanceKm} km apart</span>
+                </div>
                 <button
                   onClick={() => setShowCityPicker((v) => !v)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1 cursor-pointer"
-                  title="Configure cities"
+                  className="text-[11px] text-sky-600 hover:text-sky-800 bg-white/80 px-2.5 py-1 rounded-full border border-sky-100 shadow-2xs transition-colors cursor-pointer"
                 >
                   Edit
                 </button>
@@ -515,12 +525,12 @@ export function HomeView({
 
             {/* In-place City Configuration Accordion */}
             {showCityPicker && (
-              <div className="p-3.5 rounded-2xl border border-black/[0.06] bg-black/[0.015] space-y-3">
-                <div className="flex items-center justify-between text-xs font-medium text-foreground">
+              <div className="p-3.5 rounded-2xl border border-sky-200 bg-sky-50/50 space-y-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-[#233554]">
                   <span>Update Partner City</span>
                   <button
                     onClick={() => setShowCityPicker(false)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
@@ -530,8 +540,8 @@ export function HomeView({
                     type="text"
                     value={tempPartnerCity}
                     onChange={(e) => setTempPartnerCity(e.target.value)}
-                    placeholder="Enter city (e.g. Manila, Cebu, Tokyo)"
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-black/10 bg-white text-xs outline-none focus:ring-1 focus:ring-primary/40"
+                    placeholder="Enter city (e.g. Manila, Tokyo, Cebu)"
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-sky-200 bg-white text-xs outline-none focus:ring-1 focus:ring-pink-300"
                   />
                   <button
                     onClick={() => {
@@ -539,102 +549,102 @@ export function HomeView({
                       setPartnerCity(c);
                       setPartnerCityLocal(c);
                       setShowCityPicker(false);
-                      toast.success(`Partner city set to ${c}`);
+                      toast.success(`Partner city set to ${c} ♡`);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-pink-500 text-white text-xs font-medium hover:bg-pink-600 transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
                   >
                     <Check size={12} />
                     Apply
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    "Manila",
-                    "Cebu City",
-                    "Iloilo City",
-                    "Davao City",
-                    "Dumaguete",
-                    "Baguio",
-                    "Tokyo",
-                    "Vancouver",
-                  ].map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setPartnerCity(c);
-                        setPartnerCityLocal(c);
-                        setTempPartnerCity(c);
-                        setShowCityPicker(false);
-                        toast.success(`Partner city updated: ${c}`);
-                      }}
-                      className="text-[10px] px-2 py-0.5 rounded-full border border-black/5 bg-white/60 hover:bg-white text-foreground/80 transition-colors"
-                    >
-                      {c}
-                    </button>
-                  ))}
+                  {["Manila", "Tokyo", "Cebu City", "Iloilo City", "Davao City", "Baguio", "Dumaguete", "Vancouver"].map(
+                    (c) => (
+                      <button
+                        key={c}
+                        onClick={() => {
+                          setPartnerCity(c);
+                          setPartnerCityLocal(c);
+                          setTempPartnerCity(c);
+                          setShowCityPicker(false);
+                          toast.success(`Partner city updated to ${c} ♡`);
+                        }}
+                        className="text-[10px] px-2.5 py-0.5 rounded-full border border-sky-200/70 bg-white/80 hover:bg-white text-slate-700 transition-colors cursor-pointer"
+                      >
+                        {c}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Dual City Visual Architecture */}
-            <div className="grid grid-cols-12 items-center gap-2 p-3.5 rounded-2xl border border-black/[0.05] bg-gradient-to-b from-white/90 to-white/50">
-              {/* User City (Left) */}
-              <div className="col-span-5 min-w-0 space-y-0.5">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  {name}
+            {/* Dual Profile & Looped Heart Ribbons (Matches reference image) */}
+            <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-b from-sky-50/50 via-white/80 to-pink-50/30 border border-sky-100/80">
+              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                {/* Sean Side (Left) */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <CuteBoyAvatar />
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
+                      Sean
+                    </span>
+                    <div className="flex items-center gap-1 font-serif text-sm sm:text-base font-semibold text-[#233554] truncate">
+                      <MapPin size={12} className="text-sky-500 shrink-0" />
+                      <span>{userCity}</span>
+                    </div>
+                    <div className="font-serif text-base sm:text-lg font-bold text-[#1e293b] tabular-nums mt-0.5">
+                      {localTime.timeStr}
+                    </div>
+                    <div className="text-[10px] text-sky-800/70 font-light truncate">
+                      {userSolar.phase} · {userSolar.mood}
+                    </div>
+                  </div>
                 </div>
-                <div className="font-serif text-base font-semibold text-foreground truncate">
-                  {userCity}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-mono tabular-nums text-foreground/85">
-                  <Clock size={11} className="text-muted-foreground shrink-0" />
-                  <span>{localTime.timeStr}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground font-light">
-                  {userSolar.phase} · {userSolar.mood}
-                </div>
-              </div>
 
-              {/* Transit Bridge (Center) */}
-              <div className="col-span-2 flex flex-col items-center justify-center text-center px-1">
-                <div className="w-full flex items-center justify-center">
-                  <div className="h-px w-full bg-gradient-to-r from-foreground/10 via-foreground/30 to-foreground/10" />
+                {/* Looped Heart Ribbon Transit (Center) */}
+                <div className="flex-1 flex flex-col items-center justify-center px-1 sm:px-3">
+                  <span className="font-serif italic text-xs text-pink-400 font-medium mb-0.5">
+                    to
+                  </span>
+                  <LoopedHeartRibbon />
                 </div>
-                <span className="font-serif text-xs italic text-muted-foreground mt-1 tracking-tight">
-                  to
-                </span>
-              </div>
 
-              {/* Partner City (Right) */}
-              <div className="col-span-5 min-w-0 text-right space-y-0.5">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  {partnerName}
-                </div>
-                <div className="font-serif text-base font-semibold text-foreground truncate">
-                  {partnerCity}
-                </div>
-                <div className="flex items-center justify-end gap-1.5 text-xs font-mono tabular-nums text-foreground/85">
-                  <span>{partnerTime.timeStr}</span>
-                  <Clock size={11} className="text-muted-foreground shrink-0" />
-                </div>
-                <div className="text-[10px] text-muted-foreground font-light">
-                  {partnerSolar.phase} · {partnerSolar.mood}
+                {/* Partner Side (Right) */}
+                <div className="flex items-center gap-2.5 min-w-0 text-right justify-end">
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
+                      Partner
+                    </span>
+                    <div className="flex items-center justify-end gap-1 font-serif text-sm sm:text-base font-semibold text-[#233554] truncate">
+                      <MapPin size={12} className="text-pink-500 shrink-0" />
+                      <span>{partnerCity}</span>
+                    </div>
+                    <div className="font-serif text-base sm:text-lg font-bold text-[#1e293b] tabular-nums mt-0.5">
+                      {partnerTime.timeStr}
+                    </div>
+                    <div className="text-[10px] text-pink-900/70 font-light truncate">
+                      {partnerSolar.phase} · {partnerSolar.mood}
+                    </div>
+                  </div>
+                  <CuteGirlAvatar />
                 </div>
               </div>
             </div>
 
-            {/* Timezone relationship caption */}
-            <div className="text-center text-[10px] text-muted-foreground tracking-wide">
-              <span>{tzDifference}</span>
-              <span className="mx-1.5 text-foreground/20">/</span>
-              <span>
-                Coordinates: {userCityProfile.lat.toFixed(1)}°N ·{" "}
-                {partnerCityProfile.lat.toFixed(1)}°N
+            {/* Inset Timezone & Coordinate Capsule */}
+            <div className="rounded-full bg-sky-50/80 border border-sky-100 py-1.5 px-4 text-center text-[11px] text-slate-600 flex items-center justify-center gap-2 shadow-inner">
+              <Clock size={12} className="text-pink-400" />
+              <span className="font-medium text-[#233554]">{tzDifference}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-[10px] text-slate-500">
+                Coordinates: {userCityProfile.lat.toFixed(1)}°N · {partnerCityProfile.lat.toFixed(1)}°N
               </span>
+              <Sparkles size={11} className="text-amber-400" />
             </div>
 
-            {/* Action Bar: Editorial Layout */}
-            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-black/[0.04]">
+            {/* 3 Tactile Action Buttons (Send Hug, Leave Note, Add Memory) */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
               <button
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -643,74 +653,76 @@ export function HomeView({
                   hug.mutate();
                 }}
                 disabled={hug.isPending}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-rose-200/50 bg-rose-50/40 hover:bg-rose-50/80 active:scale-[0.98] transition-all cursor-pointer group text-xs font-medium text-rose-950"
+                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-pink-200/90 bg-pink-100/90 hover:bg-pink-200/90 text-pink-700 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
               >
-                <Heart
-                  size={13}
-                  className="text-rose-600 fill-rose-600/30 group-hover:scale-110 transition-transform"
-                />
+                <Heart size={14} className="fill-pink-400 text-pink-500 shrink-0" />
                 <span>Send Hug</span>
               </button>
 
               <button
                 onClick={() => openSheet("add-note")}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-black/[0.06] bg-white/80 hover:bg-white active:scale-[0.98] transition-all cursor-pointer text-xs font-medium text-foreground/80"
+                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-sky-100 bg-white/95 hover:bg-white text-slate-700 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
               >
-                <PenSquare size={13} className="text-muted-foreground" />
+                <PenSquare size={14} className="text-slate-500 shrink-0" />
                 <span>Leave Note</span>
               </button>
 
               <button
                 onClick={() => openSheet("add-memory")}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-black/[0.06] bg-white/80 hover:bg-white active:scale-[0.98] transition-all cursor-pointer text-xs font-medium text-foreground/80"
+                className="flex items-center justify-center gap-1.5 py-2.5 sm:py-3 px-2 rounded-full border border-sky-200/70 bg-sky-50/90 hover:bg-sky-100 text-sky-800 active:scale-95 transition-all cursor-pointer font-medium text-xs shadow-xs"
               >
-                <Plus size={13} className="text-muted-foreground" />
+                <Plus size={14} className="text-sky-600 shrink-0" />
                 <span>Add Memory</span>
               </button>
             </div>
           </section>
 
-          {/* ── Greeting & Partner Activity Journal Strip ── */}
-          <section className="rounded-3xl border border-black/[0.06] bg-white/75 backdrop-blur-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-black/[0.06]">
-              {/* Left: Intimate Greeting */}
+          {/* ── CARD 2: WELCOME / TOGETHER & PARTNER CHRONICLE (Split Card) ── */}
+          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-sky-100/80">
+              {/* Left Side: Intimate Greeting & Milestone Ticker */}
               <div
                 {...longPressProps}
-                className="p-5 flex flex-col justify-between cursor-pointer hover:bg-black/[0.015] transition-colors"
+                className="p-5 sm:p-6 flex flex-col justify-between relative cursor-pointer hover:bg-sky-50/30 transition-colors"
                 title="Hold to view space guide"
               >
                 <div className="space-y-1">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
+                  <div className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
                     Home
                   </div>
-                  <div className="font-serif text-2xl font-normal text-foreground leading-tight tracking-tight">
-                    Welcome back, {name}.
+                  <div className="font-serif text-2xl font-normal text-[#233554] tracking-tight">
+                    Welcome back, {name}. <span className="text-pink-400 font-normal">♡</span>
                   </div>
                 </div>
 
                 {timeTogether && (
-                  <div className="mt-4 pt-4 border-t border-black/[0.04] space-y-1">
-                    <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-medium">
+                  <div className="mt-5 pt-4 border-t border-sky-100/80 space-y-1">
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold block">
                       Together
-                    </div>
+                    </span>
                     <div className="flex items-baseline gap-2">
-                      <span className="font-serif text-3xl font-semibold text-foreground tracking-tight">
+                      <span className="font-serif text-3xl sm:text-4xl font-bold text-[#1e293b] tracking-tight">
                         {timeTogether.totalDays}
                       </span>
-                      <span className="font-serif italic text-sm text-muted-foreground">
-                        days of devotion
+                      <span className="font-serif italic text-base text-pink-500 font-normal">
+                        days of devotion ♡
                       </span>
                     </div>
-                    <div className="font-mono text-[11px] tabular-nums text-foreground/60 tracking-wider">
+                    <div className="font-mono text-xs tabular-nums text-slate-500 tracking-wider">
                       {String(timeTogether.hours).padStart(2, "0")}h{" "}
                       {String(timeTogether.mins).padStart(2, "0")}m{" "}
                       {String(timeTogether.secs).padStart(2, "0")}s
                     </div>
                   </div>
                 )}
+
+                {/* Subtle Lily accent in corner */}
+                <div className="absolute -bottom-2 -left-2 opacity-25 pointer-events-none">
+                  <img src="/lily2.png" alt="" className="w-16 h-16 object-contain" />
+                </div>
               </div>
 
-              {/* Right: Partner's Latest Touchpoint */}
+              {/* Right Side: Partner Chronicle with Tactile Polaroid & Washi Tape */}
               <div
                 onClick={() => {
                   if (!recentAction) return;
@@ -722,257 +734,282 @@ export function HomeView({
                     setTab("calendar");
                   }
                 }}
-                className="p-5 flex flex-col justify-between cursor-pointer hover:bg-black/[0.015] transition-colors group"
-                title="View partner activity"
+                className="p-5 sm:p-6 flex flex-col justify-between cursor-pointer hover:bg-sky-50/30 transition-colors group relative"
               >
                 <div className="flex items-center justify-between">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
+                  <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
                     Partner Chronicle
-                  </div>
-                  <ArrowUpRight
-                    size={13}
-                    className="text-muted-foreground/60 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
-                  />
+                  </span>
+                  <ArrowRight size={14} className="text-sky-400 group-hover:translate-x-1 transition-transform" />
                 </div>
 
-                <div className="my-3 min-h-[70px] flex items-center">
-                  {loadingAction ? (
-                    <div className="space-y-2 w-full animate-pulse">
-                      <div className="h-3 w-24 bg-black/5 rounded" />
-                      <div className="h-8 w-full bg-black/5 rounded-xl" />
-                    </div>
-                  ) : recentAction ? (
-                    <div className="space-y-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full overflow-hidden border border-black/10 bg-black/5 flex items-center justify-center text-[10px] font-medium shrink-0">
-                          {recentAction.partnerAvatar ? (
-                            <img
-                              src={recentAction.partnerAvatar}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            recentAction.partnerName.slice(0, 1).toUpperCase()
-                          )}
-                        </div>
-                        <span className="text-xs font-medium text-foreground">
-                          {recentAction.partnerName} {recentAction.text}
-                        </span>
-                      </div>
+                {/* Tactile Polaroid Card with Washi Tape */}
+                <div className="my-3 flex flex-col items-center">
+                  <div className="relative p-2.5 pb-3 bg-white rounded-xl shadow-[0_6px_20px_rgba(186,215,255,0.45)] border border-slate-100 max-w-[210px] w-full transform -rotate-1 group-hover:rotate-0 transition-transform">
+                    {/* Cute Washi Tape Strip */}
+                    <WashiTape color="pink" pattern="gingham" />
 
-                      {recentAction.item?.cover_url || recentAction.item?.image_url ? (
-                        <div className="h-16 w-full rounded-xl overflow-hidden border border-black/5 bg-black/5">
-                          <img
-                            src={recentAction.item.cover_url || recentAction.item.image_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : recentAction.item?.body ? (
-                        <div className="rounded-xl border border-black/5 bg-black/[0.02] p-2.5 text-xs text-foreground/85 line-clamp-2 italic font-serif">
-                          "{recentAction.item.body}"
-                        </div>
+                    {/* Polaroid Photo Window */}
+                    <div className="w-full h-24 sm:h-28 rounded-lg overflow-hidden bg-gradient-to-br from-sky-200 via-pink-100 to-amber-100 flex items-center justify-center relative shadow-inner">
+                      {recentAction?.item?.cover_url || recentAction?.item?.image_url ? (
+                        <img
+                          src={recentAction.item.cover_url || recentAction.item.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="text-xs text-muted-foreground">
-                          {recentAction.item?.title || "A quiet touch"}
+                        <div className="text-center p-2">
+                          <Heart size={20} className="text-pink-400 fill-pink-200 mx-auto mb-1 animate-pulse" />
+                          <span className="font-serif italic text-[11px] text-slate-600 block">
+                            Our Sky Together
+                          </span>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground font-light">
-                      No moments shared yet today. Leave a note or send a hug.
+
+                    {/* Polaroid Caption */}
+                    <div className="mt-2 text-center">
+                      <p className="text-[10px] sm:text-[11px] text-slate-600 font-serif italic line-clamp-2 px-1">
+                        "{recentAction?.item?.body || "No moments shared yet today. Leave a note or send a hug."}"
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                <div className="text-[10px] text-muted-foreground font-mono">
-                  {recentAction
-                    ? format(new Date(recentAction.createdAt), "MMM d · h:mm a")
-                    : "Synchronized"}
+                {/* Bottom Synchronize Button */}
+                <div className="flex items-center justify-center pt-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-[10px] font-medium border border-sky-100 shadow-2xs group-hover:bg-sky-100 transition-colors">
+                    <RefreshCw size={10} className="text-sky-500" />
+                    <span>Synchronize</span>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ── What Matters Today ── */}
-          <section className="rounded-3xl border border-black/[0.06] bg-white/75 backdrop-blur-2xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-muted-foreground">
-                Upcoming Moments
-              </span>
+          {/* ── CARD 3: UPCOMING MOMENTS ── */}
+          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)]">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <CalendarIcon size={14} className="text-pink-400" />
+                <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
+                  Upcoming Moments
+                </span>
+              </div>
               <button
                 onClick={() => setTab("calendar")}
-                className="text-xs font-medium text-foreground/75 hover:text-foreground transition-colors cursor-pointer"
+                className="text-xs font-medium text-sky-600 hover:text-sky-800 transition-colors cursor-pointer flex items-center gap-1"
               >
-                Calendar
+                <span>Calendar</span>
+                <ArrowRight size={12} />
               </button>
             </div>
 
-            {loadingStats ? (
-              <div className="space-y-2 animate-pulse">
-                <div className="h-14 rounded-2xl bg-black/5" />
-              </div>
-            ) : stats?.nextEvent ? (
-              <button
-                onClick={() => setTab("calendar")}
-                className="w-full text-left p-4 rounded-2xl border border-black/[0.05] bg-white/80 hover:bg-white transition-colors cursor-pointer flex items-center justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="font-serif text-base font-semibold text-foreground">
-                    {stats.nextEvent.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground font-light">
-                    {format(new Date(stats.nextEvent.starts_at), "EEEE, MMMM d · h:mm a")}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="inline-block px-2.5 py-1 rounded-full border border-black/5 bg-black/[0.03] text-[11px] font-mono tabular-nums text-foreground/80">
-                    in{" "}
-                    {Math.max(0, differenceInDays(new Date(stats.nextEvent.starts_at), new Date()))}
-                    d
+            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-pink-50/60 via-white to-sky-50/40 border border-pink-100/70">
+              {/* Left Date Stamp Badge */}
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-pink-200 shadow-xs flex flex-col items-center justify-center shrink-0">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-pink-600">
+                    {stats?.nextEvent
+                      ? format(new Date(stats.nextEvent.starts_at), "MMM")
+                      : "NOV"}
                   </span>
+                  <div className="flex items-center gap-0.5">
+                    <span className="font-serif text-lg font-bold text-[#233554] leading-none">
+                      {stats?.nextEvent
+                        ? format(new Date(stats.nextEvent.starts_at), "d")
+                        : "19"}
+                    </span>
+                    <span className="text-pink-400 text-xs">♡</span>
+                  </div>
                 </div>
-              </button>
-            ) : (
-              <button
-                onClick={() => openSheet("add-event")}
-                className="w-full p-4 rounded-2xl border border-dashed border-black/15 bg-black/[0.015] hover:bg-black/[0.03] transition-colors cursor-pointer flex items-center justify-center gap-2 text-xs text-muted-foreground"
-              >
-                <Plus size={13} />
-                <span>Schedule a shared date or call</span>
-              </button>
-            )}
+
+                <div>
+                  <h4 className="font-serif text-base font-semibold text-[#233554] flex items-center gap-1.5">
+                    <span>{stats?.nextEvent?.title || "Our 5th monthsary"}</span>
+                    <span className="text-pink-400">♡</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 font-light mt-0.5">
+                    {stats?.nextEvent
+                      ? format(new Date(stats.nextEvent.starts_at), "EEEE, MMMM d · h:mm a")
+                      : `Together for ${timeTogether?.totalDays || 146} days!`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bouquet decoration in corner */}
+              <LilyBouquetAccent className="hidden sm:block absolute right-2 -bottom-2" />
+            </div>
+
+            {/* Schedule trigger capsule */}
+            <button
+              onClick={() => openSheet("add-event")}
+              className="mt-3 w-full py-2.5 rounded-full border border-dashed border-sky-300/80 bg-sky-50/40 hover:bg-sky-50 text-sky-700 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Plus size={13} className="text-sky-500" />
+              <span>Schedule a shared date or call</span>
+            </button>
           </section>
         </div>
 
-        {/* Right Column: Remote Photo Booth Studio, Milestone Ring & Calendar */}
+        {/* Right Column (Col 5 on Desktop) */}
         <div className="space-y-6 md:col-span-5">
-          {/* ── Remote Photo Booth Invitation Card ── */}
+          {/* ── CARD 4: STUDIO (Remote LDR Photo Booth) ── */}
           <section
             onClick={() => setTab("photobooth")}
-            className="cursor-pointer relative overflow-hidden rounded-3xl border border-black/[0.07] bg-gradient-to-br from-white/95 via-stone-50/80 to-amber-50/40 backdrop-blur-2xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04)] hover:border-black/15 transition-all active:scale-[0.99] group touch-manipulation space-y-3"
+            className="cursor-pointer relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] hover:shadow-lg transition-all active:scale-[0.99] group"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-muted-foreground">
-                Studio
-              </span>
-              <span className="text-[10px] font-medium tracking-wide text-foreground/80 px-2.5 py-0.5 rounded-full border border-black/10 bg-white shadow-2xs">
-                Synchronized
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <div className="font-serif text-lg font-medium text-foreground tracking-tight flex items-center justify-between">
-                <span>Remote LDR Photo Booth</span>
-                <Camera
-                  size={18}
-                  className="text-foreground/70 group-hover:scale-110 transition-transform"
-                />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <Star size={13} className="text-amber-400 fill-amber-300" />
+                <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
+                  Studio
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground font-light leading-relaxed">
-                Connect dual live cameras across Bacolod and {partnerCity}. Snap synchronized 4-cut
-                strips, co-decorate with stamps, and preserve your keepsake.
-              </p>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Synchronized</span>
+              </div>
             </div>
 
-            <div className="pt-2 flex items-center justify-between text-xs font-medium text-foreground/80 border-t border-black/[0.05]">
-              <span>Enter Booth</span>
-              <ArrowUpRight
-                size={14}
-                className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
-              />
+            <div className="flex items-center gap-4">
+              {/* Tactile Polaroid Keepsake with Washi Tape */}
+              <div className="relative p-2 pb-2.5 bg-white rounded-xl shadow-[0_4px_14px_rgba(186,215,255,0.5)] border border-slate-100 w-24 shrink-0 transform -rotate-3 group-hover:rotate-0 transition-transform">
+                <WashiTape color="blue" pattern="gingham" />
+                <div className="w-full h-20 rounded-lg overflow-hidden bg-gradient-to-b from-sky-300 via-sky-200 to-indigo-100 flex items-center justify-center shadow-inner">
+                  <div className="w-9 h-9 rounded-full border border-white/80 flex items-center justify-center text-white">
+                    <Heart size={16} className="fill-white/80" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Info */}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-serif text-base font-semibold text-[#233554] tracking-tight truncate">
+                    Remote LDR Photo Booth
+                  </h3>
+                  <Camera size={14} className="text-pink-500 shrink-0" />
+                </div>
+                <p className="text-[11px] text-slate-500 font-light leading-relaxed line-clamp-3">
+                  Connect dual live cameras across Bacolod and {partnerCity}. Snap synchronized 4-cut strips, co-decorate with stamps, and preserve your keepsake.
+                </p>
+                <div className="pt-1 flex items-center gap-1 text-xs font-medium text-sky-700 group-hover:text-pink-600 transition-colors">
+                  <span>Enter Booth</span>
+                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* ── Milestone Progress Card ── */}
-          <section className="rounded-3xl border border-black/[0.06] bg-white/75 backdrop-blur-2xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] space-y-4">
+          {/* ── CARD 5: MONTHLY MILESTONE ── */}
+          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-muted-foreground">
+              <span className="text-[10px] uppercase tracking-[0.22em] text-[#334e68] font-bold">
                 Monthly Milestone
               </span>
-              <span className="text-[11px] font-mono tabular-nums text-foreground/70">
+              <span className="text-[11px] font-mono text-slate-500">
                 19th of each month
               </span>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <span className="font-serif text-base font-semibold text-foreground">
-                  {daysToNextMonthsary === 0
-                    ? "Today is our Monthsary"
-                    : `${daysToNextMonthsary} days remaining`}
+            <div className="relative pt-6">
+              {/* Adorable Peeking Cat on the Progress Bar */}
+              <div
+                className="absolute -top-3.5 transition-all duration-700 ease-out"
+                style={{
+                  left: `clamp(10%, ${cycleProgress}%, 85%)`,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                <PeekingCat />
+              </div>
+
+              {/* Header inside: Days remaining & percent */}
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span className="font-serif text-lg font-bold text-[#233554] flex items-center gap-1.5">
+                  <span>
+                    {daysToNextMonthsary === 0
+                      ? "Happy Monthsary Day!"
+                      : `${daysToNextMonthsary} days remaining`}
+                  </span>
+                  <span className="text-pink-400">♡</span>
                 </span>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200">
                   {cycleProgress}%
                 </span>
               </div>
 
-              {/* Minimalist Progress Line */}
-              <div className="w-full h-1.5 rounded-full bg-black/[0.05] overflow-hidden">
+              {/* Soft Pillowy Progress Bar */}
+              <div className="w-full h-3 rounded-full bg-pink-100/70 overflow-hidden shadow-inner p-0.5">
                 <div
-                  className="h-full bg-foreground rounded-full transition-all duration-700 ease-out"
+                  className="h-full bg-gradient-to-r from-pink-300 via-rose-400 to-pink-500 rounded-full transition-all duration-700 ease-out shadow-xs"
                   style={{ width: `${cycleProgress}%` }}
                 />
               </div>
             </div>
 
-            {/* Micro Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/[0.04]">
-              <div className="text-center p-2 rounded-xl bg-black/[0.02]">
-                <div className="font-serif text-base font-semibold text-foreground">
+            {/* 3 Soft Inset Metric Pills */}
+            <div className="grid grid-cols-3 gap-2 pt-2">
+              <div className="text-center p-2 rounded-2xl bg-sky-50/60 border border-sky-100 shadow-2xs">
+                <Heart size={14} className="text-pink-400 fill-pink-200 mx-auto mb-0.5" />
+                <div className="font-serif text-base font-bold text-[#233554]">
                   {stats?.memories ?? 0}
                 </div>
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium mt-0.5">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
                   Memories
                 </div>
               </div>
 
-              <div className="text-center p-2 rounded-xl bg-black/[0.02]">
-                <div className="font-serif text-base font-semibold text-foreground">
+              <div className="text-center p-2 rounded-2xl bg-pink-50/60 border border-pink-100 shadow-2xs">
+                <Star size={14} className="text-amber-400 fill-amber-200 mx-auto mb-0.5" />
+                <div className="font-serif text-base font-bold text-[#233554]">
                   {stats?.hugs ?? 0}
                 </div>
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium mt-0.5">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
                   Embraces
                 </div>
               </div>
 
-              <div className="text-center p-2 rounded-xl bg-black/[0.02]">
-                <div className="font-serif text-base font-semibold text-foreground">
+              <div className="text-center p-2 rounded-2xl bg-indigo-50/60 border border-indigo-100 shadow-2xs">
+                <Gift size={14} className="text-indigo-400 fill-indigo-200 mx-auto mb-0.5" />
+                <div className="font-serif text-base font-bold text-[#233554]">
                   {stats?.trips ?? 0}
                 </div>
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium mt-0.5">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500 font-medium">
                   Places
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ── Editorial Calendar Spread ── */}
-          <section className="rounded-3xl border border-black/[0.06] bg-white/75 backdrop-blur-2xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] space-y-4">
+          {/* ── CARD 6: CALENDAR (Pastel Planner Aesthetic) ── */}
+          <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_-6px_rgba(186,215,255,0.4),0_4px_16px_rgba(224,242,254,0.5)] space-y-4">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setCursor(subMonths(cursor, 1))}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-95 transition-all text-foreground/80 cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-sky-100 active:scale-95 transition-all text-slate-600 cursor-pointer"
                 aria-label="Previous month"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => setTab("calendar")}
-                className="font-serif text-base font-medium text-foreground tracking-tight hover:underline cursor-pointer"
+                className="font-serif text-base font-semibold text-[#233554] tracking-tight hover:text-pink-600 transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                {format(cursor, "MMMM yyyy")}
+                <span>{format(cursor, "MMMM yyyy")}</span>
+                <span className="text-pink-400 font-normal">♡</span>
               </button>
               <button
                 onClick={() => setCursor(addMonths(cursor, 1))}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-95 transition-all text-foreground/80 cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-sky-100 active:scale-95 transition-all text-slate-600 cursor-pointer"
                 aria-label="Next month"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-wider text-muted-foreground font-medium">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-wider text-slate-400 font-bold uppercase">
               {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                 <div key={i}>{d}</div>
               ))}
@@ -985,14 +1022,16 @@ export function HomeView({
               {gridDays.map((d) => {
                 const hasEvent = monthEvents.some((e) => isSameDay(new Date(e.starts_at), d));
                 const dayPhoto = monthPhotos.find(
-                  (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d),
+                  (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d)
                 );
                 const isToday = isSameDay(d, today);
                 return (
                   <div
                     key={d.toISOString()}
-                    className={`relative aspect-square flex items-center justify-center rounded-full overflow-hidden transition-colors ${
-                      isToday ? "ring-1.5 ring-foreground font-semibold" : "hover:bg-black/[0.04]"
+                    className={`relative aspect-square flex items-center justify-center rounded-2xl overflow-hidden transition-all ${
+                      isToday
+                        ? "bg-gradient-to-tr from-pink-200 to-rose-200 text-rose-900 font-bold shadow-[0_2px_10px_rgba(244,114,182,0.4)] border border-pink-300"
+                        : "hover:bg-sky-50 text-slate-700"
                     } ${!isSameMonth(d, cursor) ? "opacity-25" : ""}`}
                   >
                     {dayPhoto?.url && (
@@ -1002,26 +1041,31 @@ export function HomeView({
                           alt=""
                           className="absolute inset-0 w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-white/20 border border-white/40 rounded-full" />
+                        <div className="absolute inset-0 bg-white/20 border border-white/40 rounded-2xl" />
                       </>
                     )}
                     <span
                       className={`relative z-10 text-[11px] tabular-nums ${
                         isToday
-                          ? "text-foreground font-bold"
+                          ? "text-rose-950 font-bold"
                           : dayPhoto
-                            ? "text-foreground font-medium"
-                            : "text-foreground/80"
+                          ? "text-slate-900 font-bold"
+                          : "text-slate-700"
                       }`}
                     >
                       {d.getDate()}
                     </span>
                     {hasEvent && (
-                      <span className="absolute bottom-1 h-1 w-1 rounded-full bg-rose-500 z-10" />
+                      <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-pink-500 z-10 shadow-xs" />
                     )}
                   </div>
                 );
               })}
+            </div>
+
+            {/* Corner lily accent */}
+            <div className="absolute -bottom-3 -right-3 opacity-20 pointer-events-none">
+              <img src="/main-lily.png" alt="" className="w-20 h-20 object-contain" />
             </div>
           </section>
         </div>
@@ -1030,7 +1074,7 @@ export function HomeView({
       <LongPressModal
         isOpen={showLongPressInfo}
         onClose={() => setShowLongPressInfo(false)}
-        title="Our Sanctuary"
+        title="Our Sanctuary ♡"
         description="Welcome to your private shared space. Here, distance dissolves into synchronous moments, shared memories, live photo strips, and continuous connection. Tap into our story anytime."
       />
 

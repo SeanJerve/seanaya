@@ -55,68 +55,61 @@
 }
 
 :root {
-  --radius: 1.25rem;
+  --radius: 1.5rem;
 
-  /* Pastel blue heart */
-  --background: oklch(0.985 0.012 235);
-  --foreground: oklch(0.32 0.05 255);
+  /* Kawaii Pastel Romance Palette */
+  --background: #ebf3ff;
+  --foreground: #233554;
 
-  --card: oklch(0.995 0.006 235 / 0.72);
-  --card-foreground: oklch(0.32 0.05 255);
-  --popover: oklch(0.995 0.006 235);
-  --popover-foreground: oklch(0.32 0.05 255);
+  --card: rgba(255, 255, 255, 0.88);
+  --card-foreground: #233554;
+  --popover: rgba(255, 255, 255, 0.95);
+  --popover-foreground: #233554;
 
-  --primary: oklch(0.68 0.09 240);
-  --primary-foreground: oklch(0.99 0.005 240);
-  --secondary: oklch(0.94 0.025 235);
-  --secondary-foreground: oklch(0.32 0.05 255);
-  --muted: oklch(0.955 0.015 240);
-  --muted-foreground: oklch(0.52 0.035 255);
-  --accent: oklch(0.9 0.04 245);
-  --accent-foreground: oklch(0.32 0.05 255);
-  --destructive: oklch(0.72 0.14 25);
-  --destructive-foreground: oklch(0.99 0.005 240);
-  --border: oklch(0.9 0.02 240 / 0.55);
-  --input: oklch(0.94 0.018 240);
-  --ring: oklch(0.72 0.08 240);
+  --primary: #f472b6;
+  --primary-foreground: #ffffff;
+  --secondary: #e0f2fe;
+  --secondary-foreground: #1e3a8a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #fbcfe8;
+  --accent-foreground: #831843;
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.8);
+  --input: #ffffff;
+  --ring: #f472b6;
 
   /* Scene palette */
-  --sky: oklch(0.92 0.045 235);
-  --sky-soft: oklch(0.965 0.025 235);
-  --lily: oklch(0.985 0.008 240);
-  --lily-stem: oklch(0.7 0.09 155);
-  --petal: oklch(0.965 0.015 240);
-  --mist: oklch(0.88 0.03 240 / 0.7);
-  --dusk: oklch(0.55 0.08 265);
-  --warm: oklch(0.9 0.05 75);
-  --hug: oklch(0.78 0.13 15);
+  --sky: #dbeafe;
+  --sky-soft: #f0f7ff;
+  --lily: #ffffff;
+  --lily-stem: #86efac;
+  --petal: #fdf2f8;
+  --mist: rgba(224, 242, 254, 0.7);
+  --dusk: #c084fc;
+  --warm: #fef08a;
+  --hug: #fb7185;
 
-  /* Layered gradients & shadows */
-  --gradient-sky: linear-gradient(180deg, oklch(0.96 0.03 235) 0%, oklch(0.9 0.05 240) 100%);
-  --gradient-dawn: linear-gradient(180deg, oklch(0.95 0.04 55) 0%, oklch(0.9 0.05 240) 100%);
-  --gradient-noon: linear-gradient(180deg, oklch(0.97 0.03 235) 0%, oklch(0.88 0.06 235) 100%);
-  --gradient-dusk: linear-gradient(180deg, oklch(0.85 0.06 30) 0%, oklch(0.55 0.09 275) 100%);
-  --gradient-night: linear-gradient(180deg, oklch(0.32 0.06 265) 0%, oklch(0.22 0.05 275) 100%);
-  --gradient-lily: radial-gradient(
-    circle at 50% 40%,
-    oklch(1 0 0) 0%,
-    oklch(0.94 0.02 240) 60%,
-    transparent 100%
-  );
+  /* Dreamy pastel baby-blue sky gradient */
+  --gradient-sky: linear-gradient(135deg, #dbeafe 0%, #ebf3ff 45%, #fdf2f8 85%, #e0e7ff 100%);
+  --gradient-dawn: linear-gradient(180deg, #ffedd5 0%, #ebf3ff 100%);
+  --gradient-noon: linear-gradient(180deg, #e0f2fe 0%, #dbeafe 100%);
+  --gradient-dusk: linear-gradient(180deg, #fbcfe8 0%, #c7d2fe 100%);
+  --gradient-night: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
 
-  --shadow-soft: 0 8px 30px -12px oklch(0.55 0.08 245 / 0.25);
-  --shadow-panel:
-    0 20px 60px -30px oklch(0.4 0.08 250 / 0.35), 0 2px 6px oklch(0.7 0.04 240 / 0.15);
-  --shadow-glass: inset 0 1px 0 oklch(1 0 0 / 0.6), 0 12px 40px -20px oklch(0.5 0.08 245 / 0.3);
+  --shadow-soft: 0 10px 30px -5px rgba(186, 215, 255, 0.4), 0 4px 12px rgba(220, 230, 250, 0.5);
+  --shadow-panel: 0 20px 50px -20px rgba(165, 195, 245, 0.5), 0 2px 8px rgba(200, 220, 255, 0.4);
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 36px -10px rgba(186, 215, 255, 0.45);
 
-  --sidebar: oklch(0.985 0.012 235);
-  --sidebar-foreground: oklch(0.32 0.05 255);
-  --sidebar-primary: oklch(0.68 0.09 240);
-  --sidebar-primary-foreground: oklch(0.99 0.005 240);
-  --sidebar-accent: oklch(0.94 0.025 235);
-  --sidebar-accent-foreground: oklch(0.32 0.05 255);
-  --sidebar-border: oklch(0.9 0.02 240 / 0.55);
-  --sidebar-ring: oklch(0.72 0.08 240);
+  --sidebar: rgba(255, 255, 255, 0.85);
+  --sidebar-foreground: #233554;
+  --sidebar-primary: #f472b6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e0f2fe;
+  --sidebar-accent-foreground: #1e3a8a;
+  --sidebar-border: rgba(255, 255, 255, 0.8);
+  --sidebar-ring: #f472b6;
 }
 
 .dark,

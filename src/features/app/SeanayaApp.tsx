@@ -4,6 +4,7 @@ import { useRelationship } from "@/hooks/useRelationship";
 import { useAppStore } from "./store";
 import { AppHeader } from "@/features/nav/AppHeader";
 import { BottomNav } from "@/features/nav/BottomNav";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { HomeView } from "@/features/views/HomeView";
@@ -267,20 +268,39 @@ function Inner() {
   )[tab];
 
   return (
-    <div className="min-h-[100dvh] w-full seanaya-bg">
-      {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
+    <div className="min-h-[100dvh] w-full seanaya-bg flex relative overflow-x-hidden">
+      {/* Dreamy Floral Watermarks matching Reference Scrapbook */}
+      <div className="fixed top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 pointer-events-none opacity-30 select-none z-0 translate-x-16 -translate-y-10">
+        <img src="/main-lily.png" alt="" className="w-full h-full object-contain" />
+      </div>
+      <div className="fixed bottom-0 right-0 w-80 sm:w-[28rem] h-80 sm:h-[28rem] pointer-events-none opacity-25 select-none z-0 translate-x-20 translate-y-16">
+        <img src="/lily1.png" alt="" className="w-full h-full object-contain" />
+      </div>
 
-      <main>
-        {tab === "home" && <HomeView relationshipId={relId} anniversary={effectiveRel?.anniversary ?? null} />}
-        {tab === "calendar" && <CalendarView relationshipId={relId} />}
-        {tab === "memories" && <MemoriesView relationshipId={relId} />}
-        {tab === "wall" && <WallView relationshipId={relId} />}
-        {tab === "stickers" && <StickersView relationshipId={relId} />}
-        {tab === "pet" && <PetView relationshipId={relId} />}
-        {tab === "photobooth" && <PhotoBoothView relationshipId={relId} />}
-      </main>
+      {/* Desktop Sidebar (visible on xl: screens, hidden on mobile/tablet) */}
+      {tab !== "photobooth" && <DesktopSidebar className="hidden xl:flex relative z-20" />}
 
-      {tab !== "photobooth" && <BottomNav relationshipId={relId} />}
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
+
+        <main className="flex-1">
+          {tab === "home" && <HomeView relationshipId={relId} anniversary={effectiveRel?.anniversary ?? null} />}
+          {tab === "calendar" && <CalendarView relationshipId={relId} />}
+          {tab === "memories" && <MemoriesView relationshipId={relId} />}
+          {tab === "wall" && <WallView relationshipId={relId} />}
+          {tab === "stickers" && <StickersView relationshipId={relId} />}
+          {tab === "pet" && <PetView relationshipId={relId} />}
+          {tab === "photobooth" && <PhotoBoothView relationshipId={relId} />}
+        </main>
+      </div>
+
+      {/* Floating Bottom Nav (active on mobile/tablet, hidden on desktop xl: where sidebar is used) */}
+      {tab !== "photobooth" && (
+        <div className="xl:hidden">
+          <BottomNav relationshipId={relId} />
+        </div>
+      )}
 
       <Sheet open={sheet === "add-memory"} title="New memory">
         <AddMemorySheet relationshipId={relId} />
