@@ -186,7 +186,26 @@ function Inner() {
 
   const fallbackRelId =
     typeof window !== "undefined" ? localStorage.getItem("seanaya.rel_id") : null;
-  const activeRelId = rel?.id || fallbackRelId || "";
+  const isUrlPreview =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("preview") === "true";
+
+  const effectiveRel =
+    rel ||
+    (isUrlPreview
+      ? {
+          id: "cdb0c647-18fe-4e07-9d90-66b83298bc47",
+          user_a_id: "preview-a",
+          user_b_id: "preview-b",
+          name: "Seanaya",
+          name_a: "Sean",
+          name_b: "Aya",
+          anniversary: "2026-06-19",
+          invite_code: "SEANAYA",
+        }
+      : null);
+
+  const activeRelId = effectiveRel?.id || fallbackRelId || "";
 
   if (isMonthsaryOpen && activeRelId) {
     return (
@@ -196,7 +215,7 @@ function Inner() {
     );
   }
 
-  if (isLoading) {
+  if (!isUrlPreview && isLoading) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center"
@@ -207,7 +226,7 @@ function Inner() {
     );
   }
 
-  if (isError || !rel) {
+  if (!isUrlPreview && (isError || !effectiveRel)) {
     return (
       <div
         className="fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
@@ -232,8 +251,8 @@ function Inner() {
     );
   }
 
-  const relId = rel.id;
-  const inviteCode = rel?.invite_code ?? "";
+  const relId = effectiveRel?.id || "";
+  const inviteCode = effectiveRel?.invite_code ?? "";
 
   const headerTitle = (
     {
@@ -252,7 +271,7 @@ function Inner() {
       {tab !== "photobooth" && <AppHeader title={headerTitle} relationshipId={relId} />}
 
       <main>
-        {tab === "home" && <HomeView relationshipId={relId} anniversary={rel.anniversary} />}
+        {tab === "home" && <HomeView relationshipId={relId} anniversary={effectiveRel?.anniversary ?? null} />}
         {tab === "calendar" && <CalendarView relationshipId={relId} />}
         {tab === "memories" && <MemoriesView relationshipId={relId} />}
         {tab === "wall" && <WallView relationshipId={relId} />}

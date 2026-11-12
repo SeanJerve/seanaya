@@ -21,6 +21,15 @@ import { FieldWrap, Input, PrimaryButton } from "./form-ui";
 import { useTheme, type Theme } from "@/lib/theme";
 import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
 import { uploadImage } from "@/lib/storage";
+import {
+  getUserCity,
+  setUserCity,
+  getPartnerCity,
+  setPartnerCity,
+  calculateDistanceKm,
+  resolveCity,
+  getTimezoneOffsetDescription,
+} from "@/lib/location-service";
 
 export function SettingsSheet({
   relationshipId,
@@ -34,6 +43,8 @@ export function SettingsSheet({
   const [displayName, setDisplayName] = useState(pinStorage.getName() ?? "");
   const [newPin, setNewPin] = useState("");
   const [anniversary, setAnniversary] = useState<string>("");
+  const [userCity, setUserCityState] = useState(getUserCity());
+  const [partnerCity, setPartnerCityState] = useState(getPartnerCity());
   const [theme, setTheme] = useTheme();
   const { prefs, set: setPref } = useNotificationPrefs();
 
@@ -195,6 +206,117 @@ export function SettingsSheet({
           </FieldWrap>
           <PrimaryButton onClick={() => saveName.mutate()}>Save profile</PrimaryButton>
         </div>
+      </section>
+
+      {/* ── Anniversary Setting ── */}
+      <section className="space-y-3 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
+        <SectionHead label="Anniversary" />
+        <p className="text-[11px] text-muted-foreground">
+          The milestone date that anchors your relationship timeline.
+        </p>
+        <FieldWrap label="Date">
+          <Input type="date" value={anniversary} onChange={(e) => setAnniversary(e.target.value)} />
+        </FieldWrap>
+        <PrimaryButton onClick={() => saveAnn.mutate()} disabled={saveAnn.isPending}>
+          Save Anniversary
+        </PrimaryButton>
+      </section>
+
+      {/* ── LDR Cities & Timezones ── */}
+      <section className="space-y-4 rounded-2xl bg-white/50 p-4 border border-white/30 backdrop-blur-xl">
+        <div className="flex items-center justify-between">
+          <SectionHead label="LDR Cities & Timezones" />
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {calculateDistanceKm(
+              resolveCity(userCity).lat,
+              resolveCity(userCity).lng,
+              resolveCity(partnerCity).lat,
+              resolveCity(partnerCity).lng,
+            )}{" "}
+            km apart
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Configure accurate home cities for you and your partner. This powers live dual clocks,
+          solar day-night cycles, and distance metrics.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FieldWrap label="Your City">
+            <Input
+              value={userCity}
+              onChange={(e) => setUserCityState(e.target.value)}
+              placeholder="e.g. Bacolod"
+            />
+          </FieldWrap>
+          <FieldWrap label="Partner's City">
+            <Input
+              value={partnerCity}
+              onChange={(e) => setPartnerCityState(e.target.value)}
+              placeholder="e.g. Manila"
+            />
+          </FieldWrap>
+        </div>
+
+        {/* Quick Philippine & Global City Chips */}
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
+            Quick Select for Partner:
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              "Manila",
+              "Cebu City",
+              "Iloilo City",
+              "Davao City",
+              "Baguio",
+              "Dumaguete",
+              "Tokyo",
+              "Vancouver",
+            ].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setPartnerCityState(c)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition cursor-pointer ${
+                  partnerCity.toLowerCase() === c.toLowerCase()
+                    ? "border-primary/60 bg-white/90 font-medium text-foreground shadow-2xs"
+                    : "border-white/40 bg-white/40 text-foreground/70 hover:bg-white/60"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Live Preview Bar */}
+        <div className="rounded-xl border border-white/40 bg-white/60 p-3 text-[11px] flex items-center justify-between text-muted-foreground">
+          <span>
+            {userCity || "Bacolod"} — {partnerCity || "Manila"}
+          </span>
+          <span className="font-medium text-foreground/80">
+            {getTimezoneOffsetDescription(
+              resolveCity(userCity).timezone,
+              resolveCity(partnerCity).timezone,
+            )}
+          </span>
+        </div>
+
+        <PrimaryButton
+          onClick={() => {
+            const u = userCity.trim() || "Bacolod";
+            const p = partnerCity.trim() || "Manila";
+            setUserCity(u);
+            setPartnerCity(p);
+            setUserCityState(u);
+            setPartnerCityState(p);
+            toast.success(`Locations updated: ${u} — ${p}`);
+            qc.invalidateQueries({ queryKey: ["stats"] });
+          }}
+        >
+          Save Locations
+        </PrimaryButton>
       </section>
 
       <section className="space-y-3">

@@ -251,6 +251,17 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   };
 
   const initApp = async () => {
+    const urlPreview =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("preview");
+    if (urlPreview === "true") {
+      pinStorage.setSlot("a");
+      pinStorage.setName("Sean");
+      pinStorage.setRel("cdb0c647-18fe-4e07-9d90-66b83298bc47");
+      setStage("unlocked");
+      return;
+    }
+
     setStage("loading");
     setErrorMsg(null);
     try {

@@ -178,7 +178,7 @@ export function HugOverlay({ relationshipId }: { relationshipId: string }) {
                 <span className="font-serif text-sm font-semibold text-foreground tracking-tight">
                   A warm hug from {activeHug.senderName}
                 </span>
-                <span className="text-xs text-muted-foreground">❤️</span>
+                <Heart size={13} className="text-rose-500 fill-rose-500 shrink-0" />
               </motion.div>
             </motion.div>
           </>

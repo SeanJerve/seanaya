@@ -29,6 +29,7 @@ import {
 import type { ShootStage, PlacedSticker, PhotoCut } from "./types";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
+import { getUserCity, getPartnerCity } from "@/lib/location-service";
 
 function fireConfetti() {
   if (typeof document === "undefined") return;
@@ -271,6 +272,8 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
         partnerName,
         userName,
         customCaption,
+        userCity: getUserCity(),
+        partnerCity: getPartnerCity(),
       });
       downloadPhotoStrip(canvas, `Seanaya_Photobooth_${Date.now()}.png`);
       fireConfetti();
@@ -291,6 +294,8 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
         partnerName,
         userName,
         customCaption,
+        userCity: getUserCity(),
+        partnerCity: getPartnerCity(),
       });
       await savePhotoStripToAlbum({
         canvas,
@@ -387,7 +392,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                   className={`w-full h-full object-cover ${isMirror ? "scale-x-[-1]" : ""}`}
                 />
                 <div className="absolute top-2.5 left-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[10px] text-white/80 border border-white/10 font-medium">
-                  {userName} (Bacolod)
+                  {userName} ({getUserCity()})
                 </div>
               </div>
 
@@ -499,7 +504,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                   {customCaption.trim()
                     ? customCaption.trim()
                     : activeFrameConfig.hasLdrTag
-                      ? `Bacolod ✈ ${partnerName} • ${new Date().toLocaleDateString()}`
+                      ? `${getUserCity()} — ${getPartnerCity()} • ${new Date().toLocaleDateString()}`
                       : `${userName} & ${partnerName} • ${new Date().toLocaleDateString()}`}
                 </span>
               </div>

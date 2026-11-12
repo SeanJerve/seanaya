@@ -25,7 +25,7 @@ export const FRAME_TEMPLATES: FrameTemplate[] = [
   {
     id: "ldr-journey",
     name: "LDR Distance Special",
-    description: "Bacolod ✈️ Partner City — Flight stamps, distance & dual timezones",
+    description: "Bacolod to Partner City — Dual timezones, calculated distance & postal stamps",
     bgColor: "#faf6eb",
     textColor: "#453823",
     accentColor: "#d97706",

@@ -36,8 +36,8 @@ export function AppHeader({
   });
 
   return (
-    <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-background/40 border-b border-white/30">
-      <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+    <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl bg-background/40 border-b border-black/[0.04]">
+      <div className="mx-auto flex max-w-md md:max-w-4xl lg:max-w-5xl items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
             Seanaya

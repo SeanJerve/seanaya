@@ -19,7 +19,7 @@ const TOAST_TITLE: Record<NotifKind, string> = {
   note: "A note landed on the wall",
   trip: "A new place was pinned",
   song: "A song joined your radio",
-  hug: "A hug arrived 💗",
+  hug: "A warm embrace arrived",
   capsule: "A time capsule was placed",
 };
 

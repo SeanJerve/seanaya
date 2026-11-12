@@ -13,6 +13,8 @@ interface CompositeOptions {
   userName: string;
   anniversary?: string | null;
   customCaption?: string;
+  partnerCity?: string;
+  userCity?: string;
 }
 
 export async function renderPhotoStripCanvas({
@@ -23,6 +25,8 @@ export async function renderPhotoStripCanvas({
   partnerName,
   userName,
   customCaption,
+  partnerCity,
+  userCity,
 }: CompositeOptions): Promise<HTMLCanvasElement> {
   const frame = FRAME_TEMPLATES.find((f) => f.id === frameId) || FRAME_TEMPLATES[0];
   const filter = PHOTO_FILTERS.find((f) => f.id === filterId);
@@ -152,9 +156,11 @@ export async function renderPhotoStripCanvas({
     ctx.fillStyle = "rgba(128,128,128,0.7)";
     ctx.fillText(`${dateStr}  •  Our Quiet Space Together`, canvas.width / 2, footerCenterY + 60);
   } else if (frame.hasLdrTag) {
-    ctx.font = "bold 34px sans-serif";
-    ctx.fillText(`Bacolod  ✈  ${partnerName}  •  ${dateStr}`, canvas.width / 2, footerCenterY + 15);
-    ctx.font = "26px sans-serif";
+    const uCity = userCity || "Bacolod";
+    const pCity = partnerCity || "Manila";
+    ctx.font = "bold 32px serif";
+    ctx.fillText(`${uCity}  —  ${pCity}  •  ${dateStr}`, canvas.width / 2, footerCenterY + 15);
+    ctx.font = "italic 24px serif";
     ctx.fillStyle = frame.accentColor;
     ctx.fillText(
       "Always close in heart, across any distance",
