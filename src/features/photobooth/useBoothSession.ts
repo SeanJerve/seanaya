@@ -34,6 +34,12 @@ export function useBoothSession({
   const [shotIndex, setShotIndex] = useState(0);
   const [ready, setReadyState] = useState<Record<Slot, boolean>>({ a: false, b: false });
   const [countdown, setCountdown] = useState<number | null>(null);
+  // Solo: shoot on your own, nothing is shared. Together: both must be here and ready.
+  const [mode, setModeState] = useState<"solo" | "together">("together");
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  // Whether this result has been kept in the album (shared so it isn't saved twice)
+  const [kept, setKeptState] = useState(false);
 
   const channelRef = useRef<any>(null);
   const captureRef = useRef(capture);
@@ -44,8 +50,12 @@ export function useBoothSession({
   const stateRef = useRef({ shots, shotIndex, layout, style, filterId, caption });
   stateRef.current = { shots, shotIndex, layout, style, filterId, caption };
 
-  const send = (event: string, payload: Record<string, unknown> = {}) =>
+  // In solo mode only the mode itself is shared; everything else stays on this device.
+  const send = (event: string, payload: Record<string, unknown> = {}) => {
+    if (event !== "mode" && modeRef.current === "solo") return;
     channelRef.current?.send({ type: "broadcast", event, payload: { ...payload, from: slot } });
+  };
+  const ignoring = (payload: { from: Slot }) => payload.from === slot || modeRef.current === "solo";
 
   const putFrame = (index: number, who: Slot, dataUrl: string) =>
     setShots((prev) => {
@@ -94,15 +104,15 @@ export function useBoothSession({
         setReadyState((r) => ({ ...r, [other]: false }));
       })
       .on("broadcast", { event: "ready" }, ({ payload }) => {
-        if (payload.from === slot) return;
+        if (ignoring(payload)) return;
         setReadyState((r) => ({ ...r, [payload.from]: payload.ready }));
       })
       .on("broadcast", { event: "countdown" }, ({ payload }) => {
-        if (payload.from === slot) return;
+        if (ignoring(payload)) return;
         runCountdown(payload.index, payload.startAt);
       })
       .on("broadcast", { event: "frame" }, ({ payload }) => {
-        if (payload.from === slot) return;
+        if (ignoring(payload)) return;
         putFrame(payload.index, payload.from, payload.dataUrl);
         // If we missed this countdown, catch up and clear stale ready flags.
         setShotIndex((i) => {
@@ -111,14 +121,27 @@ export function useBoothSession({
         });
       })
       .on("broadcast", { event: "settings" }, ({ payload }) => {
-        if (payload.from === slot) return;
+        if (ignoring(payload)) return;
         if (payload.layout) setLayoutState(payload.layout);
         if (payload.style) setStyleState(payload.style);
         if (payload.filterId) setFilterState(payload.filterId);
         if (typeof payload.caption === "string") setCaptionState(payload.caption);
       })
-      .on("broadcast", { event: "reset" }, ({ payload }) => {
+      .on("broadcast", { event: "kept" }, ({ payload }) => {
+        if (ignoring(payload)) return;
+        setKeptState(true);
+      })
+      .on("broadcast", { event: "mode" }, ({ payload }) => {
         if (payload.from === slot) return;
+        setModeState(payload.mode);
+        setShots([]);
+        setShotIndex(0);
+        setKeptState(false);
+        setReadyState({ a: false, b: false });
+      })
+      .on("broadcast", { event: "reset" }, ({ payload }) => {
+        if (ignoring(payload)) return;
+        setKeptState(false);
         setShots([]);
         setShotIndex(0);
         setReadyState({ a: false, b: false });
@@ -126,6 +149,7 @@ export function useBoothSession({
       // Someone (re)joined: share settings and the frames already taken.
       .on("broadcast", { event: "hello" }, ({ payload }) => {
         if (payload.from === slot) return;
+        send("mode", { mode: modeRef.current });
         const s = stateRef.current;
         send("settings", { layout: s.layout, style: s.style, filterId: s.filterId, caption: s.caption });
         s.shots.forEach((shot, index) => {
@@ -153,15 +177,16 @@ export function useBoothSession({
   // Start the countdown once everyone present is ready. A leads when both are here.
   useEffect(() => {
     if (done || countdown !== null || runningRef.current !== null) return;
-    const allReady = partnerHere ? ready.a && ready.b : ready[slot];
-    const leader = partnerHere ? slot === "a" : true;
+    const together = mode === "together";
+    const allReady = together ? partnerHere && ready.a && ready.b : ready[slot];
+    const leader = together ? slot === "a" : true;
     if (allReady && leader) {
       const startAt = Date.now() + 350;
       send("countdown", { index: shotIndex, startAt });
       runCountdown(shotIndex, startAt);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, partnerHere, done, countdown, shotIndex]);
+  }, [ready, partnerHere, done, countdown, shotIndex, mode]);
 
   // Broadcasts are best-effort: keep re-announcing Ready until the countdown starts.
   useEffect(() => {
@@ -194,7 +219,23 @@ export function useBoothSession({
     send("settings", { caption: c });
   };
 
+  const setMode = (m: "solo" | "together") => {
+    setModeState(m);
+    modeRef.current = m;
+    setShots([]);
+    setShotIndex(0);
+    setKeptState(false);
+    setReadyState({ a: false, b: false });
+    send("mode", { mode: m });
+  };
+
+  const markKept = () => {
+    setKeptState(true);
+    send("kept");
+  };
+
   const reset = () => {
+    setKeptState(false);
     setShots([]);
     setShotIndex(0);
     setReadyState({ a: false, b: false });
@@ -203,6 +244,10 @@ export function useBoothSession({
 
   return {
     partnerHere,
+    mode,
+    setMode,
+    kept,
+    markKept,
     layout,
     style,
     filterId,

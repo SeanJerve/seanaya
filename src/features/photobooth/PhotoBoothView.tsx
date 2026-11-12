@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Check, Download, FlipHorizontal2, RotateCcw, SwitchCamera, BookImage, Camera } from "lucide-react";
 import { useWebRTC } from "./useWebRTC";
 import { useBoothSession } from "./useBoothSession";
-import { FILTERS, LAYOUTS, STYLES, downloadCanvas, renderBooth, type LayoutId, type StyleId } from "./booth-templates";
-import { saveStripToAlbumBook, updateSavedStrip, type SavedStrip } from "./album-save";
+import { FILTERS, LAYOUTS, STYLES, downloadCanvas, renderBooth, renderShotImage, type LayoutId, type StyleId } from "./booth-templates";
+import { saveStripToAlbumBook } from "./album-save";
 import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
 import { useCoupleNames } from "@/hooks/useCouple";
@@ -58,12 +58,8 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
     };
   }, [session.layout, session.style, session.filterId, session.shots, session.caption, names]);
 
-  // Auto-save the finished result once (A saves when you shoot together, otherwise whoever shot it)
-  const [saved, setSaved] = useState<SavedStrip | null>(null);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const savedLook = useRef("");
-  const look = `${session.layout}|${session.style}|${session.filterId}|${session.caption}`;
-  const leader = session.partnerHere ? slot === "a" : true;
+  // Nothing is saved automatically: you look at the result, then keep it or not.
+  const [saving, setSaving] = useState(false);
   const render = () =>
     renderBooth({
       layout: session.layout,
@@ -74,60 +70,41 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
       names,
     });
 
-  useEffect(() => {
-    if (!session.done || saved || saveState === "saving" || !leader || !relationshipId) return;
-    setSaveState("saving");
-    const t = setTimeout(async () => {
-      try {
-        const s = await saveStripToAlbumBook({
-          canvas: await render(),
-          relationshipId,
-          title: session.caption.trim() || `Photo booth with ${partner}`,
-        });
-        savedLook.current = look;
-        setSaved(s);
-        setSaveState("saved");
-        toast.success("Saved to your album");
-      } catch (e: any) {
-        setSaveState("error");
-        toast.error("Couldn't save to the album. Check your connection and try again.");
-      }
-    }, 1500); // let the partner's last frame arrive
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.done]);
-
-  const updateAlbum = async () => {
-    setSaveState("saving");
+  const keep = async () => {
+    setSaving(true);
     try {
-      const canvas = await render();
-      const s = saved
-        ? await updateSavedStrip(saved, canvas, relationshipId)
-        : await saveStripToAlbumBook({ canvas, relationshipId, title: session.caption.trim() || `Photo booth with ${partner}` });
-      savedLook.current = look;
-      setSaved(s);
-      setSaveState("saved");
-      toast.success(saved ? "Album copy updated" : "Saved to your album");
-    } catch (e: any) {
-      setSaveState("error");
+      await saveStripToAlbumBook({
+        canvas: await render(),
+        relationshipId,
+        title: session.caption.trim() || `Photo booth with ${partner}`,
+      });
+      session.markKept();
+      toast.success("Kept in your album");
+    } catch {
       toast.error("Couldn't save to the album. Check your connection and try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const shootAgain = () => {
-    session.reset();
-    setSaved(null);
-    setSaveState("idle");
+  const discard = () => session.reset();
+
+  const downloadShot = async (i: number) => {
+    const shot = session.shots[i];
+    if (!shot) return;
+    downloadCanvas(await renderShotImage(shot, session.filterId), `seanaya-frame-${i + 1}-${Date.now()}.png`);
   };
 
   const partnerLive = cam.peerConnected && !!cam.remoteStream;
   const counting = session.countdown !== null;
   const chip = (on: boolean) => `sn-pill h-9 shrink-0 px-4 text-[13.5px] ${on ? "sn-active" : ""}`;
 
+  const together = session.mode === "together";
   let readyLabel = "Ready";
   if (counting) readyLabel = "Smile";
-  else if (session.meReady && session.partnerHere && !session.partnerReady) readyLabel = `Waiting for ${partner}`;
-  else if (!session.meReady && session.partnerReady) readyLabel = `${partner} is ready`;
+  else if (together && !session.partnerHere) readyLabel = session.meReady ? `Waiting for ${partner} to join` : "Ready";
+  else if (together && session.meReady && !session.partnerReady) readyLabel = `Waiting for ${partner}`;
+  else if (together && !session.meReady && session.partnerReady) readyLabel = `${partner} is ready`;
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -253,7 +230,13 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
           {/* Floating controls */}
           <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             {session.shotIndex === 0 && !counting && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
+                {(["solo", "together"] as const).map((m) => (
+                  <button key={m} onClick={() => session.setMode(m)} aria-pressed={session.mode === m} className={chip(session.mode === m)}>
+                    {m === "solo" ? "Solo" : "Together"}
+                  </button>
+                ))}
+                <span className="mx-1 w-px self-stretch bg-white/60" />
                 {(Object.keys(LAYOUTS) as LayoutId[]).map((id) => (
                   <button key={id} onClick={() => session.setLayout(id)} className={chip(session.layout === id)}>
                     {LAYOUTS[id].name}
@@ -287,7 +270,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
       ) : (
         <>
           {/* Result */}
-          <main className="absolute inset-x-0 bottom-[260px] top-[84px] flex items-center justify-center px-4 sm:bottom-[230px] sm:top-[96px]">
+          <main className="absolute inset-x-0 bottom-[330px] top-[84px] flex items-center justify-center px-4 sm:bottom-[300px] sm:top-[96px]">
             {preview && (
               <motion.img
                 key={session.layout}
@@ -334,25 +317,45 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                 maxLength={48}
                 className="h-11 w-full rounded-full border border-white/80 bg-white/70 px-4 text-[15px] text-sn-navy outline-none backdrop-blur-xl placeholder:text-sn-faint focus:border-sn-periwinkle"
               />
+              {/* Each frame on its own */}
+              <div className="no-scrollbar flex gap-2.5 overflow-x-auto py-0.5">
+                {session.shots.slice(0, session.total).map((shot, i) => {
+                  const thumb = shot?.a || shot?.b;
+                  return thumb ? (
+                    <button
+                      key={i}
+                      onClick={() => downloadShot(i)}
+                      aria-label={`Download frame ${i + 1}`}
+                      title={`Download frame ${i + 1}`}
+                      className="group relative h-14 w-[74px] shrink-0 overflow-hidden rounded-[12px] border-2 border-white shadow-[var(--shadow-pill)]"
+                    >
+                      <img src={thumb} alt="" className="h-full w-full object-cover" />
+                      <span className="absolute inset-0 grid place-items-center bg-[#1f2a5c]/30 text-white opacity-90 transition group-hover:bg-[#1f2a5c]/45">
+                        <Download size={17} strokeWidth={2} />
+                      </span>
+                    </button>
+                  ) : null;
+                })}
+              </div>
               <div className="flex gap-2">
-                {leader && (saveState !== "saved" || savedLook.current !== look) ? (
-                  <button onClick={updateAlbum} disabled={saveState === "saving"} className="sn-pill h-12 flex-1 text-[15px]">
-                    <BookImage size={18} strokeWidth={1.9} />
-                    {saveState === "saving" ? "Saving…" : saved ? "Update album" : "Save to album"}
-                  </button>
-                ) : (
+                {session.kept ? (
                   <span className="flex h-12 flex-1 items-center justify-center gap-2 text-[15px] font-semibold text-sn-ink">
-                    <Check size={18} strokeWidth={2.2} className="text-[#3a9c7a]" /> In your album
+                    <Check size={18} strokeWidth={2.2} className="text-[#3a9c7a]" /> Kept in your album
                   </span>
+                ) : (
+                  <button onClick={keep} disabled={saving} className="sn-pill h-12 flex-1 text-[15px]">
+                    <BookImage size={18} strokeWidth={1.9} />
+                    {saving ? "Keeping…" : "Keep"}
+                  </button>
                 )}
                 <button
                   onClick={async () => downloadCanvas(await render(), `seanaya-${session.layout}-${Date.now()}.png`)}
                   className="sn-pill h-12 px-5 text-[15px]"
                 >
-                  <Download size={18} strokeWidth={1.9} /> PNG
+                  <Download size={18} strokeWidth={1.9} /> Strip
                 </button>
-                <button onClick={shootAgain} className="sn-pill h-12 px-5 text-[15px]">
-                  <RotateCcw size={17} strokeWidth={1.9} /> Again
+                <button onClick={discard} className="sn-ghost h-12 px-5 text-[15px]">
+                  <RotateCcw size={17} strokeWidth={1.9} /> {session.kept ? "New shoot" : "Discard"}
                 </button>
               </div>
             </div>

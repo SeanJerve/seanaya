@@ -204,3 +204,17 @@ export function downloadCanvas(canvas: HTMLCanvasElement, name: string) {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }, "image/png");
 }
+
+/** One frame on its own: the pair side by side (landscape), or a single photo (portrait). */
+export async function renderShotImage(shot: Shot, filterId: string): Promise<HTMLCanvasElement> {
+  const pair = !!(shot.a && shot.b);
+  const canvas = document.createElement("canvas");
+  canvas.width = pair ? 1440 : 900;
+  canvas.height = pair ? 960 : 1200;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const filter = FILTERS.find((f) => f.id === filterId)?.css ?? "none";
+  await drawShot(ctx, shot, 0, 0, canvas.width, canvas.height, 0, filter, "#eef1fb");
+  return canvas;
+}

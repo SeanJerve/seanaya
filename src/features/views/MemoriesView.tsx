@@ -622,7 +622,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
   const renderOpenBook = () => {
     return (
-      <div className="mx-auto w-full max-w-[640px] select-none px-4 pb-[200px] pt-2 sm:px-6 lg:max-w-[1186px] lg:pb-32">
+      <div className="mx-auto w-full max-w-[640px] select-none px-4 pb-[210px] pt-2 sm:px-6 lg:max-w-[900px]">
         {/* ── Page bar: back, page numbers, page actions ── */}
         <div className="flex items-center gap-3">
           <button
@@ -720,7 +720,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           </div>
         )}
 
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-10">
+        <div className="mt-5 flex flex-col items-center">
           {/* ── The page ── */}
           <div className="flex min-w-0 flex-col items-center">
             {activePage && (
@@ -748,7 +748,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               </div>
             )}
 
-            <div className="relative w-full max-w-[min(100%,calc((100dvh-230px)/1.4))] lg:max-w-[min(100%,calc((100dvh-250px)/1.4))]">
+            <div className="relative w-full max-w-[min(100%,calc((100dvh-320px)/1.4))]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentPageIdx}
@@ -939,9 +939,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             )}
           </div>
 
-          {/* ── Tools: floating above the dock on phones, a side column on desktop ── */}
+          {/* ── Tools: a floating bar centred above the dock ── */}
           {activePage && (
-            <div className="fixed inset-x-3 bottom-[calc(max(0.875rem,env(safe-area-inset-bottom))+76px)] z-30 lg:sticky lg:inset-auto lg:top-6 lg:bottom-auto">
+            <div className="fixed inset-x-3 bottom-[calc(max(0.875rem,env(safe-area-inset-bottom))+80px)] z-30 mx-auto max-w-[520px]">
               <AnimatePresence initial={false}>
                 {activeTab && (
                   <motion.div
@@ -950,7 +950,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 12 }}
                     transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-                    className="sn-card mb-3 max-h-[46dvh] overflow-y-auto p-5 lg:max-h-[calc(100dvh-220px)]"
+                    className="sn-card mb-3 max-h-[46dvh] overflow-y-auto p-5"
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="font-serif text-[20px] font-semibold text-sn-navy">
@@ -1257,7 +1257,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               </AnimatePresence>
 
               {/* Tool switcher */}
-              <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/80 bg-white/45 p-1.5 shadow-[0_14px_30px_-16px_rgba(70,88,168,0.55)] backdrop-blur-xl lg:mx-0 lg:w-full lg:justify-between">
+              <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/80 bg-white/45 p-1.5 shadow-[0_14px_30px_-16px_rgba(70,88,168,0.55)] backdrop-blur-xl">
                 {(
                   [
                     ["stickers", "Stickers", Star],
@@ -1269,7 +1269,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     key={key}
                     onClick={() => toggleTool(key)}
                     aria-pressed={activeTab === key}
-                    className={`sn-pill h-11 px-4 text-[14px] lg:flex-1 ${activeTab === key ? "sn-active" : ""}`}
+                    className={`sn-pill h-11 px-4 text-[14px] ${activeTab === key ? "sn-active" : ""}`}
                   >
                     <Icon size={17} strokeWidth={1.8} />
                     {label}
