@@ -248,12 +248,27 @@ export function RoamingPet({
       )}
 
       <motion.div
-        className="h-full w-full"
-        animate={mode === "play" ? { y: [0, -14, 0, -6, 0] } : { y: 0 }}
-        transition={mode === "play" ? { duration: 0.8, ease: "easeOut" } : { duration: 0.2 }}
-        style={{ transform: `scaleX(${dir})` }}
+        className="relative h-full w-full"
+        initial={false}
+        animate={mode === "play" ? { y: [0, -14, 0, -6, 0], scaleX: dir } : { y: 0, scaleX: dir }}
+        transition={{
+          y: mode === "play" ? { duration: 0.8, ease: "easeOut" } : { duration: 0.2 },
+          scaleX: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+        }}
       >
-        <ChibiCat mode={mode} coat={coat} face={face} coatPhoto={coatPhoto} id={pet.id} />
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={mode === "sleep" ? "sleep" : mode === "sit" ? "sit" : "stand"}
+            className="absolute inset-0"
+            initial={{ opacity: 0, scale: 0.94, y: 2 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
+            style={{ transformOrigin: "50% 100%" }}
+          >
+            <ChibiCat mode={mode} coat={coat} face={face} coatPhoto={coatPhoto} id={pet.id} />
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
     </div>
   );
@@ -293,9 +308,7 @@ function ChibiCat({
         <ellipse cx="32" cy="45" rx="22" ry="2.6" fill="rgba(60,70,140,0.14)" />
         <g className="sn-breathe" style={{ transformOrigin: "32px 44px" }}>
           <path d="M10 40 C 8 30, 22 24, 34 26 C 46 26, 54 32, 52 40 C 50 45, 14 46, 10 40 Z" fill={body} stroke={shade} strokeWidth="0.9" />
-          <path d="M14 41 C 8 38, 8 31, 16 30" fill="none" stroke={shade} strokeWidth="5" strokeLinecap="round" />
-          <path d="M14 41 C 8 38, 8 31, 16 30" fill="none" stroke={fur} strokeWidth="3.6" strokeLinecap="round" />
-          <g transform="translate(44 31)">
+          <g transform="translate(45 34) rotate(-8)">
             <path d="M-8 -6 L-6 -14 L-1 -8 Z" fill={body} stroke={shade} strokeWidth="0.8" strokeLinejoin="round" />
             <path d="M3 -8 L8 -14 L9 -5 Z" fill={body} stroke={shade} strokeWidth="0.8" strokeLinejoin="round" />
             <circle r="9.5" fill={body} stroke={shade} strokeWidth="0.9" />
@@ -309,6 +322,12 @@ function ChibiCat({
               </>
             )}
           </g>
+          {/* front paws under the chin */}
+          <ellipse cx="38" cy="43" rx="5" ry="2.8" fill={fur} stroke={shade} strokeWidth="0.8" />
+          <ellipse cx="46" cy="43.5" rx="4.6" ry="2.6" fill={fur} stroke={shade} strokeWidth="0.8" />
+          {/* tail wrapped along the front */}
+          <path d="M11 39 C 12 46, 24 46.5, 32 44.5" fill="none" stroke={shade} strokeWidth="5" strokeLinecap="round" />
+          <path d="M11 39 C 12 46, 24 46.5, 32 44.5" fill="none" stroke={fur} strokeWidth="3.6" strokeLinecap="round" />
         </g>
       </svg>
     );
@@ -320,14 +339,14 @@ function ChibiCat({
       <ellipse cx="32" cy="46" rx={sitting ? 15 : 19} ry="2.4" fill="rgba(60,70,140,0.14)" />
 
       {/* tail */}
-      <g className="sn-tail" style={{ transformOrigin: sitting ? "22px 38px" : "15px 31px" }}>
+      <g className="sn-tail" style={{ transformOrigin: sitting ? "18px 42px" : "15px 31px" }}>
         {sitting ? (
-          <path d="M22 40 C 12 42, 9 34, 14 28" fill="none" stroke={shade} strokeWidth="5" strokeLinecap="round" />
+          <path d="M18 43 C 9 44, 7 35, 12 30" fill="none" stroke={shade} strokeWidth="5" strokeLinecap="round" />
         ) : (
           <path d="M15 31 C 8 28, 6 20, 11 15" fill="none" stroke={shade} strokeWidth="5" strokeLinecap="round" />
         )}
         {sitting ? (
-          <path d="M22 40 C 12 42, 9 34, 14 28" fill="none" stroke={fur} strokeWidth="3.6" strokeLinecap="round" />
+          <path d="M18 43 C 9 44, 7 35, 12 30" fill="none" stroke={fur} strokeWidth="3.6" strokeLinecap="round" />
         ) : (
           <path d="M15 31 C 8 28, 6 20, 11 15" fill="none" stroke={fur} strokeWidth="3.6" strokeLinecap="round" />
         )}
@@ -344,13 +363,13 @@ function ChibiCat({
       {/* body */}
       <g className={moving ? "sn-bob" : ""}>
         {sitting ? (
-          <path d="M20 44 C 16 34, 20 24, 32 24 C 42 24, 46 34, 42 44 Z" fill={body} stroke={shade} strokeWidth="0.9" />
+          <path d="M17 45 C 13 35, 19 26, 31 26 C 43 26, 49 35, 45 45 Z" fill={body} stroke={shade} strokeWidth="0.9" />
         ) : (
           <ellipse cx="30" cy="31" rx={mode === "run" ? 17.5 : 16} ry="9.5" fill={body} stroke={shade} strokeWidth="0.9" />
         )}
         {!coatPhoto && (
           <>
-            <ellipse cx={sitting ? 33 : 32} cy={sitting ? 37 : 34} rx={sitting ? 6 : 9} ry={sitting ? 6.5 : 4.5} fill={belly} opacity="0.85" />
+            <ellipse cx={sitting ? 31 : 32} cy={sitting ? 38 : 34} rx={sitting ? 7 : 9} ry={sitting ? 6.5 : 4.5} fill={belly} opacity="0.85" />
             <path d={sitting ? "M24 30 q2 -2 4 0" : "M22 25 q2 -2.2 4 0 M27 24 q2 -2.2 4 0"} stroke={mark} strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.8" />
           </>
         )}
@@ -359,8 +378,8 @@ function ChibiCat({
       {/* front legs */}
       {sitting ? (
         <>
-          <rect x="30" y="34" width="5" height="11" rx="2.5" fill={fur} stroke={shade} strokeWidth="0.7" />
-          <rect x="36" y="34" width="5" height="11" rx="2.5" fill={fur} stroke={shade} strokeWidth="0.7" />
+          <rect x="25.5" y="37" width="5.4" height="8.6" rx="2.7" fill={fur} stroke={shade} strokeWidth="0.7" />
+          <rect x="31.6" y="37" width="5.4" height="8.6" rx="2.7" fill={fur} stroke={shade} strokeWidth="0.7" />
         </>
       ) : (
         <>
@@ -370,7 +389,7 @@ function ChibiCat({
       )}
 
       {/* head */}
-      <g transform={sitting ? "translate(33 17)" : "translate(46 20)"}>
+      <g transform={sitting ? "translate(31 19)" : "translate(46 20)"}>
       <g className={moving ? "sn-bob" : ""}>
         <path d="M-9 -5 L-7.5 -14.5 L-1.5 -9 Z" fill={body} stroke={shade} strokeWidth="0.8" strokeLinejoin="round" />
         <path d="M-7.2 -7.5 L-6.6 -12.2 L-3.6 -9.2 Z" fill="#f6b8c8" />
