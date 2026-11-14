@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Eye, EyeOff, Camera, X, Cat, Upload } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Pencil, X, Cat, Upload } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { uploadImage } from "@/lib/storage";
@@ -74,6 +74,9 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isUploading, setIsUploading] = useState(false);
+
+  // Per-cat edit panel (face / coat uploads and delete)
+  const [editingPetId, setEditingPetId] = useState<string | null>(null);
 
   const { data: pets = [], isLoading: loadingPets } = useQuery({
     queryKey: ["pets", relationshipId],
@@ -328,6 +331,18 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
     }
   };
 
+  const editingPet = editingPetId ? (pets.find((x) => x.id === editingPetId) ?? null) : null;
+
+  // Escape closes the edit panel (but not while the face cropper is on top of it)
+  useEffect(() => {
+    if (!editingPetId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !croppingFileSrc) setEditingPetId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editingPetId, croppingFileSrc]);
+
   const handleEyeToggle = (p: Pet, isActive: boolean) => {
     toggleActiveRoamingPetId(p.id);
     if (!isActive && !isPetVisible) {
@@ -340,26 +355,18 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
       <section>
 
         {loadingPets ? (
-          <ul className="space-y-4 animate-pulse">
+          <ul className="grid grid-cols-1 gap-3 animate-pulse min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {[1, 2].map((i) => (
               <li
                 key={i}
-                className="flex flex-col gap-3 rounded-2xl bg-white/50 p-4 border border-white/20"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-white/20 bg-white/50 p-3"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-foreground/10 shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3.5 w-24 bg-foreground/10 rounded" />
-                    <div className="h-2.5 w-16 bg-foreground/10 rounded" />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-7 h-7 rounded-full bg-foreground/10" />
-                    <div className="w-7 h-7 rounded-full bg-foreground/10" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[12px] border-t border-white/10 pt-3">
-                  <div className="h-6 bg-foreground/5 rounded-2xl" />
-                  <div className="h-6 bg-foreground/5 rounded-2xl" />
+                <div className="h-14 w-14 shrink-0 rounded-full bg-foreground/10" />
+                <div className="h-3.5 w-20 rounded bg-foreground/10" />
+                <div className="h-2.5 w-14 rounded bg-foreground/10" />
+                <div className="flex items-center gap-2">
+                  <div className="h-10 w-10 rounded-full bg-foreground/10" />
+                  <div className="h-10 w-10 rounded-full bg-foreground/10" />
                 </div>
               </li>
             ))}
@@ -370,7 +377,7 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
             <div className="mt-3 font-serif text-[22px] font-semibold text-sn-navy">No cats here yet</div>
           </div>
         ) : (
-          <ul className="grid gap-[18px] lg:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {pets.map((p) => {
               const ageInDays = p.birthday
                 ? Math.max(0, differenceInCalendarDays(new Date(), parseISO(p.birthday)))
@@ -382,112 +389,58 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
               return (
                 <li
                   key={p.id}
-                  className="sn-card flex flex-col gap-4 p-5"
+                  className="sn-card flex min-w-0 flex-col items-center gap-1.5 p-3 text-center"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="relative w-11 h-11 rounded-full bg-white/60 border border-white/50 flex items-center justify-center text-foreground/45 shadow-inner overflow-hidden select-none pointer-events-none">
-                        {hasFace ? (
-                          <img src={p.photos[0]} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Cat size={18} />
-                        )}
-                        <label
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-auto"
-                        >
-                          <Camera size={12} className="text-white" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFaceFileChange(e, p)}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2 font-serif text-[20px] font-semibold text-sn-navy">
-                          <span className="min-w-0 truncate" title={p.name}>
-                            {p.name}
-                          </span>
-                          {isCurrentlyVisible && (
-                            <span className="shrink-0 font-sans text-[13px] font-semibold text-[#3a9c7a]">
-                              Roaming
-                            </span>
-                          )}
-                          {isActive && !isPetVisible && (
-                            <span className="shrink-0 font-sans text-[13px] font-semibold text-sn-muted">
-                              Hidden
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[14px] text-sn-muted">
-                          {ageInDays !== null && <span>{ageInDays} days with us</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        onClick={() => handleEyeToggle(p, isActive)}
-                        className={`sn-pill sn-icon-btn h-10 w-10 ${isCurrentlyVisible ? "sn-active" : ""}`}
-                        title={
-                          isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"
-                        }
-                        aria-label={
-                          isCurrentlyVisible ? `Hide ${p.name} from navbar` : `Let ${p.name} roam on navbar`
-                        }
-                        aria-pressed={isCurrentlyVisible}
-                      >
-                        {isCurrentlyVisible ? <Eye size={17} /> : <EyeOff size={17} />}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          confirm({
-                            title: "Remove cat?",
-                            message: `Are you sure you want to release "${p.name}" to the wild?`,
-                            onConfirm: () => deletePet.mutate(p.id),
-                          });
-                        }}
-                        className="sn-pill sn-icon-btn h-10 w-10"
-                        title="Remove cat"
-                        aria-label="Remove cat"
-                      >
-                        <Trash2 size={16} className="!text-[#c2416c]" />
-                      </button>
-                    </div>
+                  <div className="flex h-14 w-14 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border border-white/50 bg-white/60 text-foreground/45 shadow-inner">
+                    {hasFace ? (
+                      <img src={p.photos[0]} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Cat size={20} />
+                    )}
                   </div>
 
-                  {/* Photo Updates (Outlines and solid colors completely abandoned) */}
-                  <div className="grid grid-cols-2 gap-3 border-t border-[#ebe8f6] pt-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[13px] font-semibold text-sn-ink">Face</span>
-                      <label className="sn-pill h-9 self-start px-3.5 text-[13px]">
-                        <Upload size={14} />
-                        Upload photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFaceFileChange(e, p)}
-                          className="sr-only"
-                        />
-                      </label>
-                    </div>
+                  <div
+                    className="w-full min-w-0 truncate font-serif text-[17px] font-semibold leading-tight text-sn-navy"
+                    title={p.name}
+                  >
+                    {p.name}
+                  </div>
 
-                    <div className="flex flex-col gap-1 border-l border-white/10 pl-3">
-                      <span className="text-[13px] font-semibold text-sn-ink">Coat</span>
-                      <label className="sn-pill h-9 self-start px-3.5 text-[13px]">
-                        <Upload size={14} />
-                        Upload photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handlePatternUpload(e, p)}
-                          className="sr-only"
-                        />
-                      </label>
-                    </div>
+                  <div className="flex w-full min-w-0 items-center justify-center gap-1.5 text-[12px] leading-tight text-sn-muted">
+                    {isCurrentlyVisible ? (
+                      <span className="shrink-0 font-semibold text-[#3a9c7a]">Roaming</span>
+                    ) : isActive && !isPetVisible ? (
+                      <span className="shrink-0 font-semibold">Hidden</span>
+                    ) : null}
+                    {ageInDays !== null && (
+                      <span className="min-w-0 truncate">{ageInDays} days with us</span>
+                    )}
+                    {!isActive && ageInDays === null && <span>&nbsp;</span>}
+                  </div>
+
+                  <div className="mt-1 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handleEyeToggle(p, isActive)}
+                      className={`sn-pill sn-icon-btn h-10 w-10 ${isCurrentlyVisible ? "sn-active" : ""}`}
+                      title={
+                        isCurrentlyVisible ? "Hide cat from navbar" : "Make cat roam on navbar"
+                      }
+                      aria-label={
+                        isCurrentlyVisible ? `Hide ${p.name} from navbar` : `Let ${p.name} roam on navbar`
+                      }
+                      aria-pressed={isCurrentlyVisible}
+                    >
+                      {isCurrentlyVisible ? <Eye size={17} /> : <EyeOff size={17} />}
+                    </button>
+
+                    <button
+                      onClick={() => setEditingPetId(p.id)}
+                      className="sn-pill sn-icon-btn h-10 w-10"
+                      title="Edit cat"
+                      aria-label={`Edit ${p.name}`}
+                    >
+                      <Pencil size={16} />
+                    </button>
                   </div>
                 </li>
               );
@@ -625,6 +578,101 @@ export function PetView({ relationshipId }: { relationshipId: string }) {
                 className="sn-pill mt-2 h-12 w-full text-[15px]"
               >
                 {createPet.isPending ? "Welcoming Cat..." : "Welcome Cat"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Cat Panel (face / coat uploads, delete) ── */}
+      {editingPet && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2a5c]/20 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setEditingPetId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-cat-title"
+            onClick={(e) => e.stopPropagation()}
+            className="sn-card w-full max-w-[360px] space-y-4 rounded-[24px] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3
+                id="edit-cat-title"
+                className="min-w-0 truncate font-serif text-[22px] font-semibold text-sn-navy"
+                title={editingPet.name}
+              >
+                {editingPet.name}
+              </h3>
+              <button
+                onClick={() => setEditingPetId(null)}
+                className="sn-pill sn-icon-btn h-10 w-10 shrink-0"
+                aria-label="Close"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <span className="text-[13px] font-semibold text-sn-ink">Face photo</span>
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/50 bg-white/60 text-foreground/45 shadow-inner">
+                  {editingPet.photos?.[0] ? (
+                    <img src={editingPet.photos[0]} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Cat size={20} />
+                  )}
+                </div>
+                <label className="sn-pill h-10 cursor-pointer px-3.5 text-[13px]">
+                  <Upload size={14} />
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFaceFileChange(e, editingPet)}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col items-center gap-2 text-center">
+                <span className="text-[13px] font-semibold text-sn-ink">Coat photo</span>
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/50 bg-white/60 text-foreground/45 shadow-inner">
+                  {editingPet.photos?.[1] ? (
+                    <img src={editingPet.photos[1]} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Upload size={18} />
+                  )}
+                </div>
+                <label className="sn-pill h-10 cursor-pointer px-3.5 text-[13px]">
+                  <Upload size={14} />
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePatternUpload(e, editingPet)}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-[#ebe8f6] pt-3">
+              <button
+                onClick={() => {
+                  const pet = editingPet;
+                  setEditingPetId(null);
+                  confirm({
+                    title: "Remove cat?",
+                    message: `Are you sure you want to release "${pet.name}" to the wild?`,
+                    onConfirm: () => deletePet.mutate(pet.id),
+                  });
+                }}
+                className="sn-ghost h-10 w-full justify-center gap-1.5 px-3.5 text-[14px] font-semibold !text-[#c2416c]"
+              >
+                <Trash2 size={15} />
+                Delete cat
               </button>
             </div>
           </div>

@@ -39,7 +39,12 @@ export function HomeView({
   const { me, partner } = useCoupleNames();
   const loc = useCoupleLocations(relationshipId);
   const myCity =
-    loc.mine?.city ?? (loc.status === "denied" ? "Location off" : loc.status === "unsupported" ? "Location unavailable" : "Locating…");
+    loc.mine?.city ??
+    (loc.status === "denied"
+      ? "Location off"
+      : loc.status === "unsupported"
+        ? "Location unavailable"
+        : "Locating…");
   const partnerCity = loc.partner?.city ?? "Not shared yet";
 
   // ── Next scheduled moment ──
@@ -195,7 +200,8 @@ export function HomeView({
           <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
             <button
               onClick={(e) => {
-                if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([40, 80, 40]);
+                if (typeof navigator !== "undefined" && navigator.vibrate)
+                  navigator.vibrate([40, 80, 40]);
                 burstHearts(e);
                 hug.mutate();
               }}
@@ -222,132 +228,187 @@ export function HomeView({
           </div>
         </section>
 
-        {/* ───── Studio ───── */}
-        <section
-          onClick={() => setTab("photobooth")}
-          className="group flex cursor-pointer flex-col"
-        >
-          <h2 className="sn-label">Studio</h2>
-          <div className="relative mt-4 flex flex-1 items-start gap-5">
-            <Polaroid
-              src={ART.polaroidSky}
-              tape="blue"
-              tilt={-6}
-              className="ml-1 mt-1 w-[112px] shrink-0 group-hover:rotate-[-3deg] sm:w-[146px]"
-              photoClassName="aspect-[128/138]"
-            />
-            <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
-              <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[24px]">
-                Remote Photo Booth
-              </h3>
-              <span className="sn-pill mt-5 h-11 self-start px-5 text-[14.5px]">
-                Enter booth
-                <ArrowRight size={17} strokeWidth={2} className="transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </div>
-            <Bow className="absolute -bottom-1 right-0 hidden h-10 w-12 text-[#a9b4e4] sm:block" />
-          </div>
-        </section>
-
         {!hasAnniversary ? (
-          <section className="flex flex-col justify-center lg:col-span-2">
-            <h2 className="sn-label">Together</h2>
-            <h3 className="mt-3 font-serif text-[22px] font-semibold leading-tight text-sn-navy">
-              When did your story start?
-            </h3>
-            <p className="mt-1 text-[14.5px] text-sn-muted">
-              Set your anniversary to count your days together and your monthsaries.
-            </p>
-            <button
-              onClick={() => openSheet("settings")}
-              className="sn-pill mt-4 h-11 self-start px-5 text-[14.5px]"
+          <>
+            <section className="flex flex-col justify-center">
+              <h3 className="font-serif text-[22px] font-semibold leading-tight text-sn-navy">
+                When did your story start?
+              </h3>
+              <p className="mt-1 text-[14.5px] text-sn-muted">
+                Set your anniversary to count your days together and your monthsaries.
+              </p>
+              <button
+                onClick={() => openSheet("settings")}
+                className="sn-pill mt-4 h-11 self-start px-5 text-[14.5px]"
+              >
+                Set anniversary
+                <ArrowRight size={17} strokeWidth={2} />
+              </button>
+            </section>
+            {/* ───── Studio ───── */}
+            <section
+              onClick={() => setTab("photobooth")}
+              className="group flex cursor-pointer flex-col"
             >
-              Set anniversary
-              <ArrowRight size={17} strokeWidth={2} />
-            </button>
-          </section>
+              <div className="relative flex flex-1 items-start gap-5">
+                <Polaroid
+                  src={ART.polaroidSky}
+                  tape="blue"
+                  tilt={-6}
+                  className="ml-1 mt-1 w-[112px] shrink-0 group-hover:rotate-[-3deg] sm:w-[146px]"
+                  photoClassName="aspect-[128/138]"
+                />
+                <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
+                  <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[24px]">
+                    Remote Photo Booth
+                  </h3>
+                  <span className="sn-pill mt-5 h-11 self-start px-5 text-[14.5px]">
+                    Enter booth
+                    <ArrowRight
+                      size={17}
+                      strokeWidth={2}
+                      className="transition-transform group-hover:translate-x-0.5"
+                    />
+                  </span>
+                </div>
+                <Bow className="absolute -bottom-1 right-0 hidden h-10 w-12 text-[#a9b4e4] sm:block" />
+              </div>
+            </section>
+          </>
         ) : (
-        <>
-        {/* ───── Together ───── */}
-        <section
-          {...longPressProps}
-          className="relative flex flex-col justify-center"
-        >
-          <h2 className="sn-label">Together</h2>
-          <div className="relative z-10 mt-3 flex items-baseline gap-3">
-            <span className="font-serif text-[72px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums sm:text-[84px]">
-              <CountUp value={together.days} />
-            </span>
-            <span className="font-serif text-[28px] text-sn-ink">days</span>
-          </div>
-          <Clock className="relative z-10 mt-2 text-[16px] font-semibold tracking-[0.03em] text-sn-ink tabular-nums" />
-          <div className="relative z-10 mt-1 text-[14.5px] text-sn-muted">
-            since {format(start, "MMMM d, yyyy")}
-          </div>
-          <img
-            src={ART.lilyOpen}
-            alt=""
-            aria-hidden
-            className="pointer-events-none absolute -bottom-6 right-0 hidden w-[150px] rotate-[-24deg] select-none sm:block"
-          />
-        </section>
-
-        {/* ───── Monthly milestone ───── */}
-        <section
-          onClick={openMonthsary}
-          title="Open our monthsary story"
-          className="@container flex cursor-pointer flex-col justify-center"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="sn-label">Monthly milestone</h2>
-            <span className="text-[14px] text-[#5b6489] sm:text-[15px]">
-              {ordinal(monthDay)} of each month
-            </span>
-          </div>
-          <div className="mt-6 flex items-end justify-between gap-3">
-            <span className="font-serif text-[26px] font-semibold leading-none text-sn-navy @min-[440px]:text-[31px]">
-              {isMonthsaryToday
-                ? "It's today"
-                : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} to go`}
-            </span>
-            <span className="text-[20px] font-semibold leading-none text-[#e0609a] tabular-nums sm:text-[22px]">
-              {progress}%
-            </span>
-          </div>
-          <div className="relative mt-4">
-            <img
-              src={ART.catPeek}
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute bottom-[12px] right-[52px] hidden w-[100px] select-none @min-[340px]:block @min-[440px]:right-[56px] @min-[440px]:w-[124px]"
-            />
-            <div
-              className="relative h-[16px] rounded-full bg-[#ebeaf2] shadow-[inset_0_1px_3px_rgba(100,108,160,0.18)]"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progress to the next monthsary"
-            >
-              <div className="sn-progress-fill h-full rounded-full" style={{ width: `${progress}%` }} />
+          <>
+            {/* ───── Together ───── */}
+            <section {...longPressProps} className="relative flex flex-col justify-center">
+              <div className="relative z-10 flex items-center gap-4 sm:gap-5">
+                {/* Keeps beating as long as we're together */}
+                <img
+                  src={ART.clayHeart}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="sn-heartbeat h-[58px] w-[58px] shrink-0 select-none sm:h-[68px] sm:w-[68px]"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-serif text-[72px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums sm:text-[84px]">
+                      <CountUp value={together.days} />
+                    </span>
+                    <span className="font-serif text-[28px] text-sn-ink">days</span>
+                  </div>
+                  <Clock className="relative z-10 mt-2 text-[16px] font-semibold tracking-[0.03em] text-sn-ink tabular-nums" />
+                  <div className="relative z-10 mt-1 text-[14.5px] text-sn-muted">
+                    since {format(start, "MMMM d, yyyy")}
+                  </div>
+                </div>
+              </div>
               <img
-                src={ART.clayHeart}
+                src={ART.lilyOpen}
                 alt=""
                 aria-hidden
-                className="absolute top-1/2 h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 select-none"
-                style={{ left: `${progress}%` }}
+                className="pointer-events-none absolute -bottom-6 right-0 hidden w-[150px] rotate-[-24deg] select-none sm:block"
               />
-            </div>
-          </div>
-        </section>
-        </>
+            </section>
+
+            {/* ───── Studio ───── */}
+            <section
+              onClick={() => setTab("photobooth")}
+              className="group flex cursor-pointer flex-col"
+            >
+              <div className="relative flex flex-1 items-start gap-5">
+                <Polaroid
+                  src={ART.polaroidSky}
+                  tape="blue"
+                  tilt={-6}
+                  className="ml-1 mt-1 w-[112px] shrink-0 group-hover:rotate-[-3deg] sm:w-[146px]"
+                  photoClassName="aspect-[128/138]"
+                />
+                <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
+                  <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[24px]">
+                    Remote Photo Booth
+                  </h3>
+                  <span className="sn-pill mt-5 h-11 self-start px-5 text-[14.5px]">
+                    Enter booth
+                    <ArrowRight
+                      size={17}
+                      strokeWidth={2}
+                      className="transition-transform group-hover:translate-x-0.5"
+                    />
+                  </span>
+                </div>
+                <Bow className="absolute -bottom-1 right-0 hidden h-10 w-12 text-[#a9b4e4] sm:block" />
+              </div>
+            </section>
+
+            {/* ───── Monthly milestone ───── */}
+            <section
+              onClick={openMonthsary}
+              title="Open our monthsary story"
+              className="@container flex cursor-pointer flex-col justify-center"
+            >
+              <div className="flex items-end justify-between gap-3">
+                <span className="font-serif text-[26px] font-semibold leading-none text-sn-navy @min-[440px]:text-[31px]">
+                  {isMonthsaryToday
+                    ? "It's today"
+                    : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} to go`}
+                </span>
+                <span className="text-[20px] font-semibold leading-none text-[#e0609a] tabular-nums sm:text-[22px]">
+                  {progress}%
+                </span>
+              </div>
+              <div className="relative mt-4">
+                <img
+                  src={ART.catPeek}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-[22px] right-[52px] hidden w-[100px] select-none @min-[340px]:block @min-[440px]:right-[56px] @min-[440px]:w-[124px]"
+                />
+                <div
+                  className="relative h-[28px] rounded-full bg-[#ebeaf2] shadow-[inset_0_1px_3px_rgba(100,108,160,0.18)]"
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Progress to the next monthsary"
+                >
+                  <div
+                    className="sn-progress-fill h-full rounded-full"
+                    style={{ width: `${progress}%` }}
+                  />
+                  {/* The word sits inside the bar: soft ink on the track, white where it's filled */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 grid place-items-center text-[12.5px] font-extrabold uppercase tracking-[0.42em] text-[#9aa1c4]"
+                  >
+                    monthsary
+                  </span>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 grid place-items-center text-[12.5px] font-extrabold uppercase tracking-[0.42em] text-white [text-shadow:0_1px_2px_rgba(180,60,110,0.35)]"
+                    style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
+                  >
+                    monthsary
+                  </span>
+                  <img
+                    src={ART.clayHeart}
+                    alt=""
+                    aria-hidden
+                    className="absolute top-1/2 h-[40px] w-[40px] -translate-x-1/2 -translate-y-1/2 select-none drop-shadow-[0_4px_6px_rgba(236,122,164,0.35)]"
+                    style={{ left: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            </section>
+          </>
         )}
 
         {/* ───── Upcoming moments ───── */}
         <section className="lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="sn-label">Upcoming moments</h2>
-            <button onClick={() => setTab("calendar")} className="sn-pill relative z-10 h-9 px-4 text-[14px]">
+            <h2 className="sn-label">Soon</h2>
+            <button
+              onClick={() => setTab("calendar")}
+              className="sn-pill relative z-10 h-9 px-4 text-[14px]"
+            >
               Calendar
               <ArrowRight size={16} strokeWidth={2} />
             </button>
@@ -379,7 +440,10 @@ export function HomeView({
                   <p className="mt-1 text-[14.5px] text-sn-ink">Add a moment to count down to.</p>
                 </div>
               )}
-              <button onClick={() => openSheet("add-event")} className="sn-pill h-11 w-full px-5 text-[14.5px] sm:w-auto">
+              <button
+                onClick={() => openSheet("add-event")}
+                className="sn-pill h-11 w-full px-5 text-[14.5px] sm:w-auto"
+              >
                 <Plus size={17} strokeWidth={2} />
                 Add moment
               </button>
@@ -466,7 +530,10 @@ function Person({
         whileTap={{ scale: 0.93 }}
         onClick={(e) => {
           burstHearts(e.currentTarget, 5);
-          wiggle.start({ rotate: [0, -7, 6, -3, 0], transition: { duration: 0.5, ease: "easeInOut" } });
+          wiggle.start({
+            rotate: [0, -7, 6, -3, 0],
+            transition: { duration: 0.5, ease: "easeInOut" },
+          });
         }}
         className="sn-float shrink-0 rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-[#94b2f6]"
         style={{ animationDelay: right ? "-2.1s" : "0s" }}

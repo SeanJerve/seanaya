@@ -721,3 +721,35 @@
     width: 100% !important;
   }
 }
+
+/* The clay heart beside the days: a slow, soft lub-dub */
+@keyframes sn-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 6px 10px rgba(236, 122, 164, 0.3));
+  }
+  14% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 8px 16px rgba(236, 122, 164, 0.5));
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 7px 13px rgba(236, 122, 164, 0.42));
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+.sn-heartbeat {
+  animation: sn-heartbeat 1.9s ease-in-out infinite;
+  transform-origin: 50% 60%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-heartbeat {
+    animation: none;
+  }
+}

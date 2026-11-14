@@ -14,7 +14,8 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 /**
- * Puts a finished strip into the Album book (its own new page) and the memories timeline.
+ * Puts a kept strip into the Album book, on its own new page. It never adds a memory:
+ * the memories timeline is only ever filled in by hand.
  * Returns ids so a decorated version can later replace the same picture.
  */
 export async function saveStripToAlbumBook({
@@ -77,25 +78,8 @@ export async function saveStripToAlbumBook({
     itemId = item.id;
   }
 
-  let memoryId: string | null = null;
-  const { data: user } = await supabase.auth.getUser();
-  if (user?.user?.id) {
-    const { data: mem } = await supabase
-      .from("memories")
-      .insert({
-        relationship_id: relationshipId,
-        created_by: user.user.id,
-        title,
-        description,
-        category: "random",
-        cover_url: url,
-        memory_date: format(new Date(), "yyyy-MM-dd"),
-        tags: ["photobooth", "strip"],
-      })
-      .select("id")
-      .single();
-    memoryId = mem?.id ?? null;
-  }
+  // Booth strips go into the album book only. Memories are added by hand.
+  const memoryId: string | null = null;
 
   if (!itemId && !memoryId) throw new Error("Couldn't save to the album");
   return { url, itemId, memoryId };
