@@ -27,6 +27,8 @@ import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
 import { AddStickerSheet } from "@/features/sheets/AddStickerSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
+import { WorkInProgress, LOCK_PARTNER_B } from "./WorkInProgress";
+import { useUser } from "@/hooks/useUser";
 import { HeartBurstLayer } from "@/components/seanaya/HeartBurst";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MonthsaryWrapped } from "@/features/monthsary/MonthsaryWrapped";
@@ -109,6 +111,7 @@ export function SeanayaApp() {
 
 function Inner() {
   const { data: rel, isLoading, isError, refetch } = useRelationship();
+  const { user } = useUser();
   const { tab, sheet, isMonthsaryOpen } = useAppStore();
   const qc = useQueryClient();
 
@@ -288,6 +291,11 @@ function Inner() {
       : null);
 
   const activeRelId = effectiveRel?.id || fallbackRelId || "";
+
+  // Slot B is decided by the server (who claimed it), not by anything stored on the phone.
+  if (LOCK_PARTNER_B && !isUrlPreview && rel && user && rel.user_b_id === user.id) {
+    return <WorkInProgress name={rel.name_b || "Aya"} />;
+  }
 
   if (isMonthsaryOpen && activeRelId) {
     return (
