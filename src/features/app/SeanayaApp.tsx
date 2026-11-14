@@ -27,6 +27,7 @@ import { SettingsSheet } from "@/features/sheets/SettingsSheet";
 import { NotificationsSheet } from "@/features/sheets/NotificationsSheet";
 import { AddStickerSheet } from "@/features/sheets/AddStickerSheet";
 import { HugOverlay } from "@/features/panels/HugOverlay";
+import { HeartBurstLayer } from "@/components/seanaya/HeartBurst";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MonthsaryWrapped } from "@/features/monthsary/MonthsaryWrapped";
 import { bootTheme } from "@/lib/theme";
@@ -302,7 +303,7 @@ function Inner() {
         className="fixed inset-0 flex items-center justify-center"
         style={{ background: "var(--gradient-sky)" }}
       >
-        <div className="text-sm text-muted-foreground animate-pulse">Preparing your space…</div>
+        <div className="sn-hand animate-pulse text-[22px] text-[#646d93]">opening your space…</div>
       </div>
     );
   }
@@ -313,20 +314,28 @@ function Inner() {
         className="fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
         style={{ background: "var(--gradient-sky)" }}
       >
-        <div className="sn-card p-8 max-w-sm flex flex-col items-center shadow-soft">
-          <div className="text-[12px] uppercase tracking-[0.25em] text-muted-foreground">
-            Seanaya
-          </div>
-          <h2 className="display mt-2 text-2xl">Waking your space</h2>
-          <p className="mt-2 text-xs text-muted-foreground">
-            The database took a moment to respond. Tap below to reconnect.
+        <div className="flex max-w-sm flex-col items-center">
+          <img src="/art/cat-peek.webp" alt="" className="h-[86px] w-auto select-none" draggable={false} />
+          <div className="mt-4 font-serif text-[15px] font-medium tracking-[0.18em] text-[#38457c]">SEANAYA</div>
+          <h2 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-sn-navy">
+            {isError ? "Couldn't reach your space" : "This phone was signed out"}
+          </h2>
+          <p className="mt-2 text-[15px] leading-snug text-sn-ink">
+            {isError
+              ? "Check your connection, then try again."
+              : "Your PIN was used on another device. Enter it again here to come back in."}
           </p>
-          <button
-            onClick={() => refetch()}
-            className="mt-6 rounded-full border border-white/50 bg-white/40 backdrop-blur-xl px-7 py-2.5 text-sm text-foreground hover:bg-white/60 active:scale-95 transition shadow-sm font-medium"
-          >
-            Retry now
-          </button>
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            {isError ? (
+              <button onClick={() => refetch()} className="sn-pill h-12 px-7 text-[15px]">
+                Try again
+              </button>
+            ) : (
+              <button onClick={() => window.location.reload()} className="sn-pill h-12 px-7 text-[15px]">
+                Enter PIN again
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -407,6 +416,7 @@ function Inner() {
       </Sheet>
 
       <HugOverlay relationshipId={relId} />
+      <HeartBurstLayer />
       <ConfirmDialog />
       <MonthsaryWrapped relationshipId={relId} />
     </div>

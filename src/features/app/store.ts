@@ -153,7 +153,8 @@ declare global {
   }
 }
 
-if (typeof window !== "undefined") {
+// Local development helper only.
+if (typeof window !== "undefined" && import.meta.env.DEV) {
   window.resetMonthsary = () => {
     localStorage.removeItem("seanaya_3rd_monthsary_seen");
     localStorage.removeItem("seanaya_3rd_monthsary_seen_a");

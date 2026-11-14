@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
-import { pinStorage, hashPin, ANNIVERSARY_ISO, type Slot } from "@/features/pin/pin-utils";
+import { format, parseISO } from "date-fns";
+import { ChibiTile, chibiFor } from "@/components/seanaya/art";
+import { pinStorage, hashPin, type Slot } from "@/features/pin/pin-utils";
+import { REL_COLUMNS } from "@/hooks/useRelationship";
 import { Input } from "./form-ui";
 import { useNotificationPrefs, type PrefKind } from "@/hooks/useNotificationPrefs";
 import { uploadImage } from "@/lib/storage";
@@ -20,6 +22,7 @@ export function SettingsSheet({
   const qc = useQueryClient();
   const [displayName, setDisplayName] = useState(pinStorage.getName() ?? "");
   const [newPin, setNewPin] = useState("");
+  const [partnerPin, setPartnerPin] = useState("");
   const [anniversary, setAnniversary] = useState<string>("");
   const { prefs, set: setPref } = useNotificationPrefs();
 
@@ -73,8 +76,13 @@ export function SettingsSheet({
   const { data: rel } = useQuery({
     queryKey: ["settings-rel", relationshipId],
     queryFn: async () =>
-      (await supabase.from("relationships").select("*").eq("id", relationshipId).maybeSingle())
-        .data,
+      (
+        await supabase
+          .from("relationships")
+          .select(REL_COLUMNS)
+          .eq("id", relationshipId)
+          .maybeSingle()
+      ).data,
   });
 
   useEffect(() => {
@@ -87,7 +95,10 @@ export function SettingsSheet({
       if (!n) throw new Error("Name is required");
       pinStorage.setName(n);
       const nameCol = slot === "a" ? { name_a: n } : { name_b: n };
-      const { error } = await supabase.from("relationships").update(nameCol).eq("id", relationshipId);
+      const { error } = await supabase
+        .from("relationships")
+        .update(nameCol)
+        .eq("id", relationshipId);
       if (error) throw error;
       if (user) {
         const { error: profileError } = await supabase
@@ -107,15 +118,40 @@ export function SettingsSheet({
     mutationFn: async () => {
       if (!/^\d{4}$/.test(newPin)) throw new Error("Enter a 4-digit PIN");
       const h = await hashPin(newPin);
-      const patch = slot === "a" ? { pin_hash_a: h } : { pin_hash_b: h };
-      const { error } = await supabase.from("relationships").update(patch).eq("id", relationshipId);
-      if (error) throw error;
+      // The server works out whose PIN this is from who's signed in.
+      const { error } = await (supabase.rpc as any)("set_my_pin", {
+        _rel_id: relationshipId,
+        _new_hash: h,
+      });
+      if (error)
+        throw new Error(
+          error.message?.includes("different pin")
+            ? "Pick a different PIN than your partner"
+            : "Couldn't update your PIN",
+        );
     },
     onSuccess: () => {
       setNewPin("");
       toast.success("Your PIN was updated");
     },
     onError: (e: any) => toast.error(e?.message || String(e) || "Try again"),
+  });
+
+  const resetPartner = useMutation({
+    mutationFn: async () => {
+      if (!/^d{4}$/.test(partnerPin)) throw new Error("Enter a 4-digit PIN");
+      const h = await hashPin(partnerPin);
+      const { error } = await (supabase.rpc as any)("reset_partner_pin", {
+        _rel_id: relationshipId,
+        _new_hash: h,
+      });
+      if (error) throw new Error("Couldn't set the new PIN");
+    },
+    onSuccess: () => {
+      setPartnerPin("");
+      toast.success(`New PIN set for ${partnerName || "your partner"}`);
+    },
+    onError: (e: any) => toast.error(e?.message || "Try again"),
   });
 
   const saveAnn = useMutation({
@@ -145,46 +181,32 @@ export function SettingsSheet({
   const prefRows: { k: PrefKind; label: string }[] = [
     { k: "memory", label: "Memories" },
     { k: "event", label: "Moments" },
-    { k: "trip", label: "Places" },
     { k: "note", label: "Notes" },
-    { k: "song", label: "Songs" },
     { k: "hug", label: "Hugs" },
   ];
 
   return (
     <div className="divide-y divide-[#e7e4f3]">
       <Group label="Profile">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
-          <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-white bg-[#e6eafc] shadow-[var(--shadow-pill)]">
-            {myProfile?.avatar_url ? (
-              <img src={myProfile.avatar_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="font-serif text-[24px] font-semibold text-sn-navy">
-                {displayName.slice(0, 1).toUpperCase() || "?"}
-              </span>
-            )}
+        <div className="flex min-w-0 items-center gap-4">
+          <ChibiTile src={chibiFor(yourName || displayName)} alt="" className="h-[72px] w-[64px]" />
+          <div className="min-w-0">
+            <div className="truncate font-serif text-[24px] font-semibold leading-tight text-sn-navy">
+              {displayName || yourName || "You"}
+            </div>
+            <div className="sn-hand text-[18px] leading-tight text-[#646d93]">
+              with {partnerName || "your partner"} since{" "}
+              {anniversary ? format(parseISO(anniversary), "MMM d, yyyy") : "the start"}
+            </div>
           </div>
-          <input
-            type="file"
-            accept="image/*"
-            id="profile-pic-upload"
-            className="sr-only"
-            onChange={handleAvatarUpload}
-            disabled={uploadingAvatar}
-          />
-          <label htmlFor="profile-pic-upload" className="sn-pill h-10 shrink-0 px-4 text-[14px]">
-            <Upload size={15} strokeWidth={1.9} />
-            {uploadingAvatar ? "Uploading…" : myProfile?.avatar_url ? "Change photo" : "Add photo"}
-          </label>
-          {myProfile?.avatar_url && (
-            <button onClick={handleRemoveAvatar} className="sn-ghost h-10 shrink-0 px-4 text-[14px]">
-              Remove
-            </button>
-          )}
         </div>
         <Row label="Name">
           <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <button onClick={() => saveName.mutate()} disabled={saveName.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+          <button
+            onClick={() => saveName.mutate()}
+            disabled={saveName.isPending}
+            className="sn-pill h-12 shrink-0 px-5 text-[14.5px]"
+          >
             Save
           </button>
         </Row>
@@ -193,7 +215,11 @@ export function SettingsSheet({
       <Group label="Anniversary">
         <Row>
           <Input type="date" value={anniversary} onChange={(e) => setAnniversary(e.target.value)} />
-          <button onClick={() => saveAnn.mutate()} disabled={saveAnn.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+          <button
+            onClick={() => saveAnn.mutate()}
+            disabled={saveAnn.isPending}
+            className="sn-pill h-12 shrink-0 px-5 text-[14.5px]"
+          >
             Save
           </button>
         </Row>
@@ -215,36 +241,53 @@ export function SettingsSheet({
             inputMode="numeric"
             placeholder="New 4-digit PIN"
           />
-          <button onClick={() => savePin.mutate()} disabled={savePin.isPending} className="sn-pill h-12 shrink-0 px-5 text-[14.5px]">
+          <button
+            onClick={() => savePin.mutate()}
+            disabled={savePin.isPending}
+            className="sn-pill h-12 shrink-0 px-5 text-[14.5px]"
+          >
             Update
           </button>
         </Row>
       </Group>
 
-      <Group label="Links">
-        <div className="flex flex-wrap gap-2.5">
-          {!rel?.user_b_id && (
+      {rel?.user_b_id && (
+        <Group label={`${partnerName || "Partner"} forgot their PIN?`}>
+          <Row>
+            <Input
+              value={partnerPin}
+              onChange={(e) => setPartnerPin(e.target.value.replace(/D/g, "").slice(0, 4))}
+              inputMode="numeric"
+              placeholder="Their new 4-digit PIN"
+            />
+            <button
+              onClick={() => resetPartner.mutate()}
+              disabled={resetPartner.isPending}
+              className="sn-pill h-12 shrink-0 px-5 text-[14.5px]"
+            >
+              Set
+            </button>
+          </Row>
+        </Group>
+      )}
+
+      {rel && !rel.user_b_id && (
+        <Group label="Invite">
+          <div className="flex flex-wrap gap-2.5">
             <button
               onClick={() =>
-                copy(`${window.location.origin}/?invite=${inviteCode || rel?.invite_code || ""}`, "Invite link copied")
+                copy(
+                  `${window.location.origin}/?invite=${inviteCode || rel?.invite_code || ""}`,
+                  "Invite link copied",
+                )
               }
               className="sn-pill h-11 px-5 text-[14.5px]"
             >
               Copy invite link
             </button>
-          )}
-          <button
-            onClick={() => {
-              const partnerSlot = slot === "a" ? "b" : "a";
-              const d = anniversary || rel?.anniversary || ANNIVERSARY_ISO;
-              copy(`${window.location.origin}/?reset=${partnerSlot}&date=${d}`, "PIN reset link copied");
-            }}
-            className="sn-pill h-11 px-5 text-[14.5px]"
-          >
-            Copy PIN reset link for {partnerName || "partner"}
-          </button>
-        </div>
-      </Group>
+          </div>
+        </Group>
+      )}
     </div>
   );
 }
@@ -267,7 +310,15 @@ function Row({ label, children }: { label?: string; children: React.ReactNode })
   );
 }
 
-function Switch({ label, on, onToggle }: { label: string; on: boolean; onToggle: (v: boolean) => void }) {
+function Switch({
+  label,
+  on,
+  onToggle,
+}: {
+  label: string;
+  on: boolean;
+  onToggle: (v: boolean) => void;
+}) {
   return (
     <button
       role="switch"

@@ -1,7 +1,26 @@
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function Lightbox({ src, onClose }: { src: string | null; onClose: () => void }) {
+  // onClose is often an inline arrow; keep the latest without re-running the effect
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const isOpen = !!src;
+
+  // Escape closes. Capture on window so a sheet underneath doesn't also close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeRef.current();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {src && (
@@ -14,6 +33,7 @@ export function Lightbox({ src, onClose }: { src: string | null; onClose: () => 
         >
           <button
             onClick={onClose}
+            aria-label="Close"
             className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] rounded-full bg-white/20 p-2 text-white"
           >
             <X size={18} />

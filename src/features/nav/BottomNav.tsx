@@ -26,7 +26,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode; dotKinds?: stri
 
 export function BottomNav({ relationshipId }: { relationshipId?: string }) {
   const { tab, setTab, activeRoamingPetIds, isPetVisible } = useAppStore();
-  const { list } = useNotifications(relationshipId);
+  const { list } = useNotifications(relationshipId, { live: true });
 
   // Query details of all active roaming pets
   const { data: fetchedPets = [] } = useQuery({
@@ -108,14 +108,18 @@ export function BottomNav({ relationshipId }: { relationshipId?: string }) {
                     className="absolute inset-0 rounded-full border border-white/80 bg-[radial-gradient(circle_at_35%_30%,#c9d8fd,#94b2f6_75%)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),0_8px_16px_-8px_rgba(70,100,200,0.65)]"
                   />
                 )}
-                <span
-                  className={`relative z-10 transition-colors ${active ? "text-[#3150a8]" : "text-[#5c6aa3] hover:text-sn-navy"}`}
+                <motion.span
+                  key={active ? "on" : "off"}
+                  initial={active ? { y: 0, scale: 1 } : false}
+                  animate={active ? { y: [0, -4, 0], scale: [1, 1.14, 1] } : undefined}
+                  transition={{ duration: 0.42, ease: "easeOut" }}
+                  className={`relative z-10 block transition-colors ${active ? "text-[#3150a8]" : "text-[#5c6aa3] hover:text-sn-navy"}`}
                 >
                   {t.icon}
                   {dot && !active && (
                     <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[color:var(--hug)] shadow-[0_0_6px_var(--hug)]" />
                   )}
-                </span>
+                </motion.span>
               </button>
             );
           })}

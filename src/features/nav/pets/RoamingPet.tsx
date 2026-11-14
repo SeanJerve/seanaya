@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MutableRefObject } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { TabKey } from "@/features/app/store";
 
 /**
@@ -39,6 +39,14 @@ const parseVariant = (v: string | null) => {
 const reduceMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+const isMoving = (m: Mode) => m === "walk" || m === "run";
+/** % of dock width per second (was 0.2 / 0.62 per 50ms tick) */
+const WALK_SPEED = 4;
+const RUN_SPEED = 12.4;
+
+type Align = "left" | "right" | "center";
+const alignFor = (x: number): Align => (x < 16 ? "left" : x > 84 ? "right" : "center");
+
 // One cat talks at a time
 let lastBubbleAt = 0;
 const canSpeak = (gap = 2600) => Date.now() - lastBubbleAt > gap;
@@ -56,25 +64,106 @@ export function RoamingPet({
   tab: TabKey;
   petPositionsRef: MutableRefObject<Record<string, number>>;
 }) {
-  const still = reduceMotion();
-  const [x, setX] = useState(() => 14 + index * 26);
-  const [dir, setDir] = useState<1 | -1>(index % 2 ? -1 : 1);
-  const [mode, setMode] = useState<Mode>(still ? "sit" : "walk");
+  const prefersReduced = useReducedMotion();
+  const still = prefersReduced ?? reduceMotion();
+  const [dir, setDirState] = useState<1 | -1>(index % 2 ? -1 : 1);
+  const [mode, setModeState] = useState<Mode>(still ? "sit" : "walk");
   const [bubble, setBubble] = useState<string | null>(null);
   const [heart, setHeart] = useState(false);
   const [asleepLocked, setAsleepLocked] = useState(false);
+  const [hidden, setHidden] = useState(() => typeof document !== "undefined" && document.hidden);
 
-  const st = useRef({ x, dir, mode, until: Date.now() + 5000, meetCooldown: 0 });
-  st.current.x = x;
-  st.current.dir = dir;
-  st.current.mode = mode;
+  // Horizontal position (% of the dock width) lives in a ref and is written straight to the DOM
+  // as a transform, so walking never re-renders React or triggers layout.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const xRef = useRef(14 + index * 26);
+  const dockWidth = useRef(0);
+  const [align, setAlign] = useState<Align>(() => alignFor(xRef.current));
+  const alignRef = useRef(align);
+
+  const st = useRef({ dir, mode, until: Date.now() + 5000, meetCooldown: 0 });
+  const pressAt = useRef(0);
+  const holdTimer = useRef<number | null>(null);
+  const setDir = (d: 1 | -1) => {
+    st.current.dir = d;
+    setDirState(d);
+  };
+  const setMode = (m: Mode) => {
+    st.current.mode = m;
+    setModeState(m);
+  };
+
+  const applyX = (nx: number) => {
+    xRef.current = nx;
+    petPositionsRef.current[pet.id] = nx;
+    const el = rootRef.current;
+    if (el) el.style.transform = `translate3d(${(nx / 100) * dockWidth.current}px,0,0)`;
+    const a = alignFor(nx);
+    if (a !== alignRef.current) {
+      alignRef.current = a;
+      setAlign(a);
+    }
+  };
+
+  // Every timeout is tracked so it can be cleared on unmount
+  const timers = useRef(new Set<number>());
+  const later = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      timers.current.delete(id);
+      fn();
+    }, ms);
+    timers.current.add(id);
+    return id;
+  };
 
   const say = (text: string, ms = 3000, force = false) => {
     if (!force && !canSpeak()) return;
     lastBubbleAt = Date.now();
     setBubble(text.replace("{name}", pet.name || "I"));
-    window.setTimeout(() => setBubble((b) => (b === text.replace("{name}", pet.name || "I") ? null : b)), ms);
+    later(() => setBubble((b) => (b === text.replace("{name}", pet.name || "I") ? null : b)), ms);
   };
+
+  // Measure the dock so % positions map to px; publish our position for the other cats
+  useLayoutEffect(() => {
+    const parent = rootRef.current?.parentElement;
+    if (!parent) return;
+    const measure = () => {
+      dockWidth.current = parent.clientWidth;
+      applyX(xRef.current);
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(parent);
+    return () => {
+      ro?.disconnect();
+      delete petPositionsRef.current[pet.id];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pet.id]);
+
+  // Pause when the tab is hidden
+  useEffect(() => {
+    const onVis = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Reduced motion: stay put (sit/sleep only)
+  useEffect(() => {
+    if (still && st.current.mode !== "sit" && st.current.mode !== "sleep") setMode("sit");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [still]);
+
+  // Clear everything on unmount
+  useEffect(() => {
+    const set = timers.current;
+    return () => {
+      set.forEach((id) => window.clearTimeout(id));
+      set.clear();
+      if (holdTimer.current) window.clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    };
+  }, []);
 
   // A line when the page changes (first cat speaks)
   useEffect(() => {
@@ -85,80 +174,101 @@ export function RoamingPet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // Behaviour loop
+  // Behaviour loop: a rAF loop while walking/running, a single timeout while resting.
+  // Restarts whenever the mode changes; nothing runs while hidden, held asleep, or with reduced motion.
   useEffect(() => {
-    if (still) return;
-    const id = window.setInterval(() => {
-      const s = st.current;
-      petPositionsRef.current[pet.id] = s.x;
-      if (asleepLocked) return;
-      const now = Date.now();
+    if (still || hidden || asleepLocked) return;
+    const s = st.current;
+    let raf = 0;
+    let timer = 0;
+    let last = 0;
 
-      // Meet another cat
-      if (now > s.meetCooldown && (s.mode === "walk" || s.mode === "run")) {
-        for (const o of otherPets) {
-          if (o.id === pet.id) continue;
-          const ox = petPositionsRef.current[o.id];
-          if (ox === undefined || Math.abs(ox - s.x) > 7) continue;
-          s.meetCooldown = now + 16000;
-          setDir(ox > s.x ? 1 : -1);
-          setMode("sit");
-          s.until = now + 2200;
-          const leader = pet.id < o.id;
-          if (leader) {
-            setHeart(true);
-            window.setTimeout(() => setHeart(false), 1400);
-            say(GREETS[Math.floor(Math.random() * GREETS.length)].replace("{other}", o.name || "you"), 2200, true);
-          }
-          // Zoomies (both cats agree via the same time bucket): the leader dashes away, the other chases.
-          if (Math.floor(now / 4000) % 2 === 0) {
-            const runDir: 1 | -1 = leader ? (s.x >= ox ? 1 : -1) : ox >= s.x ? 1 : -1;
-            window.setTimeout(
-              () => {
-                setDir(runDir);
-                setMode("run");
-                st.current.until = Date.now() + 2600;
-              },
-              leader ? 1500 : 1900,
-            );
-          }
-          return;
+    // Pick the next thing to do
+    const decide = (now: number) => {
+      if (now <= s.until) return;
+      const r = Math.random();
+      const next: Mode = r < 0.5 ? "walk" : r < 0.62 ? "run" : r < 0.88 ? "sit" : "sleep";
+      setMode(next);
+      s.until = now + (next === "sleep" ? 9000 : next === "run" ? 2200 : 4000 + Math.random() * 4000);
+      if (next === "walk" && Math.random() < 0.3) setDir(s.dir === 1 ? -1 : 1);
+    };
+
+    // Meet another cat
+    const meet = (now: number) => {
+      const x = xRef.current;
+      for (const o of otherPets) {
+        if (o.id === pet.id) continue;
+        const ox = petPositionsRef.current[o.id];
+        if (ox === undefined || Math.abs(ox - x) > 7) continue;
+        s.meetCooldown = now + 16000;
+        setDir(ox > x ? 1 : -1);
+        setMode("sit");
+        s.until = now + 2200;
+        const leader = pet.id < o.id;
+        if (leader) {
+          setHeart(true);
+          later(() => setHeart(false), 1400);
+          say(GREETS[Math.floor(Math.random() * GREETS.length)].replace("{other}", o.name || "you"), 2200, true);
         }
+        // Zoomies (both cats agree via the same time bucket): the leader dashes away, the other chases.
+        if (Math.floor(now / 4000) % 2 === 0) {
+          const runDir: 1 | -1 = leader ? (x >= ox ? 1 : -1) : ox >= x ? 1 : -1;
+          later(
+            () => {
+              setDir(runDir);
+              setMode("run");
+              st.current.until = Date.now() + 2600;
+            },
+            leader ? 1500 : 1900,
+          );
+        }
+        return true;
       }
+      return false;
+    };
 
-      // Pick the next thing to do
-      if (now > s.until) {
-        const r = Math.random();
-        const next: Mode = r < 0.5 ? "walk" : r < 0.62 ? "run" : r < 0.88 ? "sit" : "sleep";
-        setMode(next);
-        s.until = now + (next === "sleep" ? 9000 : next === "run" ? 2200 : 4000 + Math.random() * 4000);
-        if (next === "walk" && Math.random() < 0.3) setDir((d) => (d === 1 ? -1 : 1));
-      }
+    const frame = (t: number) => {
+      raf = requestAnimationFrame(frame);
+      const dt = last ? Math.min(t - last, 100) : 0; // ms, capped so a stalled frame doesn't teleport
+      last = t;
+      const now = Date.now();
+      if (!isMoving(s.mode)) return; // mode just changed; the effect restarts with the idle driver
+      if (now > s.meetCooldown && meet(now)) return;
+      decide(now);
 
-      // Move
-      const step = s.mode === "run" ? 0.62 : s.mode === "walk" ? 0.2 : 0;
-      if (step) {
-        let nx = s.x + s.dir * step;
+      // Move: same speeds as before (0.2% / 0.62% per 50ms), now frame-rate independent
+      const speed = s.mode === "run" ? RUN_SPEED : s.mode === "walk" ? WALK_SPEED : 0;
+      if (speed) {
+        let nx = xRef.current + s.dir * speed * (dt / 1000);
         if (nx > 88) {
           nx = 88;
-          setDir(-1);
+          if (s.dir !== -1) setDir(-1);
         } else if (nx < 6) {
           nx = 6;
-          setDir(1);
+          if (s.dir !== 1) setDir(1);
         }
-        setX(nx);
+        applyX(nx);
       }
-    }, 50);
+    };
+
+    const idle = () => {
+      const wait = s.until - Date.now();
+      if (wait <= 0) decide(Date.now());
+      // If decide() switched to a moving mode the effect restarts; otherwise wait for the next deadline.
+      if (!isMoving(s.mode)) timer = window.setTimeout(idle, Math.max(16, s.until - Date.now() + 1));
+    };
+
+    if (isMoving(mode)) raf = requestAnimationFrame(frame);
+    else idle();
+
     return () => {
-      window.clearInterval(id);
-      delete petPositionsRef.current[pet.id];
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asleepLocked, otherPets, pet.id, still]);
+  }, [mode, hidden, asleepLocked, otherPets, pet.id, still]);
 
   // Tap = play, hold = sleep, tap while asleep = wake
-  const pressAt = useRef(0);
-  const holdTimer = useRef<number | null>(null);
   const onDown = () => {
     pressAt.current = Date.now();
     holdTimer.current = window.setTimeout(() => {
@@ -174,12 +284,12 @@ export function RoamingPet({
     holdTimer.current = null;
     if (asleepLocked) {
       setAsleepLocked(false);
-      setMode("play");
+      setMode(still ? "sit" : "play");
       st.current.until = Date.now() + 900;
       say("Good morning!", 1800, true);
       return;
     }
-    setMode("play");
+    if (!still) setMode("play");
     st.current.until = Date.now() + 900;
     say(MEOWS[Math.floor(Math.random() * MEOWS.length)], 2200, true);
   };
@@ -190,12 +300,11 @@ export function RoamingPet({
   const sampled = usePhotoCoat(coatPhoto ?? face);
   const coat = sampled ?? COATS[v.patternColor] ?? COATS.orange;
 
-  const align = x < 16 ? "left" : x > 84 ? "right" : "center";
-
   return (
     <div
+      ref={rootRef}
       className="pointer-events-auto absolute bottom-full z-40 mb-[-6px] h-[48px] w-[64px] -translate-x-1/2 cursor-pointer touch-none select-none"
-      style={{ left: `${x}%`, transition: "left 50ms linear" }}
+      style={{ left: 0, willChange: "transform" }}
       onPointerDown={onDown}
       onPointerUp={onUp}
       onPointerLeave={() => {

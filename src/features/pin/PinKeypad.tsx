@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { motion, useIsPresent } from "framer-motion";
 import { Delete } from "lucide-react";
 
 interface Props {
@@ -22,12 +23,51 @@ export function PinKeypad({ value, length = 4, onChange, onComplete, bottomActio
   };
   const del = () => onChange(value.slice(0, -1));
 
+  // Physical keyboard: digits 0-9 and Backspace. Skipped while a text field has
+  // focus, and while this keypad is animating out (AnimatePresence exit).
+  const isPresent = useIsPresent();
+  // Latest props, so fast typing never reads a stale value between renders
+  const latest = useRef({ value, length, onChange, onComplete });
+  latest.current = { value, length, onChange, onComplete };
+  useEffect(() => {
+    if (!isPresent) return;
+    const onKey = (e: KeyboardEvent) => {
+      const { value, length, onChange, onComplete } = latest.current;
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)
+      ) {
+        return;
+      }
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        if (value.length >= length) return;
+        const next = value + e.key;
+        latest.current = { ...latest.current, value: next };
+        onChange(next);
+        if (next.length === length) onComplete?.(next);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        if (value.length === 0) return;
+        const next = value.slice(0, -1);
+        latest.current = { ...latest.current, value: next };
+        onChange(next);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isPresent]);
+
   return (
     <div className="flex select-none flex-col items-center gap-9">
-      <div className="flex gap-4" aria-label={`${value.length} of ${length} digits entered`}>
+      <div role="status" aria-live="polite" className="flex gap-4">
+        <span className="sr-only">{`${value.length} of ${length} digits`}</span>
         {Array.from({ length }).map((_, i) => (
           <motion.span
             key={i}
+            aria-hidden="true"
             animate={{ scale: value.length > i ? 1.15 : 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 22 }}
             className={`h-3.5 w-3.5 rounded-full border-[1.5px] transition-colors ${

@@ -13,17 +13,18 @@ export type Notif = {
   created_at: string;
 };
 
-const TOAST_TITLE: Record<NotifKind, string> = {
+// Hugs get their own full-screen moment, so they don't toast.
+const TOAST_TITLE: Partial<Record<NotifKind, string>> = {
   memory: "A new memory was kept",
   event: "A new moment on the calendar",
   note: "A note landed on the wall",
-  trip: "A new place was pinned",
-  song: "A song joined your radio",
-  hug: "A warm embrace arrived",
-  capsule: "A time capsule was placed",
 };
 
-export function useNotifications(relationshipId: string | undefined) {
+/**
+ * `live`: subscribe to new notifications. Only one mounted place (the dock) should
+ * pass it, or every toast and refresh happens twice.
+ */
+export function useNotifications(relationshipId: string | undefined, { live = false } = {}) {
   const { user } = useUser();
   const qc = useQueryClient();
   const bootstrapped = useRef(false);
@@ -45,7 +46,7 @@ export function useNotifications(relationshipId: string | undefined) {
   });
 
   useEffect(() => {
-    if (!relationshipId || !user) return;
+    if (!live || !relationshipId || !user) return;
     const channelId = `notif-${relationshipId}-${user.id}-${Math.random().toString(36).slice(2, 10)}`;
     const ch = supabase
       .channel(channelId)
@@ -58,13 +59,9 @@ export function useNotifications(relationshipId: string | undefined) {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          // The content itself is refreshed by the app's own realtime channel.
           qc.invalidateQueries({ queryKey: ["notifications"] });
           qc.invalidateQueries({ queryKey: ["stats"] });
-          qc.invalidateQueries({ queryKey: ["memories"] });
-          qc.invalidateQueries({ queryKey: ["notes"] });
-          qc.invalidateQueries({ queryKey: ["events"] });
-          qc.invalidateQueries({ queryKey: ["trips"] });
-          qc.invalidateQueries({ queryKey: ["songs"] });
           // Rich toast — but only after first bootstrap load, to avoid replaying history
           if (!bootstrapped.current) return;
           const kind = (payload.new as { kind?: NotifKind } | null)?.kind;
@@ -75,7 +72,7 @@ export function useNotifications(relationshipId: string | undefined) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [relationshipId, user, qc]);
+  }, [live, relationshipId, user, qc]);
 
   const list = q.data ?? [];
   const unread = list.filter((n) => !n.read).length;

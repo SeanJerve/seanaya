@@ -176,8 +176,11 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
   const [isPaused, setIsPaused] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const timerRef = useRef<number | null>(null);
-  const [slideProgress, setSlideProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const pressStartRef = useRef<number | null>(null);
+  const [reducedMotion] = useState(
+    () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+  );
 
   // Fetch real data for Sean and Aya
   const { data: stats } = useQuery({
@@ -241,7 +244,16 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
   }, [stats?.stickers]);
 
   // Lily Popper physics on canvas
+  const cancelLilyPoppers = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  };
+
   const fireLilyPoppers = () => {
+    cancelLilyPoppers();
+    if (reducedMotion) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -295,11 +307,11 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
       });
     }
 
-    let active = true;
     let lastTime = performance.now();
 
     const update = (time: number) => {
-      if (!active || !canvas || !ctx) return;
+      rafRef.current = null;
+      if (!canvas.isConnected) return;
       const dt = (time - lastTime) / 16.666;
       lastTime = time;
 
@@ -343,52 +355,37 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
       }
 
       if (allDead) {
-        active = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       } else {
-        requestAnimationFrame(update);
+        rafRef.current = requestAnimationFrame(update);
       }
     };
 
-    requestAnimationFrame(update);
+    rafRef.current = requestAnimationFrame(update);
   };
 
-  // Fire poppers on initial mount and on slide 0 & 5
+  // Fire poppers on initial mount and on slide 0 & 5; stop them when closing.
+  // fireLilyPoppers cancels any loop already running before starting a new one.
   useEffect(() => {
-    if (!isMonthsaryOpen) return;
+    if (!isMonthsaryOpen) {
+      cancelLilyPoppers();
+      return;
+    }
     if (currentSlide === 0 || currentSlide === 5) {
       fireLilyPoppers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMonthsaryOpen, currentSlide]);
 
-  // Story progress timer
-  useEffect(() => {
-    if (!isMonthsaryOpen || isPaused) return;
+  // Cancel any running popper loop on unmount
+  useEffect(() => cancelLilyPoppers, []);
 
-    const interval = 50;
-    const step = (interval / SLIDE_DURATION_MS) * 100;
-
-    timerRef.current = window.setInterval(() => {
-      setSlideProgress((prev) => {
-        if (prev >= 100) {
-          if (currentSlide < TOTAL_SLIDES - 1) {
-            setCurrentSlide((s) => s + 1);
-            return 0;
-          } else {
-            return 100;
-          }
-        }
-        return prev + step;
-      });
-    }, interval);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isMonthsaryOpen, isPaused, currentSlide]);
-
-  useEffect(() => {
-    setSlideProgress(0);
-  }, [currentSlide]);
+  // Advance when the current slide's CSS progress bar finishes
+  const handleProgressEnd = () => {
+    if (currentSlide < TOTAL_SLIDES - 1) {
+      setCurrentSlide((s) => Math.min(s + 1, TOTAL_SLIDES - 1));
+    }
+  };
 
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -406,7 +403,21 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
     }
   };
 
+  const startHold = () => {
+    pressStartRef.current = Date.now();
+    setIsPaused(true);
+  };
+
+  const endHold = () => {
+    setIsPaused(false);
+  };
+
   const handleContainerTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    // A long press was a hold-to-pause, not a tap: don't change slides on release
+    const pressedAt = pressStartRef.current;
+    pressStartRef.current = null;
+    if (pressedAt !== null && Date.now() - pressedAt > 250) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const width = rect.width;
@@ -421,10 +432,34 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
 
   const handleRestart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentSlide(0);
-    setSlideProgress(0);
-    fireLilyPoppers();
+    if (currentSlide === 0) {
+      fireLilyPoppers();
+    } else {
+      // The slide-change effect fires the poppers for slide 0
+      setCurrentSlide(0);
+    }
   };
+
+  // Keyboard: arrows change slides, Escape closes
+  const closeRef = useRef(closeMonthsary);
+  closeRef.current = closeMonthsary;
+  useEffect(() => {
+    if (!isMonthsaryOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeRef.current();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentSlide((s) => Math.min(s + 1, TOTAL_SLIDES - 1));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentSlide((s) => Math.max(s - 1, 0));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isMonthsaryOpen]);
 
   if (!isMonthsaryOpen) return null;
 
@@ -446,15 +481,36 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
   return (
     <AnimatePresence>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="3rd monthsary story"
         className="fixed inset-0 z-50 flex select-none flex-col justify-between overflow-hidden"
         style={{ background: "var(--gradient-sky)" }}
-        onMouseDown={() => setIsPaused(true)}
-        onMouseUp={() => setIsPaused(false)}
-        onTouchStart={() => setIsPaused(true)}
-        onTouchEnd={() => setIsPaused(false)}
+        onPointerDown={startHold}
+        onPointerUp={endHold}
+        onPointerCancel={endHold}
+        onPointerLeave={endHold}
         onClick={handleContainerTap}
       >
-        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-30" style={{ width: "100%", height: "100%" }} />
+        {/* Progress keyframes. The class beats the global reduced-motion rule
+            (animation-duration: 0.01ms) so slides keep their real duration. */}
+        <style>{`
+          @keyframes sn-wrapped-progress { from { width: 0%; } to { width: 100%; } }
+          .sn-wrapped-progress {
+            animation-name: sn-wrapped-progress;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+            animation-duration: ${SLIDE_DURATION_MS}ms !important;
+            animation-iteration-count: 1 !important;
+          }
+        `}</style>
+        {!reducedMotion && (
+          <canvas
+            ref={canvasRef}
+            className="pointer-events-none absolute inset-0 z-30"
+            style={{ width: "100%", height: "100%" }}
+          />
+        )}
         <AmbientBlobs />
         <BackgroundSparkles />
 
@@ -462,13 +518,20 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
         <div className="relative z-40 mx-auto flex w-full max-w-[720px] flex-col gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex w-full items-center gap-1.5">
             {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => {
-              const fill = idx < currentSlide ? 100 : idx === currentSlide ? slideProgress : 0;
+              const bar = "h-full rounded-full bg-[linear-gradient(90deg,#a9c0f6,#7f9fe9)]";
               return (
                 <div key={idx} className="h-[5px] flex-1 overflow-hidden rounded-full bg-white/55">
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,#a9c0f6,#7f9fe9)] transition-[width] duration-75 ease-linear"
-                    style={{ width: `${fill}%` }}
-                  />
+                  {idx === currentSlide ? (
+                    <div
+                      // keyed by slide so the animation restarts whenever the slide changes
+                      key={`progress-${currentSlide}`}
+                      className={`${bar} sn-wrapped-progress`}
+                      style={{ width: 0, animationPlayState: isPaused ? "paused" : "running" }}
+                      onAnimationEnd={handleProgressEnd}
+                    />
+                  ) : (
+                    <div className={bar} style={{ width: idx < currentSlide ? "100%" : "0%" }} />
+                  )}
                 </div>
               );
             })}

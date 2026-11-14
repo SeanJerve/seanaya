@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAppStore } from "@/features/app/store";
 import { useCoupleNames } from "@/hooks/useCouple";
 import { chibiFor } from "@/components/seanaya/art";
+import { burstHearts } from "@/components/seanaya/HeartBurst";
 
 const SUBTITLES: Record<string, string> = {
   Home: "another day, another page in our story",
@@ -54,8 +55,9 @@ export function AppHeader({
   const actions = (
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
       <button
-        onClick={() => {
+        onClick={(e) => {
           if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([30, 70]);
+          burstHearts(e);
           hug.mutate();
         }}
         disabled={hug.isPending}

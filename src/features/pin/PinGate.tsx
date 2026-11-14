@@ -20,9 +20,6 @@ type Stage =
   | "partner-pin"
   | "partner-confirm"
   | "unlock" // both PINs exist → PIN pad
-  | "forgot-who"
-  | "forgot-date"
-  | "forgot-newpin"
   | "unlocked";
 
 type SpaceState = {
@@ -216,8 +213,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState(pinStorage.getName() ?? "");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
-  const [dateInput, setDateInput] = useState("");
-  const [resetSlot, setResetSlot] = useState<Slot>("a");
 
   // Ref for the lily confetti canvas overlay
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -299,15 +294,9 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       }
 
       const urlInvite = new URLSearchParams(window.location.search).get("invite");
-      const urlReset = new URLSearchParams(window.location.search).get("reset");
-      const urlDate = new URLSearchParams(window.location.search).get("date");
 
       if (!s) {
         setStage("setup-name");
-      } else if (urlReset && urlDate && (urlReset === "a" || urlReset === "b")) {
-        setResetSlot(urlReset as Slot);
-        setDateInput(urlDate);
-        setStage("forgot-newpin");
       } else if (s.has_a && s.has_b) {
         setStage("unlock");
       } else if (s.has_a && !s.has_b) {
@@ -644,7 +633,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       ) {
         navigator.clipboard.writeText(inviteLink).catch(() => {});
       }
-      toast.success("Space created! Invite link copied to clipboard.", { duration: 6000 });
+      toast.success("Your space is ready. Invite link copied.", { duration: 6000 });
 
       setStage("unlocked");
     } catch (e: any) {
@@ -663,7 +652,8 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         _rel_id: space.id,
         _pin_hash: hash,
         _name: name.trim() || "partner",
-      });
+        _invite: urlInvite,
+      } as any);
       if (error) {
         toast.error(
           error.message.includes("different pin")
@@ -696,7 +686,12 @@ export function PinGate({ children }: { children: React.ReactNode }) {
         _rel_id: space.id,
         _pin_hash: hash,
       });
-      if (error || !data) {
+      if (data === "locked") {
+        setPin("");
+        toast.error("Too many tries. Wait a few minutes, then try again.");
+        return;
+      }
+      if (error || !data || (data !== "a" && data !== "b")) {
         setPin("");
         toast.error("PIN doesn't match");
         return;
@@ -711,31 +706,6 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       console.error(e);
       toast.error(e.message || "Something went wrong");
     }
-  }
-
-  // -------- Forgot: anniversary → reset one slot --------
-  async function completeReset(newPin: string) {
-    if (!space) return;
-    const h = await hashPin(newPin);
-    const { error } = await supabase.rpc("reset_slot_pin", {
-      _rel_id: space.id,
-      _slot: resetSlot,
-      _new_hash: h,
-      _anniversary: dateInput,
-    });
-    if (error) {
-      toast.error("Reset link is invalid or expired.");
-      return;
-    }
-    toast.success("PIN updated. You can now log in.");
-    setPin("");
-
-    if (typeof window !== "undefined") {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    setStage("unlock");
-    refreshSpace();
   }
 
   const handleBack = (e: React.MouseEvent) => {
@@ -1166,17 +1136,12 @@ export function PinGate({ children }: { children: React.ReactNode }) {
             <div className="mt-9">
               <PinKeypad value={pin} onChange={setPin} onComplete={tryUnlock} />
             </div>
+            <p className="sn-hand mt-7 text-center text-[19px] leading-snug text-[#646d93]">
+              forgot it? your partner can set a new one in Settings
+            </p>
           </Screen>
         )}
 
-        {stage === "forgot-newpin" && (
-          <Screen key="newpin">
-            <Title kicker="Reset" title="Choose a new PIN" />
-            <div className="mt-9">
-              <PinKeypad value={pin} onChange={setPin} onComplete={completeReset} />
-            </div>
-          </Screen>
-        )}
       </AnimatePresence>
     </div>
   );

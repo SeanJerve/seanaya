@@ -121,7 +121,10 @@ export function useCoupleLocations(relationshipId: string) {
         saveMySpot(spot);
         setMine(spot);
         setStatus("ok");
-        if (relationshipId) shareSpot(relationshipId, slot, spot);
+        // Only an approximate spot (about 1 km) leaves this phone: enough for the city
+        // and the distance between you, not your exact address.
+        const round = (n: number) => Math.round(n * 100) / 100;
+        if (relationshipId) shareSpot(relationshipId, slot, { city: spot.city, lat: round(lat), lng: round(lng) });
       },
       (err) => setStatus(err.code === err.PERMISSION_DENIED ? "denied" : mine ? "ok" : "unsupported"),
       { enableHighAccuracy: false, timeout: 15_000, maximumAge: 30 * 60_000 },

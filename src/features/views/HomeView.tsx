@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,6 +9,7 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
+import { animate, motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import { useAppStore } from "@/features/app/store";
 import { Plus, Heart, SquarePen, MapPin, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import { useUser } from "@/hooks/useUser";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useCoupleLocations, useCoupleNames } from "@/hooks/useCouple";
 import { LongPressModal } from "@/components/ui/LongPressModal";
+import { burstHearts } from "@/components/seanaya/HeartBurst";
 import { ART, Bow, ChibiTile, HeartRibbon, Polaroid, chibiFor } from "@/components/seanaya/art";
 
 const ordinal = (n: number) => {
@@ -65,9 +67,10 @@ export function HomeView({
     () => (anniversary ? parseISO(anniversary) : startOfDay(new Date())),
     [anniversary],
   );
+  // The page only needs the minute; the seconds tick inside <Clock/> on their own.
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
+    const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
   const together = useMemo(() => {
@@ -191,8 +194,9 @@ export function HomeView({
 
           <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
             <button
-              onClick={() => {
+              onClick={(e) => {
                 if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([40, 80, 40]);
+                burstHearts(e);
                 hug.mutate();
               }}
               disabled={hug.isPending}
@@ -272,14 +276,11 @@ export function HomeView({
           <h2 className="sn-label">Together</h2>
           <div className="relative z-10 mt-3 flex items-baseline gap-3">
             <span className="font-serif text-[72px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums sm:text-[84px]">
-              {together.days}
+              <CountUp value={together.days} />
             </span>
             <span className="font-serif text-[28px] text-sn-ink">days</span>
           </div>
-          <div className="relative z-10 mt-2 text-[16px] font-semibold tracking-[0.03em] text-sn-ink tabular-nums">
-            {String(together.hours).padStart(2, "0")}h {String(together.mins).padStart(2, "0")}m{" "}
-            {String(together.secs).padStart(2, "0")}s
-          </div>
+          <Clock className="relative z-10 mt-2 text-[16px] font-semibold tracking-[0.03em] text-sn-ink tabular-nums" />
           <div className="relative z-10 mt-1 text-[14.5px] text-sn-muted">
             since {format(start, "MMMM d, yyyy")}
           </div>
@@ -403,6 +404,42 @@ export function HomeView({
   );
 }
 
+/** Hours, minutes and seconds of today, ticking on its own so the page doesn't re-render. */
+function Clock({ className }: { className?: string }) {
+  const [t, setT] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setT(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    <div className={className}>
+      {p(t.getHours())}h {p(t.getMinutes())}m {p(t.getSeconds())}s
+    </div>
+  );
+}
+
+/** Counts up to the number the first time it shows. */
+function CountUp({ value }: { value: number }) {
+  const reduce = useReducedMotion();
+  const [shown, setShown] = useState(reduce ? value : 0);
+  const done = useRef(false);
+  useEffect(() => {
+    if (reduce || done.current) {
+      setShown(value);
+      return;
+    }
+    done.current = true;
+    const controls = animate(0, value, {
+      duration: Math.min(1.6, 0.6 + value / 400),
+      ease: [0.16, 0.84, 0.3, 1],
+      onUpdate: (v) => setShown(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [value, reduce]);
+  return <>{shown}</>;
+}
+
 function Person({
   side,
   name,
@@ -415,17 +452,31 @@ function Person({
   portrait: string;
 }) {
   const right = side === "right";
+  const wiggle = useAnimationControls();
   return (
     <div
       className={`flex min-w-0 flex-col items-center gap-3 text-center @min-[570px]:flex-row @min-[570px]:gap-4 ${
         right ? "@min-[570px]:flex-row-reverse @min-[570px]:text-right" : "@min-[570px]:text-left"
       }`}
     >
-      <ChibiTile
-        src={portrait}
-        alt={name}
-        className="h-[96px] w-[84px] @min-[420px]:h-[110px] @min-[420px]:w-[96px] @min-[570px]:h-[128px] @min-[570px]:w-[112px]"
-      />
+      <motion.button
+        type="button"
+        aria-label={`${name}`}
+        animate={wiggle}
+        whileTap={{ scale: 0.93 }}
+        onClick={(e) => {
+          burstHearts(e.currentTarget, 5);
+          wiggle.start({ rotate: [0, -7, 6, -3, 0], transition: { duration: 0.5, ease: "easeInOut" } });
+        }}
+        className="sn-float shrink-0 rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-[#94b2f6]"
+        style={{ animationDelay: right ? "-2.1s" : "0s" }}
+      >
+        <ChibiTile
+          src={portrait}
+          alt={name}
+          className="h-[96px] w-[84px] @min-[420px]:h-[110px] @min-[420px]:w-[96px] @min-[570px]:h-[128px] @min-[570px]:w-[112px]"
+        />
+      </motion.button>
       <div className="min-w-0">
         <div className="font-serif text-[24px] font-semibold leading-tight text-sn-navy @min-[570px]:text-[27px]">
           {name}

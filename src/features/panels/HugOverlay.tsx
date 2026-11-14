@@ -1,189 +1,163 @@
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Heart, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { pinStorage } from "@/features/pin/pin-utils";
+import { useUser } from "@/hooks/useUser";
+import { useCoupleNames } from "@/hooks/useCouple";
+import { ChibiTile, chibiFor } from "@/components/seanaya/art";
+import { burstHearts } from "@/components/seanaya/HeartBurst";
 
-interface HugEvent {
-  id: string;
-  senderName: string;
-  senderSlot: "a" | "b";
-}
+type Petal = { id: number; x: number; drift: number; delay: number; size: number; rot: number; src: string };
 
-interface Petal {
-  id: number;
-  x: number;
-  delay: number;
-  size: number;
-  rotation: number;
-}
+const PETALS = ["/art/petal-1.png", "/art/petal-2.png", "/art/petal-3.png"];
 
+/** When your partner sends a hug: the two of you bump together and a heart pops out. */
 export function HugOverlay({ relationshipId }: { relationshipId: string }) {
-  const [activeHug, setActiveHug] = useState<HugEvent | null>(null);
+  const { user } = useUser();
+  const { me, partner } = useCoupleNames();
+  const reduce = useReducedMotion();
+  const [hugId, setHugId] = useState<string | null>(null);
   const [petals, setPetals] = useState<Petal[]>([]);
-  const currentSlot = pinStorage.getSlot();
+  const userIdRef = useRef<string | undefined>(user?.id);
+  userIdRef.current = user?.id;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const centerRef = useRef<HTMLDivElement | null>(null);
+
+  const close = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setHugId(null);
+    setPetals([]);
+  };
+
+  const show = (id: string) => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([40, 90, 40, 200, 50, 100, 50]);
+    setPetals(
+      Array.from({ length: 12 }, (_, i) => ({
+        id: Date.now() + i,
+        x: 4 + Math.random() * 92,
+        drift: (Math.random() - 0.5) * 18,
+        delay: Math.random() * 1.2,
+        size: 14 + Math.random() * 14,
+        rot: (Math.random() - 0.5) * 90,
+        src: PETALS[i % PETALS.length],
+      })),
+    );
+    setHugId(id);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(close, 4200);
+  };
+  const showRef = useRef(show);
+  showRef.current = show;
+
+  // Local development only: lets the hug be previewed without a second phone.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") return;
+    (window as any).__previewHug = () => showRef.current(`preview-${Date.now()}`);
+  }, []);
 
   useEffect(() => {
     if (!relationshipId) return;
-
-    const channelId = `hugs:${relationshipId}-${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(channelId)
+      .channel(`hug-overlay-${relationshipId}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "hugs",
-          filter: `relationship_id=eq.${relationshipId}`,
-        },
-        async (payload) => {
-          const hugId = (payload.new as { id: string; sender_id?: string }).id;
-
-          // Fetch sender details
-          const { data: rel } = await supabase
-            .from("relationships")
-            .select("name_a, name_b, user_a_id, user_b_id")
-            .eq("id", relationshipId)
-            .single();
-
-          let senderName = "Your Love";
-          let senderSlot: "a" | "b" = "a";
-
-          if (rel) {
-            const isUserA = (payload.new as any).sender_id === rel.user_a_id;
-            senderSlot = isUserA ? "a" : "b";
-            senderName = isUserA ? rel.name_a || "Sean" : rel.name_b || "Aya";
-          }
-
-          // Trigger Heartbeat Haptic Pattern on supported mobile devices
-          if (typeof navigator !== "undefined" && navigator.vibrate) {
-            // Heartbeat rhythm: thump-thump ... thump-thump
-            navigator.vibrate([40, 90, 40, 200, 50, 100, 50]);
-          }
-
-          // Generate 16 floating watercolor petals
-          const newPetals: Petal[] = Array.from({ length: 16 }, (_, i) => ({
-            id: Date.now() + i,
-            x: 10 + Math.random() * 80,
-            delay: Math.random() * 0.8,
-            size: 16 + Math.random() * 20,
-            rotation: (Math.random() - 0.5) * 60,
-          }));
-          setPetals(newPetals);
-
-          setActiveHug({ id: hugId, senderName, senderSlot });
-
-          setTimeout(() => {
-            setActiveHug(null);
-            setPetals([]);
-          }, 4500);
+        { event: "INSERT", schema: "public", table: "hugs", filter: `relationship_id=eq.${relationshipId}` },
+        (payload) => {
+          const row = payload.new as { id: string; sender_id?: string };
+          // Your own hug already got its hearts on the button.
+          if (row.sender_id && row.sender_id === userIdRef.current) return;
+          showRef.current(row.id);
         },
       )
       .subscribe();
-
     return () => {
+      if (timer.current) clearTimeout(timer.current);
       supabase.removeChannel(channel);
     };
   }, [relationshipId]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-      <AnimatePresence>
-        {activeHug && (
-          <>
-            {/* Ambient Radial Warm Glow Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="absolute inset-0 bg-radial from-rose-500/20 via-pink-400/10 to-transparent backdrop-blur-[2px]"
-            />
-
-            {/* Floating Watercolor Lily Petals */}
-            {petals.map((p) => (
-              <motion.div
+    <AnimatePresence>
+      {hugId && (
+        <motion.div
+          key={hugId}
+          role="status"
+          aria-live="polite"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, pointerEvents: "none" }}
+          transition={{ duration: 0.45 }}
+          onClick={close}
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_46%,rgba(255,221,234,0.75),rgba(214,224,250,0.45)_48%,rgba(205,217,248,0.2)_75%)] backdrop-blur-[3px]"
+        >
+          {!reduce &&
+            petals.map((p) => (
+              <motion.img
                 key={p.id}
-                initial={{
-                  opacity: 0,
-                  y: 120,
-                  x: `${p.x}vw`,
-                  rotate: p.rotation,
-                  scale: 0.6,
-                }}
-                animate={{
-                  opacity: [0, 0.85, 0.85, 0],
-                  y: -window.innerHeight * 0.7,
-                  x: `${p.x + (Math.random() - 0.5) * 12}vw`,
-                  rotate: p.rotation + 180,
-                  scale: 1,
-                }}
-                transition={{
-                  duration: 3.8,
-                  delay: p.delay,
-                  ease: [0.2, 0.8, 0.2, 1],
-                }}
-                className="absolute top-1/2"
-              >
-                <img
-                  src="/main-lily.webp"
-                  alt="lily petal"
-                  style={{ width: p.size, height: p.size }}
-                  className="object-contain drop-shadow-[0_4px_12px_rgba(244,114,182,0.3)] opacity-90"
-                />
-              </motion.div>
+                src={p.src}
+                alt=""
+                aria-hidden
+                initial={{ y: "-8vh", x: `${p.x}vw`, rotate: p.rot, opacity: 0 }}
+                animate={{ y: "108vh", x: `${p.x + p.drift}vw`, rotate: p.rot + 220, opacity: [0, 1, 1, 0.8] }}
+                transition={{ duration: 4.4, delay: p.delay, ease: "linear" }}
+                style={{ width: p.size, height: p.size, position: "absolute", left: 0, top: 0 }}
+              />
             ))}
 
-            {/* Central Heart with Kowalski Spring Physics */}
-            <motion.div
-              key={activeHug.id}
-              initial={{ scale: 0.2, opacity: 0, y: 30 }}
-              animate={{
-                scale: [0.2, 1.25, 1.08, 1.35, 1.15, 1],
-                opacity: [0, 1, 1, 1, 1, 0],
-                y: [30, -10, -5, -15, -10, -50],
+          <div ref={centerRef} className="relative flex flex-col items-center">
+            {/* The heart that pops out of the hug */}
+            <motion.img
+              src="/art/clay-heart.png"
+              alt=""
+              aria-hidden
+              initial={{ scale: 0, y: 30, opacity: 0 }}
+              animate={{ scale: [0, 1.25, 1], y: [30, -6, 0], opacity: 1 }}
+              transition={{ delay: reduce ? 0 : 0.62, duration: 0.55, ease: "easeOut" }}
+              onAnimationComplete={() => {
+                if (!reduce && centerRef.current) {
+                  const r = centerRef.current.getBoundingClientRect();
+                  burstHearts({ x: r.left + r.width / 2, y: r.top + 40 }, 9);
+                }
               }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{
-                duration: 4.2,
-                times: [0, 0.2, 0.35, 0.55, 0.75, 1],
-                ease: "easeInOut",
-              }}
-              className="relative flex flex-col items-center justify-center"
-            >
-              <div className="relative">
-                <Heart
-                  size={100}
-                  fill="oklch(0.78 0.13 15)"
-                  className="text-hug drop-shadow-[0_0_35px_oklch(0.78_0.13_15/0.7)]"
-                />
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  className="absolute -top-2 -right-2 text-amber-300"
-                >
-                  <Sparkles size={24} />
-                </motion.div>
-              </div>
+              className="relative z-10 mb-[-18px] h-[76px] w-[76px] drop-shadow-[0_10px_18px_rgba(236,122,164,0.45)]"
+            />
 
-              {/* Sender Inscription Card */}
+            <div className="flex items-end">
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25, duration: 0.4 }}
-                className="mt-4 px-5 py-2 rounded-full border border-white/60 bg-white/80 dark:bg-black/60 backdrop-blur-xl shadow-lg flex items-center gap-2"
+                initial={reduce ? { opacity: 0 } : { x: -110, rotate: -10, opacity: 0 }}
+                animate={
+                  reduce
+                    ? { opacity: 1 }
+                    : { x: [-110, 10, 2], rotate: [-10, 8, 5], opacity: 1, scaleX: [1, 0.94, 1] }
+                }
+                transition={{ duration: 0.75, times: [0, 0.75, 1], ease: "easeOut" }}
+                className="relative z-[1]"
               >
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                <span className="font-serif text-sm font-semibold text-foreground tracking-tight">
-                  A warm hug from {activeHug.senderName}
-                </span>
-                <Heart size={13} className="text-rose-500 fill-rose-500 shrink-0" />
+                <ChibiTile src={chibiFor(partner)} alt={partner} className="h-[132px] w-[116px]" />
               </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+              <motion.div
+                initial={reduce ? { opacity: 0 } : { x: 110, rotate: 10, opacity: 0 }}
+                animate={
+                  reduce
+                    ? { opacity: 1 }
+                    : { x: [110, -10, -2], rotate: [10, -8, -5], opacity: 1, scaleX: [1, 0.94, 1] }
+                }
+                transition={{ duration: 0.75, times: [0, 0.75, 1], ease: "easeOut" }}
+              >
+                <ChibiTile src={chibiFor(me)} alt={me} className="h-[132px] w-[116px]" />
+              </motion.div>
+            </div>
+
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: reduce ? 0.1 : 0.9, duration: 0.4 }}
+              className="sn-hand mt-5 text-[34px] leading-none text-sn-navy drop-shadow-[0_2px_8px_rgba(255,255,255,0.9)]"
+            >
+              a hug from {partner}
+            </motion.p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
