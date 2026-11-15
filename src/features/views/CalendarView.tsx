@@ -60,8 +60,88 @@ export const isWrappedMemory = (m?: Memory | null) => {
 // Most avatars shown per timeline day before collapsing the rest into a "+N" pill.
 const MAX_AVATARS = 3;
 
+// Shared look for a timeline bubble: thick white rim and a soft drop under the clay.
+const bubbleShell = (wrapped: boolean) =>
+  `group relative rounded-full flex items-center justify-center overflow-hidden border-[3px] border-white/90 bg-[#eef2fe] shadow-[0_14px_26px_-12px_rgba(70,100,200,0.55)] transition-all ${
+    wrapped ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60" : ""
+  }`;
+
+/**
+ * Inside of a timeline bubble. The main (dated) bubble is a glossy clay bead:
+ * the photo sits behind it softly blurred, under a milky radial glaze, so the
+ * navy date on top stays easy to read. Smaller side bubbles keep a clear photo
+ * with the same inner shine.
+ */
+function TimelineBubbleFace({ m, isMain, zoomOnHover = false }: { m: Memory; isMain: boolean; zoomOnHover?: boolean }) {
+  const date = m.memory_date ? new Date(m.memory_date + "T00:00:00") : null;
+  const shine =
+    "shadow-[inset_0_2px_3px_rgba(255,255,255,0.9),inset_0_-6px_12px_rgba(120,140,220,0.25)]";
+
+  return (
+    <>
+      {m.cover_url && (
+        <img
+          src={m.cover_url}
+          alt=""
+          loading="lazy"
+          className={`absolute inset-0 h-full w-full object-cover transition-transform ${
+            isMain
+              ? `scale-110 [filter:blur(2px)_saturate(1.05)] ${zoomOnHover ? "group-hover:scale-[1.16]" : ""}`
+              : zoomOnHover
+                ? "group-hover:scale-110"
+                : ""
+          }`}
+        />
+      )}
+
+      {isMain ? (
+        <div
+          aria-hidden
+          className={`absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.75),rgba(201,216,253,0.45)_60%,rgba(148,178,246,0.35))] ${shine}`}
+        />
+      ) : (
+        <div aria-hidden className={`absolute inset-0 rounded-full ${shine}`} />
+      )}
+
+      {isMain ? (
+        <div className="relative z-10 flex flex-col items-center text-[#1f2a5c] [text-shadow:0_1px_0_rgba(255,255,255,0.9),0_0_8px_rgba(255,255,255,0.75)]">
+          {date ? (
+            <>
+              <span className="text-[12px] font-bold uppercase leading-none tracking-[0.14em] text-[#1f2a5c]/85">
+                {format(date, "MMM")}
+              </span>
+              <span className="mt-0.5 font-serif text-[26px] font-bold leading-none">
+                {format(date, "d")}
+              </span>
+              <span className="mt-0.5 text-[12px] font-semibold leading-none text-[#1f2a5c]/70 tabular-nums">
+                {format(date, "yyyy")}
+              </span>
+            </>
+          ) : (
+            <span className="text-[12px] font-bold uppercase tracking-wider">Special</span>
+          )}
+        </div>
+      ) : (
+        !m.cover_url && <Tag size={12} className="relative z-10 text-[#1f2a5c]/75" />
+      )}
+
+      {isWrappedMemory(m) && (
+        <div className="absolute bottom-1 right-1 z-20 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md border border-white/80">
+          <Play size={8} fill="currentColor" className="ml-0.5" />
+        </div>
+      )}
+    </>
+  );
+}
+
 export function CalendarView({ relationshipId }: { relationshipId: string }) {
-  const [cursor, setCursor] = useState(new Date());
+  const [cursor, setCursorState] = useState(new Date());
+  // Day tapped in the month grid; its moments show in a small glass line.
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const setCursor = (d: Date) => {
+    setCursorState(d);
+    setSelectedDay(null);
+  };
   const { openSheet, confirm, openMonthsary } = useAppStore();
   const [showLongPressInfo, setShowLongPressInfo] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
@@ -233,6 +313,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
 
   const rowHeight = LEVEL_ROW;
 
+  const selectedEvents = selectedDay
+    ? events.filter((e) => isSameDay(new Date(e.starts_at), selectedDay))
+    : [];
+
   const matchingDateGroups = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
@@ -385,10 +469,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                         ? "w-20 h-20 z-20"
                         : "w-13 h-13 z-10 opacity-90 hover:opacity-100 hover:scale-105 hover:z-30";
 
-                      const formattedMDate = m.memory_date
-                        ? new Date(m.memory_date + "T00:00:00")
-                        : null;
-
                       return (
                         <div key={m.id} className="flex flex-col items-center relative">
                           <button
@@ -399,59 +479,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                 setActiveMemory(m);
                               }
                             }}
-                            className={`group relative rounded-full flex items-center justify-center overflow-hidden border-[3px] border-white bg-[#f4f6fe] shadow-[0_6px_20px_-8px_rgba(80,110,160,0.3)] transition-all hover:scale-105 active:scale-95 ${sizeClass} ${
-                              isWrappedMemory(m)
-                                ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
-                                : ""
-                            }`}
+                            aria-label={m.title}
+                            className={`${bubbleShell(!!isWrappedMemory(m))} hover:scale-105 active:scale-95 ${sizeClass}`}
                           >
-                            {m.cover_url && (
-                              <>
-                                <img
-                                  src={m.cover_url}
-                                  alt=""
-                                  loading="lazy"
-                                  className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-white/10 backdrop-blur-[0.5px] transition-opacity group-hover:opacity-10" />
-                              </>
-                            )}
-
-                            {isMain ? (
-                              <div
-                                className={`relative z-10 flex flex-col items-center text-foreground ${m.cover_url ? "drop-shadow-[0_1.5px_3.5px_rgba(255,255,255,0.95)]" : ""}`}
-                              >
-                                {formattedMDate ? (
-                                  <>
-                                    <span className="text-[12px] uppercase tracking-wider text-foreground/80 font-bold leading-none">
-                                      {format(formattedMDate, "MMM")}
-                                    </span>
-                                    <span className="display text-xl font-bold mt-0.5 leading-none">
-                                      {format(formattedMDate, "d")}
-                                    </span>
-                                    <span className="text-[12px] text-foreground/70 mt-0.5 leading-none">
-                                      {format(formattedMDate, "yyyy")}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-[12px] uppercase tracking-wider text-foreground/60 font-semibold">
-                                    Special
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <div
-                                className={`relative z-10 text-foreground/75 ${m.cover_url ? "drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]" : ""}`}
-                              >
-                                {m.cover_url ? null : <Tag size={12} />}
-                              </div>
-                            )}
-
-                            {isWrappedMemory(m) && (
-                              <div className="absolute bottom-1 right-1 z-20 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md border border-white/80">
-                                <Play size={8} fill="currentColor" className="ml-0.5" />
-                              </div>
-                            )}
+                            <TimelineBubbleFace m={m} isMain={isMain} zoomOnHover />
                           </button>
                         </div>
                       );
@@ -513,19 +544,34 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
             <div key={`b${i}`} />
           ))}
           {days.map((d) => {
-            const hasEvent = events.some((e) => isSameDay(new Date(e.starts_at), d));
+            const dayEventCount = events.filter((e) => isSameDay(new Date(e.starts_at), d)).length;
+            const hasEvent = dayEventCount > 0;
             const dayPhoto = monthPhotos.find(
               (p) => p.dateStr && isSameDay(new Date(p.dateStr + "T00:00:00"), d),
             );
             const isToday = isSameDay(d, today);
             const inMonth = isSameMonth(d, cursor);
+            const isSelected = !!selectedDay && isSameDay(selectedDay, d);
+            // Moment days glow softly; today keeps its clay heart instead.
+            const glow = hasEvent && !isToday && inMonth;
 
             return (
-              <div
+              <button
+                type="button"
                 key={d.toISOString()}
-                className={`relative aspect-square flex items-center justify-center rounded-full transition-transform ${dayPhoto && !isToday ? "overflow-hidden" : ""}
+                disabled={!hasEvent}
+                onClick={() => setSelectedDay(isSelected ? null : d)}
+                aria-pressed={hasEvent ? isSelected : undefined}
+                aria-label={
+                  hasEvent
+                    ? `${format(d, "MMMM d")}, ${dayEventCount} ${dayEventCount === 1 ? "moment" : "moments"}`
+                    : format(d, "MMMM d")
+                }
+                className={`relative aspect-square flex items-center justify-center rounded-full transition-transform touch-manipulation disabled:cursor-default ${dayPhoto && !isToday ? "overflow-hidden" : ""}
                   ${!inMonth ? "opacity-30" : ""}
-                  ${isToday ? "" : "hover:scale-105"}`}
+                  ${isToday ? "" : "hover:scale-105"}
+                  ${glow ? "sn-moment-day" : ""}
+                  ${isSelected ? "outline-2 outline-offset-2 outline-[#ec7aa4]/75" : ""}`}
                 title={dayPhoto?.title ?? undefined}
               >
                 {dayPhoto?.url && inMonth && (
@@ -543,69 +589,63 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                   <img src="/art/clay-heart.png" alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[130%] w-[130%] max-w-none -translate-x-1/2 -translate-y-[46%] select-none drop-shadow-[0_4px_8px_rgba(236,122,164,0.35)]" />
                 )}
 
-                {!dayPhoto && !isToday && (
+                {!dayPhoto && !isToday && !glow && (
                   <div className="absolute inset-0 rounded-full hover:bg-black/5" />
                 )}
 
                 <span
                   className={`relative z-10 text-[14px] font-semibold tabular-nums
-                  ${isToday ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}
+                  ${isToday || glow ? "text-foreground" : dayPhoto ? "text-foreground/90" : "text-foreground/70"}`}
                 >
                   {d.getDate()}
                 </span>
 
-                {hasEvent && (
+                {hasEvent && isToday && (
                   <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-hug z-10 shadow-[0_0_4px_var(--hug)]" />
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
-      </section>
 
-      {/* Events list */}
-      <section className="sn-glass p-5 sm:p-6 lg:col-start-1">
-        <h2 className="sn-label mb-4">Moment list</h2>
-        {events.length === 0 ? (
-          <div className="text-[15px] text-sn-muted">No moments this month</div>
-        ) : (
-          <ul className="space-y-2">
-            {events.map((e) => (
-              <li
-                key={e.id}
-                className="flex items-center justify-between rounded-[18px] border border-white/90 bg-white/70 px-4 py-3 shadow-[var(--shadow-pill)]"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-serif text-[17px] font-semibold text-sn-navy">{e.title}</div>
-                  <div className="text-[12px] text-muted-foreground">
-                    {format(new Date(e.starts_at), "EEE, MMM d · h:mm a")}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
+        {/* Moments for the tapped glowing day */}
+        {selectedDay && selectedEvents.length > 0 && (
+          <div className="mt-4 rounded-[18px] border border-white/85 bg-white/55 px-4 py-2.5 shadow-[var(--shadow-pill)] backdrop-blur-md">
+            <div className="text-[12px] font-bold uppercase tracking-[0.12em] text-sn-muted">
+              {format(selectedDay, "EEEE, MMM d")}
+            </div>
+            <ul className="mt-1">
+              {selectedEvents.map((e) => (
+                <li key={e.id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate font-serif text-[16px] font-semibold text-sn-navy">
+                    {e.title}
+                  </span>
+                  <span className="shrink-0 text-[12px] font-semibold text-sn-muted tabular-nums">
+                    {format(new Date(e.starts_at), "h:mm a")}
+                  </span>
                   <button
-                    onClick={(evt) => {
-                      evt.stopPropagation();
+                    onClick={() =>
                       confirm({
-                        title: "Delete event?",
-                        message: `Are you sure you want to remove "${e.title}" from your calendar?`,
+                        title: "Delete moment?",
+                        message: `Remove "${e.title}" from your calendar?`,
                         onConfirm: () => deleteEvent.mutate(e.id),
-                      });
-                    }}
-                    className="sn-pill sn-icon-btn h-10 w-10"
-                    title="Delete event"
+                      })
+                    }
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#c2416c] hover:bg-black/5 active:scale-95 touch-manipulation"
+                    title="Delete moment"
                     aria-label={`Delete ${e.title}`}
                   >
-                    <Trash2 size={15} className="!text-[#c2416c]" />
+                    <Trash2 size={15} />
                   </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
       {/* Collapsible Memories Timeline Section */}
-      <section className="sn-glass relative overflow-hidden p-5 sm:p-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <section className="sn-glass relative overflow-hidden p-5 sm:p-6 lg:col-start-2 lg:row-start-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="sn-label">Timeline</h2>
@@ -774,9 +814,6 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                         {group.memories.slice(0, MAX_AVATARS).map((m, mIdx) => {
                           const isMain = mIdx === 0;
                           const sizeClass = isMain ? "w-20 h-20 z-20" : "w-13 h-13 z-10";
-                          const formattedMDate = m.memory_date
-                            ? new Date(m.memory_date + "T00:00:00")
-                            : null;
 
                           return (
                             <button
@@ -790,46 +827,10 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                                   setActiveMemory(m);
                                 }
                               }}
-                              className={`group relative rounded-full flex items-center justify-center overflow-hidden border-[3px] border-white bg-[#f4f6fe] shadow-md transition-all hover:scale-105 ${sizeClass} ${
-                                isWrappedMemory(m)
-                                  ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-white/60 shadow-[0_0_18px_rgba(14,165,233,0.35)]"
-                                  : ""
-                              }`}
+                              aria-label={m.title}
+                              className={`${bubbleShell(!!isWrappedMemory(m))} hover:scale-105 ${sizeClass}`}
                             >
-                              {m.cover_url && (
-                                <img
-                                  src={m.cover_url}
-                                  alt=""
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                              )}
-                              {isMain ? (
-                                <div className="relative z-10 flex flex-col items-center text-foreground font-bold">
-                                  {formattedMDate ? (
-                                    <>
-                                      <span className="text-[12px] uppercase">
-                                        {format(formattedMDate, "MMM")}
-                                      </span>
-                                      <span className="text-xl leading-none mt-0.5">
-                                        {format(formattedMDate, "d")}
-                                      </span>
-                                      <span className="text-[12px] opacity-70 mt-0.5">
-                                        {format(formattedMDate, "yyyy")}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    "Special"
-                                  )}
-                                </div>
-                              ) : (
-                                <Tag size={12} className="relative z-10 text-foreground/75" />
-                              )}
-
-                              {isWrappedMemory(m) && (
-                                <div className="absolute bottom-1 right-1 z-20 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md border border-white/80">
-                                  <Play size={8} fill="currentColor" className="ml-0.5" />
-                                </div>
-                              )}
+                              <TimelineBubbleFace m={m} isMain={isMain} />
                             </button>
                           );
                         })}

@@ -70,6 +70,20 @@ const OUTLINE_COLORS = [
 
 const UNSUPPORTED_IMAGE = "unsupported-image";
 
+/*
+ * Open page size. The page keeps the cover's 1 : 1.4 ratio (item positions are
+ * stored as percentages of it) and is as wide as the closed cover (max 400px),
+ * shrinking only when the viewport is too short to show the whole page between
+ * the top of the screen and the floating tools bar + dock.
+ * Reserved height: 16px top breathing room + 12px gap + 54px tools bar +
+ * 80px dock + the dock's bottom offset max(14px, safe area).
+ */
+const PAGE_WIDTH =
+  "min(100%, 400px, max(260px, calc((100dvh - 162px - max(14px, env(safe-area-inset-bottom, 0px))) / 1.4)))";
+
+/** Converts a size designed on a 360px-wide page into page-relative container units. */
+const pu = (px: number) => `${(px / 3.6).toFixed(3)}cqw`;
+
 export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
@@ -100,6 +114,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const [renameNameText, setRenameNameText] = useState("");
 
   const pageRef = useRef<HTMLDivElement>(null);
+  const chipRowRef = useRef<HTMLDivElement>(null);
+
+  // Keep the current page's chip visible in the scrollable page row
+  useEffect(() => {
+    const row = chipRowRef.current;
+    if (!isOpen || !row) return;
+    const chip = row.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!chip) return;
+    const left = chip.offsetLeft - row.clientWidth / 2 + chip.offsetWidth / 2;
+    row.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }, [currentPageIdx, isOpen, showPageSearch]);
   const qc = useQueryClient();
   const { confirm, setTab } = useAppStore();
   const couple = useCoupleNames();
@@ -692,41 +717,46 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
   const renderOpenBook = () => {
     return (
-      <div className="mx-auto w-full max-w-[640px] select-none px-4 pb-[210px] pt-2 sm:px-6 lg:max-w-[900px]">
-        {/* ── Page bar: back, page numbers, page actions ── */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsOpen(false)}
-            aria-label="Close the album"
-            title="Close the album"
-            className="sn-pill sn-icon-btn h-11 w-11"
-          >
-            <ArrowLeft size={18} strokeWidth={2} />
-          </button>
-          <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">
-            {filteredPages.length === 0 ? (
-              <span className="px-1 text-[14px] text-sn-muted">No pages match</span>
-            ) : (
-              filteredPages.map((p) => {
-                const idx = p.originalIndex;
-                const active = currentPageIdx === idx;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setCurrentPageIdx(idx);
-                      setSelectedItemId(null);
-                    }}
-                    aria-current={active ? "page" : undefined}
-                    className={`sn-pill h-10 shrink-0 px-4 text-[14px] ${active ? "sn-active" : ""}`}
-                  >
-                    {p.name || idx + 1}
-                  </button>
-                );
-              })
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+      <div className="mx-auto flex w-full max-w-[432px] select-none flex-col items-center px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-2">
+        {/* ── Page navigation: two tiers, like the sticker book ── */}
+        <div className="sn-card relative z-20 w-full p-3">
+          {/* Row 1: back to cover, page chips, find + add */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsOpen(false)}
+              aria-label="Close the album"
+              title="Close the album"
+              className="sn-pill sn-icon-btn h-10 w-10"
+            >
+              <ArrowLeft size={17} strokeWidth={2} />
+            </button>
+            <div
+              ref={chipRowRef}
+              className="no-scrollbar relative flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-0.5 py-1"
+            >
+              {filteredPages.length === 0 ? (
+                <span className="truncate px-1 text-[13px] text-sn-muted">No pages match</span>
+              ) : (
+                filteredPages.map((p) => {
+                  const idx = p.originalIndex;
+                  const active = currentPageIdx === idx;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setCurrentPageIdx(idx);
+                        setSelectedItemId(null);
+                      }}
+                      aria-current={active ? "page" : undefined}
+                      title={p.name || `Page ${idx + 1}`}
+                      className={`sn-pill h-9 max-w-[10rem] shrink-0 px-4 text-[13.5px] ${active ? "sn-active" : ""}`}
+                    >
+                      <span className="min-w-0 truncate">{p.name || idx + 1}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
             <button
               onClick={() => {
                 setShowPageSearch(!showPageSearch);
@@ -737,7 +767,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               aria-pressed={showPageSearch}
               className={`sn-pill sn-icon-btn h-10 w-10 ${showPageSearch ? "sn-active" : ""}`}
             >
-              <Search size={17} strokeWidth={1.9} />
+              <Search size={16} strokeWidth={1.9} />
             </button>
             <button
               onClick={() => addPage.mutate()}
@@ -745,80 +775,108 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               title="Add a page"
               className="sn-pill sn-icon-btn h-10 w-10"
             >
-              <Plus size={18} strokeWidth={2} />
+              <Plus size={17} strokeWidth={2} />
             </button>
-            {pages.length > 1 && (
-              <button
-                onClick={() =>
-                  confirm({
-                    title: "Delete this page?",
-                    message: "Everything placed on this page will be removed too.",
-                    onConfirm: () => {
-                      if (activePage) deletePage.mutate(activePage.id);
-                    },
-                  })
-                }
-                aria-label="Delete this page"
-                title="Delete this page"
-                className="sn-pill sn-icon-btn hidden h-10 w-10 sm:inline-grid"
-              >
-                <Trash2 size={16} strokeWidth={1.9} className="!text-[#c2416c]" />
-              </button>
-            )}
           </div>
-        </div>
 
-        {showPageSearch && (
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              type="text"
-              value={pageSearchQuery}
-              onChange={(e) => setPageSearchQuery(e.target.value)}
-              placeholder="Page name or number"
-              autoFocus
-              className="h-11 w-full rounded-full border border-white/80 bg-white/75 px-4 text-[15px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
-            />
-            {pageSearchQuery && (
+          {showPageSearch && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={pageSearchQuery}
+                onChange={(e) => setPageSearchQuery(e.target.value)}
+                placeholder="Page name or number"
+                aria-label="Find a page"
+                autoFocus
+                className="h-10 w-full min-w-0 rounded-full border border-white/80 bg-white/75 px-4 text-[16px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
+              />
+              {pageSearchQuery && (
+                <button
+                  onClick={() => setPageSearchQuery("")}
+                  aria-label="Clear search"
+                  title="Clear search"
+                  className="sn-ghost sn-icon-btn h-10 w-10"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Row 2: page title (tap to rename), position, prev / next, delete */}
+          {activePage && (
+            <div className="mt-2 flex items-center gap-1 border-t border-white/60 pt-2">
               <button
-                onClick={() => setPageSearchQuery("")}
-                aria-label="Clear search"
-                className="sn-ghost sn-icon-btn h-11 w-11"
+                onClick={() => {
+                  setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
+                  setRenameModalOpen(true);
+                }}
+                aria-label="Rename this page"
+                title="Rename this page"
+                className="group flex h-10 min-w-0 flex-1 items-center gap-2 pl-1 text-left"
               >
-                <X size={16} />
+                <span className="truncate font-serif text-[20px] font-semibold leading-tight text-sn-navy">
+                  {activePage.name || `Page ${currentPageIdx + 1}`}
+                </span>
+                <Pencil
+                  size={14}
+                  strokeWidth={2}
+                  className="shrink-0 text-sn-muted transition-colors group-hover:text-sn-navy"
+                />
               </button>
-            )}
-          </div>
-        )}
-
-        <div className="mt-5 flex flex-col items-center">
-          {/* ── The page ── */}
-          <div className="flex min-w-0 flex-col items-center">
-            {activePage && (
-              <div className="mb-3 flex w-full max-w-[min(100%,calc((100dvh-230px)/1.4))] items-center justify-between gap-3 lg:max-w-[min(100%,calc((100dvh-250px)/1.4))]">
+              <div className="flex shrink-0 items-center">
                 <button
                   onClick={() => {
-                    setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
-                    setRenameModalOpen(true);
+                    setCurrentPageIdx(Math.max(0, currentPageIdx - 1));
+                    setSelectedItemId(null);
                   }}
-                  title="Rename this page"
-                  className="group flex min-w-0 items-center gap-2 text-left"
+                  disabled={currentPageIdx === 0}
+                  aria-label="Previous page"
+                  title="Previous page"
+                  className="sn-ghost sn-icon-btn h-10 w-10 border-transparent disabled:opacity-35"
                 >
-                  <span className="truncate font-serif text-[22px] font-semibold text-sn-navy">
-                    {activePage.name || `Page ${currentPageIdx + 1}`}
-                  </span>
-                  <Pencil
-                    size={14}
-                    strokeWidth={2}
-                    className="shrink-0 text-sn-muted transition-colors group-hover:text-sn-navy"
-                  />
+                  <ChevronLeft size={18} strokeWidth={2} />
                 </button>
-                <span className="shrink-0 text-[14px] text-sn-muted tabular-nums">
+                <span className="min-w-[2.75rem] text-center text-[13px] text-sn-muted tabular-nums">
                   {currentPageIdx + 1} / {pages.length}
                 </span>
+                <button
+                  onClick={() => {
+                    setCurrentPageIdx(Math.min(pages.length - 1, currentPageIdx + 1));
+                    setSelectedItemId(null);
+                  }}
+                  disabled={currentPageIdx >= pages.length - 1}
+                  aria-label="Next page"
+                  title="Next page"
+                  className="sn-ghost sn-icon-btn h-10 w-10 border-transparent disabled:opacity-35"
+                >
+                  <ChevronRight size={18} strokeWidth={2} />
+                </button>
               </div>
-            )}
+              {pages.length > 1 && (
+                <button
+                  onClick={() =>
+                    confirm({
+                      title: "Delete this page?",
+                      message: "Everything placed on this page will be removed too.",
+                      onConfirm: () => deletePage.mutate(activePage.id),
+                    })
+                  }
+                  aria-label="Delete this page"
+                  title="Delete this page"
+                  className="sn-ghost sn-icon-btn h-10 w-10"
+                >
+                  <Trash2 size={16} strokeWidth={1.9} className="text-[#c2416c]" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-            <div className="relative w-full max-w-[min(100%,calc((100dvh-320px)/1.4))]">
+        <div className="mt-4 flex w-full flex-col items-center">
+          {/* ── The page: as wide as the cover, 1 : 1.4, never taller than the screen allows ── */}
+          <div className="flex w-full flex-col items-center">
+            <div className="relative" style={{ width: PAGE_WIDTH }}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentPageIdx}
@@ -827,7 +885,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   animate={{ opacity: 1, x: 0, rotate: 0 }}
                   exit={{ opacity: 0, x: -18, rotate: -0.6 }}
                   transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-                  className="relative aspect-[1/1.4] w-full overflow-hidden rounded-[8px_26px_26px_8px] bg-[#fdfbf7] shadow-[0_30px_60px_-30px_rgba(50,70,150,0.65),0_2px_6px_rgba(80,98,172,0.1)]"
+                  className="@container relative aspect-[1/1.4] w-full overflow-hidden rounded-[8px_26px_26px_8px] bg-[#fdfbf7] shadow-[0_30px_60px_-30px_rgba(50,70,150,0.65),0_2px_6px_rgba(80,98,172,0.1)]"
                   onClick={() => setSelectedItemId(null)}
                 >
                   {/* paper: grain, dot grid and a soft gutter shadow */}
@@ -876,7 +934,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           style={{ left: `${it.pos_x}%`, top: `${it.pos_y}%`, zIndex: isSelected ? 50 : 10 }}
                         >
                           <div
-                            className="relative cursor-grab p-2 active:cursor-grabbing"
+                            className="relative cursor-grab active:cursor-grabbing"
+                            style={{ padding: pu(8) }}
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedItemId(isSelected ? null : it.id);
@@ -888,10 +947,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 style={{ transform: `rotate(${it.rotation}deg)` }}
                               >
                                 {it.image_url ? (
-                                  <img src={it.image_url} alt="" className="h-20 w-20 object-contain" />
+                                  <img
+                                    src={it.image_url}
+                                    alt=""
+                                    className="object-contain"
+                                    style={{ width: pu(80), height: pu(80) }}
+                                  />
                                 ) : it.content?.trim() ? (
                                   // Legacy sticker stored as an emoji/text string: keep it, but as a small quiet tag
-                                  <div className="max-w-[96px] truncate rounded-full border border-white bg-white/80 px-2.5 py-1 text-[14px] leading-none text-sn-muted">
+                                  <div
+                                    className="truncate rounded-full border border-white bg-white/80 px-2.5 py-1 leading-none text-sn-muted"
+                                    style={{ maxWidth: pu(96), fontSize: `max(12px, ${pu(14)})` }}
+                                  >
                                     {it.content}
                                   </div>
                                 ) : null}
@@ -903,14 +970,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 className="pointer-events-none select-none drop-shadow-md"
                                 style={{ transform: `rotate(${it.rotation}deg)` }}
                               >
-                                <img src={it.image_url} alt="" className="w-28 object-contain" />
+                                <img src={it.image_url} alt="" className="object-contain" style={{ width: pu(112) }} />
                               </div>
                             )}
 
                             {it.item_type === "polaroid" && it.image_url && (
                               <div
-                                className="pointer-events-none flex w-24 select-none flex-col items-center rounded-[3px] bg-white p-1.5 pb-5 shadow-[0_10px_20px_-10px_rgba(50,70,150,0.6)] ring-1 ring-[#ebe8f6]"
-                                style={{ transform: `rotate(${it.rotation}deg)` }}
+                                className="pointer-events-none flex select-none flex-col items-center rounded-[3px] bg-white shadow-[0_10px_20px_-10px_rgba(50,70,150,0.6)] ring-1 ring-[#ebe8f6]"
+                                style={{
+                                  width: pu(96),
+                                  padding: `${pu(6)} ${pu(6)} ${pu(20)}`,
+                                  transform: `rotate(${it.rotation}deg)`,
+                                }}
                               >
                                 <div className="aspect-square w-full overflow-hidden bg-[#eef1fb]">
                                   <img src={it.image_url} alt="" className="h-full w-full object-cover" />
@@ -920,13 +991,18 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
                             {it.item_type === "text" && (
                               <div
-                                className="pointer-events-none max-w-[140px] select-none rounded-[6px] p-3 text-left shadow-[0_8px_16px_-10px_rgba(50,70,150,0.55)]"
+                                className="pointer-events-none select-none rounded-[6px] text-left shadow-[0_8px_16px_-10px_rgba(50,70,150,0.55)]"
                                 style={{
+                                  maxWidth: pu(140),
+                                  padding: pu(12),
                                   background: it.color || PASTEL_COLORS[0],
                                   transform: `rotate(${it.rotation}deg)`,
                                 }}
                               >
-                                <p className="sn-hand whitespace-pre-wrap break-words text-[17px] leading-tight text-sn-navy">
+                                <p
+                                  className="sn-hand whitespace-pre-wrap break-words leading-tight text-sn-navy"
+                                  style={{ fontSize: `max(12px, ${pu(17)})` }}
+                                >
                                   {it.content}
                                 </p>
                               </div>
@@ -954,7 +1030,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                         }}
                                         aria-label="View"
                                         title="View"
-                                        className="sn-pill sn-icon-btn h-9 w-9"
+                                        className="sn-pill sn-icon-btn h-10 w-10"
                                       >
                                         <Eye size={15} />
                                       </button>
@@ -965,7 +1041,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                     }
                                     aria-label="Rotate"
                                     title="Rotate"
-                                    className="sn-pill sn-icon-btn h-9 w-9"
+                                    className="sn-pill sn-icon-btn h-10 w-10"
                                   >
                                     <RotateCw size={15} />
                                   </button>
@@ -979,7 +1055,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                     }
                                     aria-label="Delete"
                                     title="Delete"
-                                    className="sn-pill sn-icon-btn h-9 w-9"
+                                    className="sn-pill sn-icon-btn h-10 w-10"
                                   >
                                     <Trash2 size={15} className="!text-[#c2416c]" />
                                   </button>
@@ -994,27 +1070,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 </motion.div>
               </AnimatePresence>
             </div>
-
-            {pages.length > 1 && activePage && (
-              <button
-                onClick={() =>
-                  confirm({
-                    title: "Delete this page?",
-                    message: "Everything placed on this page will be removed too.",
-                    onConfirm: () => deletePage.mutate(activePage.id),
-                  })
-                }
-                className="sn-ghost mt-3 h-10 px-4 text-[14px] sm:hidden"
-              >
-                <Trash2 size={15} className="text-[#c2416c]" />
-                Delete page
-              </button>
-            )}
           </div>
 
           {/* ── Tools: a floating bar centred above the dock ── */}
           {activePage && (
-            <div className="fixed inset-x-3 bottom-[calc(max(0.875rem,env(safe-area-inset-bottom))+80px)] z-30 mx-auto max-w-[520px]">
+            <div className="fixed inset-x-4 bottom-[calc(max(0.875rem,env(safe-area-inset-bottom))+80px)] z-30 mx-auto max-w-[432px]">
               <AnimatePresence initial={false}>
                 {activeTab && (
                   <motion.div
@@ -1029,7 +1089,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                       <h3 className="font-serif text-[20px] font-semibold text-sn-navy">
                         {activeTab === "stickers" ? "Stickers" : activeTab === "photos" ? "Photo" : "Note"}
                       </h3>
-                      <button onClick={closeTool} aria-label="Close" className="sn-ghost sn-icon-btn h-9 w-9">
+                      <button onClick={closeTool} aria-label="Close" className="sn-ghost sn-icon-btn h-10 w-10">
                         <X size={16} />
                       </button>
                     </div>
@@ -1333,7 +1393,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
               </AnimatePresence>
 
               {/* Tool switcher */}
-              <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/80 bg-white/45 p-1.5 shadow-[0_14px_30px_-16px_rgba(70,88,168,0.55)] backdrop-blur-xl">
+              {/* Fills the gutter-to-gutter width; labels share the space so nothing is clipped */}
+              <div className="flex w-full items-center gap-1 rounded-full border border-white/80 bg-white/45 p-1 shadow-[0_14px_30px_-16px_rgba(70,88,168,0.55)] backdrop-blur-xl">
                 {(
                   [
                     ["stickers", "Stickers", Star],
@@ -1345,9 +1406,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     key={key}
                     onClick={() => toggleTool(key)}
                     aria-pressed={activeTab === key}
-                    className={`sn-pill h-11 px-4 text-[14px] ${activeTab === key ? "sn-active" : ""}`}
+                    className={`sn-pill h-11 flex-1 gap-1.5 px-2.5 text-[13.5px] ${activeTab === key ? "sn-active" : ""}`}
                   >
-                    <Icon size={17} strokeWidth={1.8} />
+                    <Icon size={16} strokeWidth={1.8} className="shrink-0 max-[359px]:hidden" />
                     {label}
                   </button>
                 ))}

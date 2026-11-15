@@ -293,8 +293,10 @@ function Inner() {
   const activeRelId = effectiveRel?.id || fallbackRelId || "";
 
   // Slot B is decided by the server (who claimed it), not by anything stored on the phone.
-  if (LOCK_PARTNER_B && !isUrlPreview && rel && user && rel.user_b_id === user.id) {
-    return <WorkInProgress name={rel.name_b || "Aya"} />;
+  const previewWip =
+    import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("wip");
+  if (previewWip || (LOCK_PARTNER_B && !isUrlPreview && rel && user && rel.user_b_id === user.id)) {
+    return <WorkInProgress name={rel?.name_b || "Aya"} />;
   }
 
   if (isMonthsaryOpen && activeRelId) {

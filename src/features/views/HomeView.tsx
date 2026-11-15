@@ -132,7 +132,7 @@ export function HomeView({
       ? {
           date: nextMonthsary,
           title: `Our ${ordinal(monthsaryNumber)} monthsary`,
-          detail: `${format(nextMonthsary, "EEEE, MMMM d")} · ${differenceInCalendarDays(nextMonthsary, start)} days together`,
+          detail: format(nextMonthsary, "EEEE, MMMM d"),
         }
       : null;
 
@@ -250,7 +250,7 @@ export function HomeView({
               onClick={() => setTab("photobooth")}
               className="group flex cursor-pointer flex-col"
             >
-              <div className="relative flex flex-1 items-start gap-5">
+              <div className="relative flex flex-1 items-center justify-center gap-6 sm:gap-8">
                 <Polaroid
                   src={ART.polaroidSky}
                   tape="blue"
@@ -258,7 +258,7 @@ export function HomeView({
                   className="ml-1 mt-1 w-[112px] shrink-0 group-hover:rotate-[-3deg] sm:w-[146px]"
                   photoClassName="aspect-[128/138]"
                 />
-                <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
+                <div className="flex min-w-0 flex-col justify-center">
                   <h3 className="font-serif text-[21px] font-semibold leading-tight text-sn-navy sm:text-[24px]">
                     Remote Photo Booth
                   </h3>
@@ -278,15 +278,18 @@ export function HomeView({
         ) : (
           <>
             {/* ───── Together ───── */}
-            <section {...longPressProps} className="relative flex flex-col justify-center">
-              <div className="relative z-10 flex items-center gap-4 sm:gap-5">
+            <section
+              {...longPressProps}
+              className="relative flex flex-col items-center justify-center"
+            >
+              <div className="relative z-10 flex items-center justify-center gap-4 sm:gap-6">
                 {/* Keeps beating as long as we're together */}
                 <img
                   src={ART.clayHeart}
                   alt=""
                   aria-hidden
                   draggable={false}
-                  className="sn-heartbeat h-[58px] w-[58px] shrink-0 select-none sm:h-[68px] sm:w-[68px]"
+                  className="sn-heartbeat h-[88px] w-[88px] shrink-0 select-none sm:h-[104px] sm:w-[104px]"
                 />
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-3">
@@ -345,54 +348,49 @@ export function HomeView({
               title="Open our monthsary story"
               className="@container flex cursor-pointer flex-col justify-center"
             >
-              <div className="flex items-end justify-between gap-3">
-                <span className="font-serif text-[26px] font-semibold leading-none text-sn-navy @min-[440px]:text-[31px]">
-                  {isMonthsaryToday
-                    ? "It's today"
-                    : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} to go`}
-                </span>
-                <span className="text-[20px] font-semibold leading-none text-[#e0609a] tabular-nums sm:text-[22px]">
-                  {progress}%
-                </span>
-              </div>
+              <span className="font-serif text-[26px] font-semibold leading-none text-sn-navy @min-[440px]:text-[31px]">
+                {isMonthsaryToday
+                  ? "It's today"
+                  : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} to go`}
+              </span>
               <div className="relative mt-4">
-                <img
-                  src={ART.catPeek}
-                  alt=""
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-[22px] right-[52px] hidden w-[100px] select-none @min-[340px]:block @min-[440px]:right-[56px] @min-[440px]:w-[124px]"
-                />
+                <ExcitedCat className="pointer-events-none absolute bottom-[30px] right-[44px] hidden w-[100px] select-none @min-[340px]:block @min-[440px]:right-[48px] @min-[440px]:w-[124px]" />
                 <div
-                  className="relative h-[28px] rounded-full bg-[#ebeaf2] shadow-[inset_0_1px_3px_rgba(100,108,160,0.18)]"
+                  className="relative h-[38px] rounded-full bg-[#ebeaf2] shadow-[inset_0_1px_3px_rgba(100,108,160,0.18)]"
                   role="progressbar"
                   aria-valuenow={progress}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-label="Progress to the next monthsary"
                 >
-                  <div
-                    className="sn-progress-fill h-full rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                  {/* The word sits inside the bar: soft ink on the track, white where it's filled */}
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 grid place-items-center text-[12.5px] font-extrabold uppercase tracking-[0.42em] text-[#9aa1c4]"
-                  >
-                    monthsary
-                  </span>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 grid place-items-center text-[12.5px] font-extrabold uppercase tracking-[0.42em] text-white [text-shadow:0_1px_2px_rgba(180,60,110,0.35)]"
-                    style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
-                  >
-                    monthsary
-                  </span>
+                  {/* Everything inside is masked by the bar's rounded shape */}
+                  <div className="absolute inset-0 overflow-hidden rounded-full">
+                    <div
+                      className="sn-progress-fill h-full rounded-full"
+                      style={{ width: `${progress}%` }}
+                    />
+                    {/* The word drifts slowly behind the glass: soft ink on the track, white where it's filled */}
+                    <span
+                      aria-hidden
+                      className="sn-parallax-word pointer-events-none absolute inset-0 grid place-items-center font-serif text-[30px] font-bold uppercase leading-none tracking-[0.2em] text-[#c3c8e2]"
+                    >
+                      monthsary
+                    </span>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0"
+                      style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
+                    >
+                      <span className="sn-parallax-word absolute inset-0 grid place-items-center font-serif text-[30px] font-bold uppercase leading-none tracking-[0.2em] text-white/90 [text-shadow:0_1px_3px_rgba(180,60,110,0.35)]">
+                        monthsary
+                      </span>
+                    </span>
+                  </div>
                   <img
                     src={ART.clayHeart}
                     alt=""
                     aria-hidden
-                    className="absolute top-1/2 h-[40px] w-[40px] -translate-x-1/2 -translate-y-1/2 select-none drop-shadow-[0_4px_6px_rgba(236,122,164,0.35)]"
+                    className="absolute top-1/2 h-[46px] w-[46px] -translate-x-1/2 -translate-y-1/2 select-none drop-shadow-[0_4px_6px_rgba(236,122,164,0.35)]"
                     style={{ left: `${progress}%` }}
                   />
                 </div>
@@ -465,6 +463,58 @@ export function HomeView({
         description="Everything the two of you keep lives here: where you both are, the days you've had together, the next moment you're counting down to, and every photo and note in between."
       />
     </div>
+  );
+}
+
+/** The cat peeking over the bar: now and then it giggles or shakes its head, excited. */
+function ExcitedCat({ className }: { className?: string }) {
+  const controls = useAnimationControls();
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (reduce) return;
+    let t: ReturnType<typeof setTimeout>;
+    let alive = true;
+    const next = () => {
+      t = setTimeout(
+        async () => {
+          if (!alive) return;
+          if (document.visibilityState === "visible") {
+            if (Math.random() < 0.5) {
+              // giggle: quick little hops
+              await controls.start({
+                y: [0, -7, 0, -5, 0, -3, 0],
+                transition: { duration: 0.75, ease: "easeOut" },
+              });
+            } else {
+              // excited head shake
+              await controls.start({
+                rotate: [0, -9, 8, -7, 6, -3, 0],
+                transition: { duration: 0.8, ease: "easeInOut" },
+              });
+            }
+          }
+          if (alive) next();
+        },
+        2500 + Math.random() * 4500,
+      );
+    };
+    next();
+    return () => {
+      alive = false;
+      clearTimeout(t);
+      controls.stop();
+    };
+  }, [controls, reduce]);
+  return (
+    <motion.img
+      src={ART.catPeek}
+      alt=""
+      aria-hidden
+      draggable={false}
+      animate={controls}
+      style={{ transformOrigin: "50% 90%" }}
+      className={className}
+    />
   );
 }
 

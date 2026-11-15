@@ -753,3 +753,50 @@
     animation: none;
   }
 }
+
+/* Calendar timeline bubbles */
+/* Month-grid days that hold a moment: light pink fill with a slow pink-lavender halo. */
+.sn-moment-day {
+  background: rgba(253, 228, 241, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 16px 4px rgba(240, 140, 190, 0.55);
+  animation: sn-moment-glow 3.2s ease-in-out infinite;
+}
+@keyframes sn-moment-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 0 16px 4px rgba(240, 140, 190, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 22px 7px rgba(214, 150, 236, 0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-moment-day {
+    animation: none;
+  }
+}
+
+/* "monthsary" drifting slowly inside the milestone bar */
+@keyframes sn-parallax-word {
+  0%,
+  100% {
+    translate: -14px 0;
+  }
+  50% {
+    translate: 14px 0;
+  }
+}
+.sn-parallax-word {
+  animation: sn-parallax-word 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-parallax-word {
+    animation: none;
+  }
+}
