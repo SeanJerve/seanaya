@@ -37,7 +37,7 @@ export function useNotifications(relationshipId: string | undefined, { live = fa
         .from("notifications")
         .select("id,kind,ref_id,read,created_at")
         .eq("relationship_id", relationshipId!)
-        .eq("user_id", user!.id)
+        // Access rules return only notifications meant for you, on any of your devices.
         .order("created_at", { ascending: false })
         .limit(30);
       bootstrapped.current = true;
@@ -56,7 +56,7 @@ export function useNotifications(relationshipId: string | undefined, { live = fa
           event: "INSERT",
           schema: "public",
           table: "notifications",
-          filter: `user_id=eq.${user.id}`,
+          filter: `relationship_id=eq.${relationshipId}`,
         },
         (payload) => {
           // The content itself is refreshed by the app's own realtime channel.
@@ -85,7 +85,6 @@ export function useNotifications(relationshipId: string | undefined, { live = fa
       .from("notifications")
       .update({ read: true })
       .eq("relationship_id", relationshipId)
-      .eq("user_id", userId)
       .eq("read", false);
     qc.invalidateQueries({ queryKey: ["notifications"] });
   }, [relationshipId, userId, qc]);

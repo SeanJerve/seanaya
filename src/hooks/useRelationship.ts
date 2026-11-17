@@ -20,7 +20,8 @@ export function useRelationship() {
       const { data } = await supabase
         .from("relationships")
         .select(REL_COLUMNS)
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        // Access rules only return the space this device belongs to (any of your devices).
+        .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
       return data ?? null;
