@@ -4,7 +4,7 @@ import { ChibiTile, chibiFor } from "@/components/seanaya/art";
  * While something is being made for one of you, that person sees this instead of the app.
  * Flip LOCK_PARTNER_B to false (and redeploy) to let her back in.
  */
-export const LOCK_PARTNER_B = true;
+export const LOCK_PARTNER_B = false;
 
 export function WorkInProgress({ name }: { name: string }) {
   return (

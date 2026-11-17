@@ -641,7 +641,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
 
   // Render Closed Book Cover (Takes w-full, stretches to match customize panel, aspect 1/1.4)
   const renderClosedBook = () => (
-    <div className="relative z-10 flex h-[calc(100dvh-200px)] w-full flex-col items-center justify-center overflow-hidden bg-transparent p-4">
+    <div className="relative z-10 flex w-full flex-col items-center justify-start overflow-hidden bg-transparent px-4 pb-4 pt-4">
       {/* watercolor dream backdrops */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[10%] -left-20 w-80 h-80 rounded-full bg-pink-200/10 blur-[80px]" />
@@ -652,7 +652,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         whileHover={{ scale: 1.01, rotate: 0.5 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => setIsOpen(true)}
-        className="group relative z-10 flex aspect-[1/1.4] max-h-[calc(100dvh-280px)] w-full max-w-[400px] cursor-pointer select-none flex-col justify-between overflow-hidden rounded-[10px_28px_28px_10px] bg-[linear-gradient(160deg,#bccdf6_0%,#a3b9f0_55%,#aec2f3_100%)] p-10 text-center shadow-[0_30px_60px_-30px_rgba(50,70,150,0.7),inset_0_1px_0_rgba(255,255,255,0.6)]"
+        // Same size as an open page, so opening the book doesn't change its size.
+        style={{ width: PAGE_WIDTH }}
+        className="group relative z-10 flex aspect-[1/1.4] cursor-pointer select-none flex-col justify-between overflow-hidden rounded-[10px_28px_28px_10px] bg-[linear-gradient(160deg,#bccdf6_0%,#a3b9f0_55%,#aec2f3_100%)] p-10 text-center shadow-[0_30px_60px_-30px_rgba(50,70,150,0.7),inset_0_1px_0_rgba(255,255,255,0.6)]"
       >
         {/* cloth spine */}
         <div className="absolute inset-y-0 left-0 w-[22px] bg-[linear-gradient(90deg,rgba(31,42,92,0.18),rgba(31,42,92,0.04))]" />
