@@ -281,9 +281,10 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
           {/* Stage: two cameras + the strip as it fills */}
           <main className="absolute inset-x-0 bottom-[178px] top-[84px] flex items-stretch justify-center gap-5 px-4 sm:top-[96px] sm:px-6">
             <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center gap-3 [container-type:size] sm:max-w-[920px]">
-              {/* You: portrait 2:3, the same shape as your photo in the strip */}
+              {/* You: portrait 2:3, the same shape as your photo in the strip.
+                  Same side as in the strip: slot A on the left, slot B on the right. */}
               <div
-                className="relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#dfe6fb] shadow-[var(--shadow-panel)]"
+                className={`relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#dfe6fb] shadow-[var(--shadow-panel)] ${slot === "b" ? "order-2" : "order-1"}`}
                 style={{ width: tileWidth }}
               >
                 <video
@@ -313,7 +314,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
               {/* Partner (Solo hides it so your camera gets the whole stage) */}
               {together && (
                 <div
-                  className="relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#e8e5f7] shadow-[var(--shadow-panel)]"
+                  className={`relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#e8e5f7] shadow-[var(--shadow-panel)] ${slot === "b" ? "order-1" : "order-2"}`}
                   style={{ width: tileWidth }}
                 >
                   {partnerLive ? (
