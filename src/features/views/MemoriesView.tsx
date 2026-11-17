@@ -128,7 +128,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   const qc = useQueryClient();
   const { confirm, setTab } = useAppStore();
   const couple = useCoupleNames();
-  const coverNames = couple.slot === "a" ? [couple.me, couple.partner] : [couple.partner, couple.me];
+  const coverNames =
+    couple.slot === "a" ? [couple.me, couple.partner] : [couple.partner, couple.me];
 
   // Fetch album pages
   const {
@@ -223,9 +224,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   // Photo notes are saved as kind "note" with an image_url (captioned or not),
   // so any note carrying an image counts as a photo.
   const recentPolaroids = useMemo(() => {
-    return recentNotes.filter(
-      (n: any) => !!n.image_url && new Date(n.created_at) > oneDayAgo,
-    );
+    return recentNotes.filter((n: any) => !!n.image_url && new Date(n.created_at) > oneDayAgo);
   }, [recentNotes, oneDayAgo]);
 
   const recentTexts = useMemo(() => {
@@ -292,13 +291,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
           refetchPages();
         },
       )
-      .on("postgres_changes", { event: "*", schema: "public", table: "album_items" }, (payload: any) => {
-        // album_items has no relationship_id; only react to rows on our pages.
-        // Deletes may only carry the primary key, so refetch when page_id is unknown.
-        const pageId = payload?.new?.page_id ?? payload?.old?.page_id;
-        if (pageId && !pageIdsRef.current.includes(pageId)) return;
-        refetchItems();
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "album_items" },
+        (payload: any) => {
+          // album_items has no relationship_id; only react to rows on our pages.
+          // Deletes may only carry the primary key, so refetch when page_id is unknown.
+          const pageId = payload?.new?.page_id ?? payload?.old?.page_id;
+          if (pageId && !pageIdsRef.current.includes(pageId)) return;
+          refetchItems();
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -678,7 +681,6 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
         </div>
       </motion.div>
       <p className="relative z-10 mt-5 text-[14.5px] text-sn-muted">Tap the album to open it</p>
-
     </div>
   );
 
@@ -695,17 +697,20 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
   };
   const addStickerItem = (url: string) => {
     if (!activePage) return;
-    addItem.mutate({
-      page_id: activePage.id,
-      item_type: "sticker",
-      content: null,
-      image_url: url,
-      color: null,
-      pos_x: 30,
-      pos_y: 30,
-      scale: 1,
-      rotation: 0,
-    }, { onSuccess: () => toast.success("Sticker added") });
+    addItem.mutate(
+      {
+        page_id: activePage.id,
+        item_type: "sticker",
+        content: null,
+        image_url: url,
+        color: null,
+        pos_x: 30,
+        pos_y: 30,
+        scale: 1,
+        rotation: 0,
+      },
+      { onSuccess: () => toast.success("Sticker added") },
+    );
   };
   const SHAPE_LABEL: Record<string, string> = {
     rect: "Portrait",
@@ -722,7 +727,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
       <div className="mx-auto flex w-full max-w-[432px] select-none flex-col items-center px-4 pb-[calc(48px+env(safe-area-inset-bottom))] pt-2">
         {/* ── Page navigation: two tiers, like the sticker book ── */}
         <div className="sn-card relative z-20 w-full p-3">
-          {/* Row 1: back to cover, page chips, find + add */}
+          {/* Row 1: back to cover, page title (tap to rename), find + add */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsOpen(false)}
@@ -732,33 +737,28 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             >
               <ArrowLeft size={17} strokeWidth={2} />
             </button>
-            <div
-              ref={chipRowRef}
-              className="no-scrollbar relative flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-0.5 py-1"
-            >
-              {filteredPages.length === 0 ? (
-                <span className="truncate px-1 text-[13px] text-sn-muted">No pages match</span>
-              ) : (
-                filteredPages.map((p) => {
-                  const idx = p.originalIndex;
-                  const active = currentPageIdx === idx;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setCurrentPageIdx(idx);
-                        setSelectedItemId(null);
-                      }}
-                      aria-current={active ? "page" : undefined}
-                      title={p.name || `Page ${idx + 1}`}
-                      className={`sn-pill h-9 max-w-[10rem] shrink-0 px-4 text-[13.5px] ${active ? "sn-active" : ""}`}
-                    >
-                      <span className="min-w-0 truncate">{p.name || idx + 1}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+            {activePage ? (
+              <button
+                onClick={() => {
+                  setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
+                  setRenameModalOpen(true);
+                }}
+                aria-label="Rename this page"
+                title="Rename this page"
+                className="group flex h-10 min-w-0 flex-1 items-center gap-2 pl-1 text-left"
+              >
+                <span className="truncate font-serif text-[20px] font-semibold leading-tight text-sn-navy">
+                  {activePage.name || `Page ${currentPageIdx + 1}`}
+                </span>
+                <Pencil
+                  size={14}
+                  strokeWidth={2}
+                  className="shrink-0 text-sn-muted transition-colors group-hover:text-sn-navy"
+                />
+              </button>
+            ) : (
+              <div className="min-w-0 flex-1" />
+            )}
             <button
               onClick={() => {
                 setShowPageSearch(!showPageSearch);
@@ -779,6 +779,35 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             >
               <Plus size={17} strokeWidth={2} />
             </button>
+          </div>
+
+          {/* Row 2: every page, scrollable, nothing clipped */}
+          <div
+            ref={chipRowRef}
+            className="no-scrollbar relative -mx-1 mt-2 flex min-w-0 items-center gap-2 overflow-x-auto px-1 py-2"
+          >
+            {filteredPages.length === 0 ? (
+              <span className="truncate px-1 text-[13px] text-sn-muted">No pages match</span>
+            ) : (
+              filteredPages.map((p) => {
+                const idx = p.originalIndex;
+                const active = currentPageIdx === idx;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setCurrentPageIdx(idx);
+                      setSelectedItemId(null);
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    title={p.name || `Page ${idx + 1}`}
+                    className={`sn-pill h-9 max-w-[10rem] shrink-0 px-4 text-[13.5px] ${active ? "sn-active" : ""}`}
+                  >
+                    <span className="min-w-0 truncate">{p.name || idx + 1}</span>
+                  </button>
+                );
+              })
+            )}
           </div>
 
           {showPageSearch && (
@@ -805,28 +834,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
             </div>
           )}
 
-          {/* Row 2: page title (tap to rename), position, prev / next, delete */}
+          {/* Row 3: previous / position / next, delete */}
           {activePage && (
-            <div className="mt-2 flex items-center gap-1 border-t border-white/60 pt-2">
-              <button
-                onClick={() => {
-                  setRenameNameText(activePage.name || `Page ${currentPageIdx + 1}`);
-                  setRenameModalOpen(true);
-                }}
-                aria-label="Rename this page"
-                title="Rename this page"
-                className="group flex h-10 min-w-0 flex-1 items-center gap-2 pl-1 text-left"
-              >
-                <span className="truncate font-serif text-[20px] font-semibold leading-tight text-sn-navy">
-                  {activePage.name || `Page ${currentPageIdx + 1}`}
-                </span>
-                <Pencil
-                  size={14}
-                  strokeWidth={2}
-                  className="shrink-0 text-sn-muted transition-colors group-hover:text-sn-navy"
-                />
-              </button>
-              <div className="flex shrink-0 items-center">
+            <div className="mt-1 grid grid-cols-[40px_1fr_40px] items-center border-t border-white/60 pt-2">
+              <span aria-hidden />
+              <div className="flex items-center justify-center">
                 <button
                   onClick={() => {
                     setCurrentPageIdx(Math.max(0, currentPageIdx - 1));
@@ -855,7 +867,7 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   <ChevronRight size={18} strokeWidth={2} />
                 </button>
               </div>
-              {pages.length > 1 && (
+              {pages.length > 1 ? (
                 <button
                   onClick={() =>
                     confirm({
@@ -870,6 +882,8 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                 >
                   <Trash2 size={16} strokeWidth={1.9} className="text-[#c2416c]" />
                 </button>
+              ) : (
+                <span aria-hidden />
               )}
             </div>
           )}
@@ -901,7 +915,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                     </div>
                   ) : activePageItems.length === 0 ? (
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-                      <img src="/lily1.webp" alt="" aria-hidden className="w-[110px] -rotate-6 opacity-90" />
+                      <img
+                        src="/lily1.webp"
+                        alt=""
+                        aria-hidden
+                        className="w-[110px] -rotate-6 opacity-90"
+                      />
                       <div className="mt-2 font-serif text-[20px] font-semibold text-sn-navy">
                         An empty page
                       </div>
@@ -933,7 +952,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           onDragStart={() => setSelectedItemId(null)}
                           whileDrag={{ scale: 1.05, zIndex: 100 }}
                           className="album-item-drag-target absolute touch-none select-none"
-                          style={{ left: `${it.pos_x}%`, top: `${it.pos_y}%`, zIndex: isSelected ? 50 : 10 }}
+                          style={{
+                            left: `${it.pos_x}%`,
+                            top: `${it.pos_y}%`,
+                            zIndex: isSelected ? 50 : 10,
+                          }}
                         >
                           <div
                             className="relative cursor-grab active:cursor-grabbing"
@@ -972,7 +995,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 className="pointer-events-none select-none drop-shadow-md"
                                 style={{ transform: `rotate(${it.rotation}deg)` }}
                               >
-                                <img src={it.image_url} alt="" className="object-contain" style={{ width: pu(112) }} />
+                                <img
+                                  src={it.image_url}
+                                  alt=""
+                                  className="object-contain"
+                                  style={{ width: pu(112) }}
+                                />
                               </div>
                             )}
 
@@ -986,7 +1014,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 }}
                               >
                                 <div className="aspect-square w-full overflow-hidden bg-[#eef1fb]">
-                                  <img src={it.image_url} alt="" className="h-full w-full object-cover" />
+                                  <img
+                                    src={it.image_url}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
                                 </div>
                               </div>
                             )}
@@ -1039,7 +1071,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                     )}
                                   <button
                                     onClick={() =>
-                                      updateItemRotation.mutate({ id: it.id, rotation: (it.rotation + 15) % 360 })
+                                      updateItemRotation.mutate({
+                                        id: it.id,
+                                        rotation: (it.rotation + 15) % 360,
+                                      })
                                     }
                                     aria-label="Rotate"
                                     title="Rotate"
@@ -1089,9 +1124,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="font-serif text-[20px] font-semibold text-sn-navy">
-                        {activeTab === "stickers" ? "Stickers" : activeTab === "photos" ? "Photo" : "Note"}
+                        {activeTab === "stickers"
+                          ? "Stickers"
+                          : activeTab === "photos"
+                            ? "Photo"
+                            : "Note"}
                       </h3>
-                      <button onClick={closeTool} aria-label="Close" className="sn-ghost sn-icon-btn h-10 w-10">
+                      <button
+                        onClick={closeTool}
+                        aria-label="Close"
+                        className="sn-ghost sn-icon-btn h-10 w-10"
+                      >
                         <X size={16} />
                       </button>
                     </div>
@@ -1110,7 +1153,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   className={stickerTile}
                                   aria-label="Add sticker"
                                 >
-                                  <img src={st.image_url} alt="" className="pointer-events-none max-h-full max-w-full object-contain" />
+                                  <img
+                                    src={st.image_url}
+                                    alt=""
+                                    className="pointer-events-none max-h-full max-w-full object-contain"
+                                  />
                                 </button>
                               ))}
                             </div>
@@ -1119,7 +1166,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                         <div>
                           {recentStickers.length > 0 && <h4 className="sn-label">All stickers</h4>}
                           {olderStickers.length === 0 && recentStickers.length === 0 ? (
-                            <p className="text-[14.5px] text-sn-muted">Make stickers on the Stickers page first.</p>
+                            <p className="text-[14.5px] text-sn-muted">
+                              Make stickers on the Stickers page first.
+                            </p>
                           ) : (
                             <div className="mt-2.5 grid grid-cols-5 gap-2.5 lg:grid-cols-4">
                               {olderStickers.map((st: any) => (
@@ -1129,7 +1178,11 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                   className={stickerTile}
                                   aria-label="Add sticker"
                                 >
-                                  <img src={st.image_url} alt="" className="pointer-events-none max-h-full max-w-full object-contain" />
+                                  <img
+                                    src={st.image_url}
+                                    alt=""
+                                    className="pointer-events-none max-h-full max-w-full object-contain"
+                                  />
                                 </button>
                               ))}
                             </div>
@@ -1149,22 +1202,29 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 <button
                                   key={p.id}
                                   onClick={() => {
-                                    addItem.mutate({
-                                      page_id: activePage.id,
-                                      item_type: "polaroid",
-                                      content: null,
-                                      image_url: p.image_url,
-                                      color: null,
-                                      pos_x: 30,
-                                      pos_y: 30,
-                                      scale: 1,
-                                      rotation: (Math.random() - 0.5) * 8,
-                                    }, { onSuccess: () => toast.success("Polaroid added") });
+                                    addItem.mutate(
+                                      {
+                                        page_id: activePage.id,
+                                        item_type: "polaroid",
+                                        content: null,
+                                        image_url: p.image_url,
+                                        color: null,
+                                        pos_x: 30,
+                                        pos_y: 30,
+                                        scale: 1,
+                                        rotation: (Math.random() - 0.5) * 8,
+                                      },
+                                      { onSuccess: () => toast.success("Polaroid added") },
+                                    );
                                   }}
                                   aria-label="Add this polaroid"
                                   className="w-16 shrink-0 rounded-[3px] bg-white p-1 pb-3 shadow-[0_8px_14px_-8px_rgba(50,70,150,0.55)] transition active:scale-95"
                                 >
-                                  <img src={p.image_url} alt="" className="pointer-events-none aspect-square w-full object-cover" />
+                                  <img
+                                    src={p.image_url}
+                                    alt=""
+                                    className="pointer-events-none aspect-square w-full object-cover"
+                                  />
                                 </button>
                               ))}
                             </div>
@@ -1179,9 +1239,17 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 width: "140px",
                                 height: photoShape === "rect" ? "196px" : "140px",
                                 borderRadius:
-                                  photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "24px" : "0px",
+                                  photoShape === "circle"
+                                    ? "50%"
+                                    : photoShape === "square" || photoShape === "rect"
+                                      ? "24px"
+                                      : "0px",
                                 clipPath:
-                                  photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                                  photoShape === "heart"
+                                    ? "url(#heart-mask)"
+                                    : photoShape === "star"
+                                      ? "url(#star-mask)"
+                                      : undefined,
                                 background: photoOutline,
                                 padding: "6px",
                               }}
@@ -1189,17 +1257,31 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                               onMouseMove={(e) => handlePreviewDragMove(e.clientX, e.clientY)}
                               onMouseUp={handlePreviewDragEnd}
                               onMouseLeave={handlePreviewDragEnd}
-                              onTouchStart={(e) => e.touches[0] && handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)}
-                              onTouchMove={(e) => e.touches[0] && handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)}
+                              onTouchStart={(e) =>
+                                e.touches[0] &&
+                                handlePreviewDragStart(e.touches[0].clientX, e.touches[0].clientY)
+                              }
+                              onTouchMove={(e) =>
+                                e.touches[0] &&
+                                handlePreviewDragMove(e.touches[0].clientX, e.touches[0].clientY)
+                              }
                               onTouchEnd={handlePreviewDragEnd}
                             >
                               <div
                                 className="pointer-events-none h-full w-full overflow-hidden"
                                 style={{
                                   borderRadius:
-                                    photoShape === "circle" ? "50%" : photoShape === "square" || photoShape === "rect" ? "18px" : "0px",
+                                    photoShape === "circle"
+                                      ? "50%"
+                                      : photoShape === "square" || photoShape === "rect"
+                                        ? "18px"
+                                        : "0px",
                                   clipPath:
-                                    photoShape === "heart" ? "url(#heart-mask)" : photoShape === "star" ? "url(#star-mask)" : undefined,
+                                    photoShape === "heart"
+                                      ? "url(#heart-mask)"
+                                      : photoShape === "star"
+                                        ? "url(#star-mask)"
+                                        : undefined,
                                 }}
                               >
                                 <img
@@ -1221,7 +1303,10 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                             </div>
                             <label className="w-full">
                               <span className="flex justify-between text-[13px] font-semibold text-sn-ink">
-                                Zoom <span className="tabular-nums text-sn-muted">{previewScale.toFixed(1)}×</span>
+                                Zoom{" "}
+                                <span className="tabular-nums text-sn-muted">
+                                  {previewScale.toFixed(1)}×
+                                </span>
                               </span>
                               <input
                                 type="range"
@@ -1290,7 +1375,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 aria-label={oc.label}
                                 title={oc.label}
                                 className={`h-9 w-9 rounded-full border-2 transition active:scale-95 ${
-                                  photoOutline === oc.value ? "border-[#94b2f6] ring-2 ring-white" : "border-white"
+                                  photoOutline === oc.value
+                                    ? "border-[#94b2f6] ring-2 ring-white"
+                                    : "border-white"
                                 }`}
                                 style={{ background: oc.value }}
                               />
@@ -1302,7 +1389,12 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                           <label className="sn-pill h-11 w-full cursor-pointer text-[14.5px]">
                             <Upload size={16} strokeWidth={1.9} />
                             Choose a photo
-                            <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={handleFileChange}
+                            />
                           </label>
                         )}
                       </div>
@@ -1319,22 +1411,27 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 <button
                                   key={t.id}
                                   onClick={() => {
-                                    addItem.mutate({
-                                      page_id: activePage.id,
-                                      item_type: "text",
-                                      content: t.body,
-                                      image_url: null,
-                                      color: t.color || PASTEL_COLORS[0],
-                                      pos_x: 30,
-                                      pos_y: 30,
-                                      scale: 1,
-                                      rotation: 0,
-                                    }, { onSuccess: () => toast.success("Note added") });
+                                    addItem.mutate(
+                                      {
+                                        page_id: activePage.id,
+                                        item_type: "text",
+                                        content: t.body,
+                                        image_url: null,
+                                        color: t.color || PASTEL_COLORS[0],
+                                        pos_x: 30,
+                                        pos_y: 30,
+                                        scale: 1,
+                                        rotation: 0,
+                                      },
+                                      { onSuccess: () => toast.success("Note added") },
+                                    );
                                   }}
                                   className="h-20 w-28 shrink-0 overflow-hidden rounded-[8px] p-2.5 text-left shadow-[0_8px_14px_-10px_rgba(50,70,150,0.55)] transition active:scale-95"
                                   style={{ background: t.color || PASTEL_COLORS[0] }}
                                 >
-                                  <p className="line-clamp-3 break-words text-[13px] leading-snug text-sn-navy">{t.body}</p>
+                                  <p className="line-clamp-3 break-words text-[13px] leading-snug text-sn-navy">
+                                    {t.body}
+                                  </p>
                                 </button>
                               ))}
                             </div>
@@ -1349,7 +1446,9 @@ export function MemoriesView({ relationshipId }: { relationshipId: string }) {
                                 onClick={() => setNoteColor(col)}
                                 aria-label="Paper colour"
                                 className={`h-9 w-9 rounded-full border-2 transition active:scale-95 ${
-                                  noteColor === col ? "border-[#94b2f6] ring-2 ring-white" : "border-white"
+                                  noteColor === col
+                                    ? "border-[#94b2f6] ring-2 ring-white"
+                                    : "border-white"
                                 }`}
                                 style={{ background: col }}
                               />
