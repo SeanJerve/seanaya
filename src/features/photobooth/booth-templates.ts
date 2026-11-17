@@ -137,6 +137,10 @@ export async function renderBooth({
     ]).catch(() => {});
   }
   const st = STYLES[style];
+  // Frames are portrait 2:3. Size each cell so nothing gets cropped:
+  // the two of you side by side = 4:3 cell, one of you = 2:3 cell.
+  const pair = shots.some((s) => s?.a && s?.b);
+  const cellRatio = pair ? 3 / 4 : 3 / 2; // height / width
   const filter = FILTERS.find((f) => f.id === filterId)?.css ?? "none";
   const empty = style === "midnight" ? "#2b3058" : "rgba(31,42,92,0.08)";
   const date = new Date().toLocaleDateString("en-US", {
@@ -151,11 +155,11 @@ export async function renderBooth({
   let footerTop = 0;
 
   if (layout === "strip") {
-    const W = 600,
+    const W = pair ? 600 : 420,
       pad = 32,
       gap = 18,
       cw = W - pad * 2,
-      ch = Math.round(cw * 0.75),
+      ch = Math.round(cw * cellRatio),
       footer = 190;
     canvas.width = W;
     canvas.height = pad + 4 * ch + 3 * gap + footer;
@@ -176,9 +180,10 @@ export async function renderBooth({
       pad = 44,
       gap = 24,
       cw = (W - pad * 2 - gap) / 2,
+      chg = Math.round(cw * cellRatio),
       footer = 190;
     canvas.width = W;
-    canvas.height = pad + 2 * cw + gap + footer;
+    canvas.height = pad + 2 * chg + gap + footer;
     ctx.fillStyle = st.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < 4; i++) {
@@ -188,15 +193,15 @@ export async function renderBooth({
         ctx,
         shots[i],
         pad + col * (cw + gap),
-        pad + row * (cw + gap),
+        pad + row * (chg + gap),
         cw,
-        cw,
+        chg,
         14,
         filter,
         empty,
       );
     }
-    footerTop = pad + 2 * cw + gap;
+    footerTop = pad + 2 * chg + gap;
     ctx.fillStyle = st.ink;
     ctx.textAlign = "left";
     ctx.font = '600 60px "Crimson Pro", Georgia, serif';
@@ -208,13 +213,14 @@ export async function renderBooth({
     const W = 900,
       pad = 54,
       cw = W - pad * 2,
+      chp = Math.round(cw * cellRatio),
       footer = 250;
     canvas.width = W;
-    canvas.height = pad + cw + footer;
+    canvas.height = pad + chp + footer;
     ctx.fillStyle = st.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await drawShot(ctx, shots[0], pad, pad, cw, cw, 4, filter, empty);
-    footerTop = pad + cw;
+    await drawShot(ctx, shots[0], pad, pad, cw, chp, 4, filter, empty);
+    footerTop = pad + chp;
     ctx.fillStyle = st.ink;
     ctx.textAlign = "center";
     ctx.font = '500 64px "Caveat", "Segoe Print", cursive';

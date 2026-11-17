@@ -221,20 +221,8 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   const captureLocalFrame = (videoEl: HTMLVideoElement): string => {
     // Not playing yet: a blank frame isn't a photo.
     if (!videoEl.videoWidth || videoEl.readyState < 2) return "";
-    const vw = videoEl.videoWidth;
-    const vh = videoEl.videoHeight;
-    const scale = Math.min(1, 640 / Math.max(vw, vh));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(vw * scale);
-    canvas.height = Math.round(vh * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return "";
-    if (isMirror) {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
-    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.78);
+    // Portrait 2:3, cut from the middle: exactly what the camera tile shows.
+    return grabPortrait(videoEl, 600, isMirror, 0.8);
   };
 
   return {
@@ -249,4 +237,36 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     captureLocalFrame,
     startCamera,
   };
+}
+
+/** A centred portrait (2:3) crop of the current video frame, as a JPEG data URL. */
+export function grabPortrait(
+  videoEl: HTMLVideoElement,
+  outH: number,
+  mirror: boolean,
+  quality: number,
+): string {
+  if (!videoEl.videoWidth || videoEl.readyState < 2) return "";
+  const vw = videoEl.videoWidth;
+  const vh = videoEl.videoHeight;
+  const target = 2 / 3;
+  let sw = vw;
+  let sh = vh;
+  if (vw / vh > target) sw = Math.round(vh * target);
+  else sh = Math.round(vw / target);
+  const sx = Math.round((vw - sw) / 2);
+  const sy = Math.round((vh - sh) / 2);
+  const h = Math.min(outH, sh);
+  const w = Math.round(h * target);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  if (mirror) {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
 }

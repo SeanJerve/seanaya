@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useWebRTC } from "./useWebRTC";
 import { useBoothSession } from "./useBoothSession";
+import { useLiveFallback } from "./useLiveFallback";
 import {
   FILTERS,
   LAYOUTS,
@@ -29,6 +30,15 @@ import { pinStorage } from "@/features/pin/pin-utils";
 import { useAppStore } from "@/features/app/store";
 import { useCoupleNames } from "@/hooks/useCouple";
 import { chibiFor } from "@/components/seanaya/art";
+
+type ResultTab = "layout" | "color" | "filter" | "caption" | "photos";
+const RESULT_TABS: { id: ResultTab; label: string }[] = [
+  { id: "layout", label: "Layout" },
+  { id: "color", label: "Color" },
+  { id: "filter", label: "Filter" },
+  { id: "caption", label: "Words" },
+  { id: "photos", label: "Photos" },
+];
 
 export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
   const { setTab } = useAppStore();
@@ -107,6 +117,9 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
   // The latest frame (your photo and your partner's side by side), for the in-shoot viewer.
   const takenIdx = session.shots.map((s, i) => (s && (s.a || s.b) ? i : -1)).filter((i) => i >= 0);
   const lastIdx = takenIdx.length ? takenIdx[takenIdx.length - 1] : -1;
+  const [resultTab, setResultTab] = useState<ResultTab>("layout");
+  const [retakeArmed, setRetakeArmed] = useState(false);
+  const pairShots = session.shots.some((x) => x?.a && x?.b);
   const [viewer, setViewer] = useState<{ kind: "shot" | "strip"; index: number } | null>(null);
   const [shotUrl, setShotUrl] = useState<string | null>(null);
   const [lastUrl, setLastUrl] = useState<string | null>(null);
@@ -188,6 +201,20 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
   };
 
   const partnerLive = cam.peerConnected && !!cam.remoteStream;
+  // Backup live view when direct video can't connect (common on mobile data).
+  const live = useLiveFallback({
+    relationshipId,
+    slot,
+    send:
+      session.mode === "together" && session.partnerHere && !cam.peerConnected && !!cam.localStream,
+    videoRef: localVideoRef,
+    mirror: cam.isMirror,
+  });
+  // Two portrait tiles side by side (or one in Solo), as big as the stage allows.
+  const tileWidth =
+    session.mode === "together"
+      ? "min(calc((100cqw - 12px) / 2), calc(100cqh * 2 / 3))"
+      : "min(100cqw, calc(100cqh * 2 / 3))";
   const counting = session.countdown !== null;
   const chip = (on: boolean) => `sn-pill h-9 shrink-0 px-4 text-[13.5px] ${on ? "sn-active" : ""}`;
 
@@ -253,9 +280,12 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
         <>
           {/* Stage: two cameras + the strip as it fills */}
           <main className="absolute inset-x-0 bottom-[178px] top-[84px] flex items-stretch justify-center gap-5 px-4 sm:top-[96px] sm:px-6">
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 sm:max-w-[920px] sm:flex-row">
-              {/* You */}
-              <div className="relative min-h-0 flex-1 basis-0 overflow-hidden rounded-[24px] bg-[#dfe6fb] shadow-[var(--shadow-panel)]">
+            <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center gap-3 [container-type:size] sm:max-w-[920px]">
+              {/* You: portrait 2:3, the same shape as your photo in the strip */}
+              <div
+                className="relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#dfe6fb] shadow-[var(--shadow-panel)]"
+                style={{ width: tileWidth }}
+              >
                 <video
                   ref={localRef}
                   autoPlay
@@ -282,13 +312,22 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
               </div>
               {/* Partner (Solo hides it so your camera gets the whole stage) */}
               {together && (
-                <div className="relative min-h-0 flex-1 basis-0 overflow-hidden rounded-[24px] bg-[#e8e5f7] shadow-[var(--shadow-panel)]">
+                <div
+                  className="relative aspect-[2/3] shrink-0 overflow-hidden rounded-[24px] bg-[#e8e5f7] shadow-[var(--shadow-panel)]"
+                  style={{ width: tileWidth }}
+                >
                   {partnerLive ? (
                     <video
                       ref={remoteRef}
                       autoPlay
                       playsInline
                       muted
+                      className="h-full w-full object-cover"
+                    />
+                  ) : live.partnerFrame ? (
+                    <img
+                      src={live.partnerFrame}
+                      alt={partner}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -440,113 +479,161 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
         </>
       ) : (
         <>
-          {/* Result */}
-          <main className="absolute inset-x-0 bottom-[330px] top-[84px] flex items-center justify-center px-4 sm:bottom-[300px] sm:top-[96px]">
+          {/* Result: the strip big, then one tidy panel to finish it */}
+          <main className="absolute inset-x-0 bottom-[268px] top-[84px] flex items-center justify-center px-4 sm:top-[96px]">
             {preview && (
-              <motion.img
-                key={session.layout}
+              <motion.button
+                key={session.layout + (pairShots ? "p" : "s")}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                src={preview}
-                alt="Your photo strip"
-                className="max-h-full max-w-full rounded-[10px] object-contain shadow-[0_30px_60px_-30px_rgba(50,70,150,0.7)]"
-              />
+                onClick={() => setViewer({ kind: "strip", index: Math.max(0, lastIdx) })}
+                aria-label="See the strip bigger"
+                className="flex max-h-full max-w-full items-center justify-center"
+              >
+                <img
+                  src={preview}
+                  alt="Your photo strip"
+                  className="max-h-full max-w-full rounded-[10px] object-contain shadow-[0_30px_60px_-30px_rgba(50,70,150,0.7)]"
+                  style={{ maxHeight: "calc(100dvh - 268px - 100px)" }}
+                />
+              </motion.button>
             )}
           </main>
 
-          <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <div className="flex w-full max-w-[640px] flex-col gap-3">
-              <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                {(Object.keys(LAYOUTS) as LayoutId[]).map((id) => (
+          <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="sn-card w-full max-w-[560px] p-3">
+              {/* What you're adjusting */}
+              <div role="tablist" aria-label="Finish your strip" className="grid grid-cols-5 gap-1">
+                {RESULT_TABS.map((t) => (
                   <button
-                    key={id}
-                    onClick={() => session.setLayout(id)}
-                    className={chip(session.layout === id)}
+                    key={t.id}
+                    role="tab"
+                    aria-selected={resultTab === t.id}
+                    onClick={() => setResultTab(t.id)}
+                    className={`h-10 rounded-full text-[13px] font-semibold transition ${
+                      resultTab === t.id ? "sn-pill sn-active" : "text-sn-ink hover:bg-white/50"
+                    }`}
                   >
-                    {LAYOUTS[id].name}
-                  </button>
-                ))}
-                <span className="mx-1 w-px shrink-0 bg-white/60" />
-                {(Object.keys(STYLES) as StyleId[]).map((id) => (
-                  <button
-                    key={id}
-                    onClick={() => session.setStyle(id)}
-                    aria-label={STYLES[id].name}
-                    title={STYLES[id].name}
-                    className={`h-9 w-9 shrink-0 rounded-full border-2 transition ${session.style === id ? "border-[#94b2f6] ring-2 ring-white" : "border-white"}`}
-                    style={{ background: STYLES[id].bg }}
-                  />
-                ))}
-              </div>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => session.setFilter(f.id)}
-                    className={chip(session.filterId === f.id)}
-                  >
-                    {f.name}
+                    {t.label}
                   </button>
                 ))}
               </div>
-              <input
-                value={session.caption}
-                onChange={(e) => session.setCaption(e.target.value)}
-                placeholder="Caption"
-                maxLength={48}
-                className="h-11 w-full rounded-full border border-white/80 bg-white/70 px-4 text-[15px] text-sn-navy outline-none backdrop-blur-xl placeholder:text-sn-faint focus:border-sn-periwinkle"
-              />
-              {/* Each frame on its own */}
-              <div className="no-scrollbar flex gap-2.5 overflow-x-auto py-0.5">
-                {session.shots.slice(0, session.total).map((shot, i) => {
-                  const thumb = shot?.a || shot?.b;
-                  return thumb ? (
+
+              {/* The options for that tab */}
+              <div className="no-scrollbar -mx-1 mt-2 flex h-[60px] items-center gap-2 overflow-x-auto px-1">
+                {resultTab === "layout" &&
+                  (Object.keys(LAYOUTS) as LayoutId[]).map((id) => (
                     <button
-                      key={i}
-                      onClick={() => setViewer({ kind: "shot", index: i })}
-                      aria-label={`View frame ${i + 1}`}
-                      title={`View or download frame ${i + 1}`}
-                      className="group relative h-14 w-[74px] shrink-0 overflow-hidden rounded-[12px] border-2 border-white shadow-[var(--shadow-pill)]"
+                      key={id}
+                      onClick={() => session.setLayout(id)}
+                      className={chip(session.layout === id)}
                     >
-                      <img src={thumb} alt="" className="h-full w-full object-cover" />
-                      <span className="absolute inset-0 grid place-items-center bg-[#1f2a5c]/30 text-white opacity-90 transition group-hover:bg-[#1f2a5c]/45">
-                        <Expand size={16} strokeWidth={2} />
-                      </span>
+                      {LAYOUTS[id].name}
                     </button>
-                  ) : null;
-                })}
+                  ))}
+                {resultTab === "color" &&
+                  (Object.keys(STYLES) as StyleId[]).map((id) => (
+                    <button
+                      key={id}
+                      onClick={() => session.setStyle(id)}
+                      className={chip(session.style === id)}
+                    >
+                      <span
+                        className="h-4 w-4 shrink-0 rounded-full border border-white shadow-[0_0_0_1px_rgba(31,42,92,0.12)]"
+                        style={{ background: STYLES[id].bg }}
+                      />
+                      {STYLES[id].name}
+                    </button>
+                  ))}
+                {resultTab === "filter" &&
+                  FILTERS.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => session.setFilter(f.id)}
+                      className={chip(session.filterId === f.id)}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                {resultTab === "caption" && (
+                  <input
+                    value={session.caption}
+                    onChange={(e) => session.setCaption(e.target.value)}
+                    placeholder="Write something on the strip"
+                    maxLength={48}
+                    aria-label="Caption"
+                    className="h-11 w-full rounded-full border border-white/80 bg-white/75 px-4 text-[16px] text-sn-navy outline-none placeholder:text-sn-faint focus:border-sn-periwinkle"
+                  />
+                )}
+                {resultTab === "photos" &&
+                  session.shots.slice(0, session.total).map((shot, i) => {
+                    const thumb = shot?.a || shot?.b;
+                    return thumb ? (
+                      <button
+                        key={i}
+                        onClick={() => setViewer({ kind: "shot", index: i })}
+                        aria-label={`Photo ${i + 1}: view or save it`}
+                        className="relative h-[52px] w-[42px] shrink-0 overflow-hidden rounded-[10px] border-2 border-white shadow-[var(--shadow-pill)]"
+                      >
+                        <img src={thumb} alt="" className="h-full w-full object-cover" />
+                        <span className="absolute bottom-0.5 right-0.5 grid h-4 w-4 place-items-center rounded-full bg-white/90 text-[10px] font-bold text-sn-navy">
+                          {i + 1}
+                        </span>
+                      </button>
+                    ) : null;
+                  })}
+                {resultTab === "photos" && (
+                  <span className="shrink-0 pl-1 text-[13px] text-sn-muted">
+                    Tap one to view or save it
+                  </span>
+                )}
               </div>
-              <div className="flex gap-2">
+
+              {/* Finish */}
+              <div className="mt-2 grid grid-cols-3 gap-2 border-t border-white/70 pt-3">
+                <button
+                  onClick={() => {
+                    if (session.kept || retakeArmed) {
+                      setRetakeArmed(false);
+                      discard();
+                    } else {
+                      setRetakeArmed(true);
+                      setTimeout(() => setRetakeArmed(false), 3000);
+                    }
+                  }}
+                  className={`sn-ghost h-12 min-w-0 px-2 text-[14px] ${retakeArmed ? "text-[#c2416c]" : ""}`}
+                >
+                  <RotateCcw size={17} strokeWidth={1.9} />
+                  {session.kept ? "New shoot" : retakeArmed ? "Tap again" : "Retake"}
+                </button>
+                <button
+                  onClick={async () =>
+                    downloadCanvas(await render(), `seanaya-${session.layout}-${Date.now()}.png`)
+                  }
+                  className="sn-pill h-12 min-w-0 px-2 text-[14px]"
+                >
+                  <Download size={17} strokeWidth={1.9} />
+                  Save
+                </button>
                 {session.kept ? (
-                  <span className="flex h-12 flex-1 items-center justify-center gap-2 text-[15px] font-semibold text-sn-ink">
-                    <Check size={18} strokeWidth={2.2} className="text-[#3a9c7a]" /> Kept in your
-                    album
+                  <span className="flex h-12 min-w-0 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold text-sn-ink">
+                    <Check size={18} strokeWidth={2.2} className="text-[#3a9c7a]" />
+                    Kept
                   </span>
                 ) : (
                   <button
                     onClick={keep}
                     disabled={saving || session.partnerKeeping}
-                    className="sn-pill h-12 flex-1 text-[15px]"
+                    className="sn-pill sn-active h-12 min-w-0 px-2 text-[14px]"
                   >
-                    <BookImage size={18} strokeWidth={1.9} />
+                    <BookImage size={17} strokeWidth={1.9} />
                     {saving
                       ? "Keeping…"
                       : session.partnerKeeping
-                        ? `${partner} is keeping it`
+                        ? "Keeping…"
                         : "Keep"}
                   </button>
                 )}
-                <button
-                  onClick={async () =>
-                    downloadCanvas(await render(), `seanaya-${session.layout}-${Date.now()}.png`)
-                  }
-                  className="sn-pill h-12 px-5 text-[15px]"
-                >
-                  <Download size={18} strokeWidth={1.9} /> Strip
-                </button>
-                <button onClick={discard} className="sn-ghost h-12 px-5 text-[15px]">
-                  <RotateCcw size={17} strokeWidth={1.9} /> {session.kept ? "New shoot" : "Discard"}
-                </button>
               </div>
             </div>
           </div>
