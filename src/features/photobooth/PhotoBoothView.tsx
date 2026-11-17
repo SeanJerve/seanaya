@@ -330,6 +330,18 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                       alt={partner}
                       className="h-full w-full object-cover"
                     />
+                  ) : session.partnerHere ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+                      <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#c9d8fd] border-t-[#7f9ef0]" />
+                      <p className="text-[14.5px] font-semibold text-sn-navy">
+                        Connecting to {partner}…
+                      </p>
+                      <p className="text-[12.5px] leading-snug text-sn-muted">
+                        {cam.attempt > 0
+                          ? `Trying again (${cam.attempt})`
+                          : "This takes a few seconds"}
+                      </p>
+                    </div>
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                       <img
@@ -341,6 +353,19 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                         {session.partnerHere ? "Connecting…" : "Camera off"}
                       </p>
                     </div>
+                  )}
+                  {/* What the live view is doing right now */}
+                  {session.partnerHere && (
+                    <span className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/85 px-2.5 py-1 text-[12px] font-semibold text-sn-navy shadow-[var(--shadow-pill)] backdrop-blur">
+                      <span
+                        className={`h-2 w-2 rounded-full ${partnerLive ? "bg-[#3fbf8a]" : live.partnerFrame ? "animate-pulse bg-[#f0a948]" : "animate-pulse bg-[#94b2f6]"}`}
+                      />
+                      {partnerLive
+                        ? "Live"
+                        : live.partnerFrame
+                          ? "Preview · improving"
+                          : "Connecting"}
+                    </span>
                   )}
                   {session.partnerReady && <ReadyMark />}
                 </div>
@@ -627,11 +652,7 @@ export function PhotoBoothView({ relationshipId }: { relationshipId: string }) {
                     className="sn-pill sn-active h-12 min-w-0 px-2 text-[14px]"
                   >
                     <BookImage size={17} strokeWidth={1.9} />
-                    {saving
-                      ? "Keeping…"
-                      : session.partnerKeeping
-                        ? "Keeping…"
-                        : "Keep"}
+                    {saving ? "Keeping…" : session.partnerKeeping ? "Keeping…" : "Keep"}
                   </button>
                 )}
               </div>

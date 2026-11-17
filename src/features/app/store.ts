@@ -164,3 +164,11 @@ if (typeof window !== "undefined" && import.meta.env.DEV) {
     );
   };
 }
+
+// Local development only: open any sheet from the console when the UI path needs data.
+if (typeof window !== "undefined" && import.meta.env.DEV) {
+  (window as any).__openSheet = (k: Exclude<SheetKey, null>) => {
+    state = { ...state, sheet: k };
+    emit();
+  };
+}

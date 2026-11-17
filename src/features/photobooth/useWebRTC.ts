@@ -57,6 +57,7 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   // Reconnect on its own when the call drops or never gets through.
   const retryRef = useRef<() => void>(() => {});
   const retries = useRef(0);
+  const [attempt, setAttempt] = useState(0);
   const dropTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     mounted.current = true;
@@ -86,6 +87,7 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
       if (dropTimer.current) clearTimeout(dropTimer.current);
       if (pc.connectionState === "connected") {
         retries.current = 0;
+        setAttempt(0);
         setPeerConnected(true);
       }
       // "disconnected" often recovers on its own; give it a few seconds, then redial.
@@ -144,6 +146,7 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   retryRef.current = () => {
     if (!partnerSeen.current || retries.current >= 6) return;
     const n = ++retries.current;
+    setAttempt(n);
     setTimeout(() => {
       if (!mounted.current || !partnerSeen.current) return;
       if (pcRef.current?.connectionState === "connected") return;
@@ -276,6 +279,8 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     localStream,
     remoteStream,
     peerConnected,
+    /** How many times the live video has redialled since it last connected. */
+    attempt,
     cameraError,
     facingMode,
     isMirror,

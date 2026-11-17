@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import { uploadImage } from "@/lib/storage";
 import {
-  processImageDataBG,
-  floodFillPointRemove,
-  applyStickerOutline,
-  type BGRemovalMode,
-} from "@/lib/background-remover";
+  canvasToBlob,
+  clearRegion,
+  cutout,
+  finishSticker,
+  loadToCanvas,
+  type CutMode,
+  type StickerEffect,
+} from "@/lib/sticker-maker";
 import { FormStack, Group, PrimaryButton } from "./form-ui";
-import { ImagePlus, Wand2, Paintbrush, Eraser, Undo2, Check } from "lucide-react";
+import { Check, Eraser, ImagePlus, Paintbrush, Plus, Undo2, Wand2, X } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
 
 const OUTLINE_COLORS = [
@@ -22,13 +25,36 @@ const OUTLINE_COLORS = [
   { value: "#D1C4E9", label: "Purple" },
   { value: "#C8E6C9", label: "Green" },
 ];
+const BORDERS = [
+  { label: "None", size: 0 },
+  { label: "Thin", size: 6 },
+  { label: "Classic", size: 10 },
+  { label: "Thick", size: 15 },
+];
+const EFFECTS: { id: StickerEffect; label: string }[] = [
+  { id: "clean", label: "Clean" },
+  { id: "shadow", label: "Shadow" },
+  { id: "glow", label: "Glow" },
+];
+const MAX_BATCH = 20;
 
 type Tool = "wand" | "restore" | "erase";
+type Item = {
+  id: string;
+  raw: HTMLCanvasElement;
+  work: HTMLCanvasElement;
+  mode: CutMode;
+  tolerance: number;
+  thumb: string | null;
+};
 
-// Longest side the cut-out works at. Plenty for a 96px sticker, and keeps the
-// synchronous pixel passes from freezing phones on full-size camera photos.
-const MAX_STICKER_SIDE = 1024;
+const uid = () => Math.random().toString(36).slice(2, 10);
+const tick = () => new Promise((r) => setTimeout(r, 0));
 
+/**
+ * Sticker maker. Pick one or many photos: each is cut out automatically, then one shared
+ * look (border, colour, effect) is applied to all. Any single one can be touched up.
+ */
 export function AddStickerSheet({
   relationshipId,
   pageId,
@@ -39,370 +65,395 @@ export function AddStickerSheet({
   const { user } = useUser();
   const qc = useQueryClient();
   const { closeSheet, activeStickerPageId } = useAppStore();
-  // StickersView publishes the page being viewed; new stickers land there, not on page 1.
   const targetPageId = pageId ?? activeStickerPageId;
 
-  const [file, setFile] = useState<File | null>(null);
-  const [mode, setMode] = useState<BGRemovalMode>("exterior");
-  const [tolerance, setTolerance] = useState(42);
+  const [items, setItems] = useState<Item[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(0); // photos still being cut
   const [outlineColor, setOutlineColor] = useState("#ffffff");
   const [outlineSize, setOutlineSize] = useState(10);
-  const [activeTool, setActiveTool] = useState<Tool>("wand");
-  const [brushSize, setBrushSize] = useState(16);
-
-  // Source image, already downscaled to MAX_STICKER_SIDE so the pixel loops stay fast on phones.
-  const [rawImage, setRawImage] = useState<HTMLCanvasElement | null>(null);
-  const [processing, setProcessing] = useState(false);
-
-  // Undo history stack of ImageData
+  const [effect, setEffect] = useState<StickerEffect>("shadow");
+  const [tool, setTool] = useState<Tool>("wand");
+  const [brush, setBrush] = useState(18);
   const [history, setHistory] = useState<ImageData[]>([]);
+  const [saving, setSaving] = useState<{ done: number; total: number } | null>(null);
+  const [editVersion, setEditVersion] = useState(0);
 
-  const workingCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawingRef = useRef(false);
+  const editorRef = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false);
+  const selected = items.find((i) => i.id === selectedId) ?? null;
+  const look = { outlineColor, outlineSize, effect };
 
-  // Load raw image when file changes
-  useEffect(() => {
-    if (!file) {
-      setRawImage(null);
-      setHistory([]);
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    const url = URL.createObjectURL(file);
-    img.src = url;
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      // A 12MP photo is ~48M bytes of pixels; the background-removal loops below are synchronous,
-      // so shrink to MAX_STICKER_SIDE on the longest side first.
-      const nw = img.naturalWidth;
-      const nh = img.naturalHeight;
-      const scale = Math.min(1, MAX_STICKER_SIDE / Math.max(nw, nh));
-      const c = document.createElement("canvas");
-      c.width = Math.max(1, Math.round(nw * scale));
-      c.height = Math.max(1, Math.round(nh * scale));
-      const cctx = c.getContext("2d");
-      if (!cctx) {
-        toast.error("Could not load selected image");
-        return;
+  // ── Add photos: each one is cut out right away ──
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const list = Array.from(files).slice(0, Math.max(0, MAX_BATCH - items.length));
+    if (files.length > list.length) toast(`Up to ${MAX_BATCH} at a time`);
+    setLoading((n) => n + list.length);
+    for (const f of list) {
+      try {
+        await tick();
+        const raw = await loadToCanvas(f);
+        const item: Item = {
+          id: uid(),
+          raw,
+          work: cutout(raw, 42, "exterior"),
+          mode: "exterior",
+          tolerance: 42,
+          thumb: null,
+        };
+        item.thumb = finishSticker(item.work, look).toDataURL("image/png");
+        setItems((prev) => [...prev, item]);
+        setSelectedId((cur) => cur ?? item.id);
+      } catch {
+        toast.error(`${f.name || "A photo"} couldn't be opened`);
+      } finally {
+        setLoading((n) => n - 1);
       }
-      cctx.imageSmoothingQuality = "high";
-      cctx.drawImage(img, 0, 0, c.width, c.height);
-      setRawImage(c);
-    };
-    img.onerror = () => {
-      toast.error("Could not load selected image");
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
-
-  // Re-run background processing when rawImage, mode, or tolerance changes
-  const reprocessBG = useCallback(() => {
-    if (!rawImage) return;
-
-    setProcessing(true);
-
-    const w = rawImage.width;
-    const h = rawImage.height;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) {
-      setProcessing(false);
-      return;
     }
+  };
 
-    ctx.drawImage(rawImage, 0, 0);
-    const imgData = ctx.getImageData(0, 0, w, h);
-
-    // Apply background removal
-    processImageDataBG(imgData, tolerance, mode);
-    ctx.putImageData(imgData, 0, 0);
-
-    workingCanvasRef.current = canvas;
-    setHistory([ctx.getImageData(0, 0, w, h)]);
-
-    setProcessing(false);
-  }, [rawImage, mode, tolerance]);
-
+  // ── The shared look changed: refresh every preview ──
+  const lookKey = `${outlineColor}|${outlineSize}|${effect}`;
   useEffect(() => {
-    reprocessBG();
-  }, [reprocessBG]);
+    let alive = true;
+    (async () => {
+      for (const it of items) {
+        await tick();
+        if (!alive) return;
+        const thumb = finishSticker(it.work, look).toDataURL("image/png");
+        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, thumb } : p)));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lookKey]);
 
-  // Update preview canvas with outline whenever workingCanvas or outline settings change
-  const renderPreview = useCallback(() => {
-    const workingCanvas = workingCanvasRef.current;
-    const previewCanvas = previewCanvasRef.current;
-    if (!workingCanvas || !previewCanvas) return;
-
-    let finalCanvas = workingCanvas;
-    if (outlineSize > 0 && outlineColor) {
-      finalCanvas = applyStickerOutline(workingCanvas, outlineColor, outlineSize);
-    }
-
-    previewCanvas.width = finalCanvas.width;
-    previewCanvas.height = finalCanvas.height;
-    const pCtx = previewCanvas.getContext("2d");
-    if (!pCtx) return;
-
-    pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-    pCtx.drawImage(finalCanvas, 0, 0);
-  }, [outlineColor, outlineSize]);
-
+  // ── Editor: show the selected cut-out ──
+  const drawEditor = useCallback(() => {
+    const c = editorRef.current;
+    if (!c || !selected) return;
+    c.width = selected.work.width;
+    c.height = selected.work.height;
+    const ctx = c.getContext("2d")!;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.drawImage(selected.work, 0, 0);
+  }, [selected]);
   useEffect(() => {
-    renderPreview();
-  }, [renderPreview, history]);
+    drawEditor();
+  }, [drawEditor, editVersion]);
+  useEffect(() => {
+    if (!selected) return;
+    const ctx = selected.work.getContext("2d", { willReadFrequently: true })!;
+    setHistory([ctx.getImageData(0, 0, selected.work.width, selected.work.height)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
-  // Save current working canvas state to undo history
+  const refreshThumb = (id: string) => {
+    setItems((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, thumb: finishSticker(p.work, look).toDataURL("image/png") } : p,
+      ),
+    );
+  };
+
+  const recut = (patch: Partial<Pick<Item, "mode" | "tolerance">>) => {
+    if (!selected) return;
+    const mode = patch.mode ?? selected.mode;
+    const tolerance = patch.tolerance ?? selected.tolerance;
+    const work = cutout(selected.raw, tolerance, mode);
+    setItems((prev) =>
+      prev.map((p) =>
+        p.id === selected.id
+          ? { ...p, mode, tolerance, work, thumb: finishSticker(work, look).toDataURL("image/png") }
+          : p,
+      ),
+    );
+    const ctx = work.getContext("2d", { willReadFrequently: true })!;
+    setHistory([ctx.getImageData(0, 0, work.width, work.height)]);
+    setEditVersion((v) => v + 1);
+  };
+
   const pushHistory = () => {
-    const canvas = workingCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    setHistory((prev) => [...prev.slice(-10), data]);
+    if (!selected) return;
+    const ctx = selected.work.getContext("2d", { willReadFrequently: true })!;
+    const snap = ctx.getImageData(0, 0, selected.work.width, selected.work.height);
+    setHistory((h) => [...h.slice(-10), snap]);
+  };
+  const undo = () => {
+    if (!selected || history.length <= 1) return;
+    const next = history.slice(0, -1);
+    selected.work
+      .getContext("2d", { willReadFrequently: true })!
+      .putImageData(next[next.length - 1], 0, 0);
+    setHistory(next);
+    setEditVersion((v) => v + 1);
+    refreshThumb(selected.id);
   };
 
-  const handleUndo = () => {
-    if (history.length <= 1) return;
-    const newHist = history.slice(0, -1);
-    const lastState = newHist[newHist.length - 1];
-
-    const canvas = workingCanvasRef.current;
-    if (canvas && lastState) {
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (ctx) {
-        ctx.putImageData(lastState, 0, 0);
-        setHistory(newHist);
-        renderPreview();
-      }
-    }
+  const toWork = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const c = editorRef.current!;
+    const r = c.getBoundingClientRect();
+    return {
+      x: Math.round(((e.clientX - r.left) / r.width) * c.width),
+      y: Math.round(((e.clientY - r.top) / r.height) * c.height),
+      scale: c.width / r.width,
+    };
   };
-
-  // Canvas touch & mouse interaction (Magic Wand, Restore Brush, Eraser Brush)
-  const getCanvasCoords = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
-    const previewCanvas = previewCanvasRef.current;
-    const workingCanvas = workingCanvasRef.current;
-    if (!previewCanvas || !workingCanvas) return null;
-
-    const rect = previewCanvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-
-    const scaleX = previewCanvas.width / rect.width;
-    const scaleY = previewCanvas.height / rect.height;
-
-    // Convert screen touch coords to working canvas coords
-    const previewX = (clientX - rect.left) * scaleX;
-    const previewY = (clientY - rect.top) * scaleY;
-
-    const padding = outlineSize > 0 ? outlineSize * 2 : 0;
-    const workX = Math.round(previewX - padding);
-    const workY = Math.round(previewY - padding);
-
-    return { workX, workY };
-  };
-
-  const handleCanvasInteractionStart = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
-    const coords = getCanvasCoords(e);
-    if (!coords || !workingCanvasRef.current) return;
-
-    const { workX, workY } = coords;
-    const canvas = workingCanvasRef.current;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    if (activeTool === "wand") {
-      // Magic Wand: Tap to flood fill remove color at point
-      pushHistory();
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      floodFillPointRemove(imgData, workX, workY, tolerance);
-      ctx.putImageData(imgData, 0, 0);
-      renderPreview();
-      toast.success("Area cleared", { duration: 1000 });
-    } else {
-      // Brush modes
-      isDrawingRef.current = true;
-      pushHistory();
-      paintBrushStroke(workX, workY);
-    }
-  };
-
-  const handleCanvasInteractionMove = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
-    if (!isDrawingRef.current || activeTool === "wand") return;
-    const coords = getCanvasCoords(e);
-    if (!coords) return;
-
-    paintBrushStroke(coords.workX, coords.workY);
-  };
-
-  const handleCanvasInteractionEnd = () => {
-    isDrawingRef.current = false;
-  };
-
-  const paintBrushStroke = (x: number, y: number) => {
-    const canvas = workingCanvasRef.current;
-    if (!canvas || !rawImage) return;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    if (activeTool === "erase") {
-      ctx.save();
+  const paint = (x: number, y: number, scale: number) => {
+    if (!selected) return;
+    const ctx = selected.work.getContext("2d", { willReadFrequently: true })!;
+    const radius = (brush / 2) * scale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    if (tool === "erase") {
       ctx.globalCompositeOperation = "destination-out";
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-    } else if (activeTool === "restore") {
-      // Paint original pixels from rawImage back onto canvas
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+    } else {
       ctx.clip();
-      ctx.drawImage(rawImage, 0, 0);
-      ctx.restore();
+      ctx.drawImage(selected.raw, 0, 0);
     }
-
-    renderPreview();
+    ctx.restore();
+    drawEditor();
+  };
+  const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!selected) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const { x, y, scale } = toWork(e);
+    pushHistory();
+    if (tool === "wand") {
+      clearRegion(selected.work, x, y, selected.tolerance);
+      drawEditor();
+      refreshThumb(selected.id);
+    } else {
+      drawing.current = true;
+      paint(x, y, scale);
+    }
+  };
+  const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const { x, y, scale } = toWork(e);
+    paint(x, y, scale);
+  };
+  const onUp = () => {
+    if (drawing.current && selected) refreshThumb(selected.id);
+    drawing.current = false;
   };
 
-  // Upload processed blob
-  const uploadSticker = useMutation({
-    mutationFn: async () => {
-      if (!user || !workingCanvasRef.current) return;
+  const remove = (id: string) => {
+    setItems((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      if (selectedId === id) setSelectedId(next[0]?.id ?? null);
+      return next;
+    });
+  };
 
-      const workingCanvas = workingCanvasRef.current;
-      let finalCanvas = workingCanvas;
-      if (outlineSize > 0 && outlineColor) {
-        finalCanvas = applyStickerOutline(workingCanvas, outlineColor, outlineSize);
+  // ── Save all ──
+  const saveAll = async () => {
+    if (!user || !items.length) return;
+    setSaving({ done: 0, total: items.length });
+    let saved = 0;
+    const cols = Math.ceil(Math.sqrt(items.length));
+    for (let i = 0; i < items.length; i++) {
+      try {
+        await tick();
+        const blob = await canvasToBlob(finishSticker(items[i].work, look));
+        const id = crypto.randomUUID();
+        const { path, url } = await uploadImage("stickers", relationshipId, blob, `sticker_${id}`);
+        // Spread a batch out in a loose grid so they don't land on top of each other.
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const span = Math.min(70, 18 * cols);
+        const x =
+          50 - span / 2 + (cols > 1 ? (col / (cols - 1)) * span : 0) + (Math.random() - 0.5) * 6;
+        const y =
+          22 +
+          row * Math.min(22, 60 / Math.max(1, Math.ceil(items.length / cols))) +
+          (Math.random() - 0.5) * 4;
+        const { error } = await supabase.from("stickers").insert({
+          relationship_id: relationshipId,
+          created_by: user.id,
+          image_url: url,
+          image_path: path,
+          pos_x: Math.max(8, Math.min(88, x)),
+          pos_y: Math.max(8, Math.min(86, y)),
+          rotation: (Math.random() - 0.5) * 18,
+          page_id: targetPageId || null,
+        });
+        if (error) throw error;
+        saved++;
+      } catch {
+        /* counted below */
       }
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        finalCanvas.toBlob((b) => resolve(b), "image/png"),
-      );
-
-      if (!blob) throw new Error("Failed to render sticker blob");
-
-      const stickerId = crypto.randomUUID();
-      const x = 30 + Math.random() * 40;
-      const y = 30 + Math.random() * 30;
-      const rot = (Math.random() - 0.5) * 20;
-
-      const { path, url } = await uploadImage(
-        "stickers",
-        relationshipId,
-        blob,
-        `sticker_${stickerId}`,
-      );
-
-      const { error } = await supabase.from("stickers").insert({
-        relationship_id: relationshipId,
-        created_by: user.id,
-        image_url: url,
-        image_path: path,
-        pos_x: x,
-        pos_y: y,
-        rotation: rot,
-        page_id: targetPageId || null,
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Sticker saved!");
-      qc.invalidateQueries({ queryKey: ["stickers", relationshipId] });
-      setFile(null);
+      setSaving({ done: i + 1, total: items.length });
+    }
+    qc.invalidateQueries({ queryKey: ["stickers", relationshipId] });
+    setSaving(null);
+    if (saved === items.length) {
+      toast.success(saved === 1 ? "Sticker added" : `${saved} stickers added`);
       closeSheet();
-    },
-    onError: (e: any) => {
-      toast.error(e?.message || "Failed to save sticker");
-    },
-  });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setFile(f);
+    } else {
+      toast.error(
+        `${items.length - saved} couldn't be saved. Check your connection and try again.`,
+      );
+    }
   };
 
   const slider =
     "h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfe3f5] accent-[#7f9ef0]";
+  const chip = (on: boolean) => `sn-pill h-10 shrink-0 px-4 text-[14px] ${on ? "sn-active" : ""}`;
   const tools = [
-    { id: "wand" as const, label: "Magic tap", icon: <Wand2 size={16} strokeWidth={1.8} /> },
+    { id: "wand" as const, label: "Tap to clear", icon: <Wand2 size={16} strokeWidth={1.8} /> },
     { id: "restore" as const, label: "Restore", icon: <Paintbrush size={16} strokeWidth={1.8} /> },
     { id: "erase" as const, label: "Erase", icon: <Eraser size={16} strokeWidth={1.8} /> },
   ];
 
+  if (!items.length && !loading) {
+    return (
+      <FormStack>
+        <label className="flex h-48 cursor-pointer flex-col items-center justify-center gap-2 rounded-[22px] border border-dashed border-[#c9cfee] bg-white/45 px-6 text-center transition hover:bg-white/70">
+          <ImagePlus size={28} strokeWidth={1.5} className="text-[#5b6aa6]" />
+          <span className="font-serif text-[20px] font-semibold text-sn-navy">Choose photos</span>
+          <span className="text-[14px] text-sn-ink">
+            Pick one or a whole batch. Backgrounds come off on their own.
+          </span>
+          {/* sr-only rather than hidden, for iOS Safari */}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => addFiles(e.target.files)}
+            className="sr-only"
+          />
+        </label>
+      </FormStack>
+    );
+  }
+
   return (
     <FormStack>
-      {!file ? (
-        <label className="flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] border border-dashed border-[#c9cfee] bg-white/45 text-[14px] font-semibold text-sn-ink transition hover:bg-white/70">
-          <ImagePlus size={24} strokeWidth={1.6} className="text-[#5b6aa6]" />
-          Choose a photo
-          {/* sr-only rather than hidden, for iOS Safari */}
-          <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
-        </label>
-      ) : (
-        <>
-          <Group label="Cut">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("exterior")}
-                aria-pressed={mode === "exterior"}
-                className={`sn-pill h-10 px-4 text-[14px] ${mode === "exterior" ? "sn-active" : ""}`}
-              >
-                Outline only
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("global")}
-                aria-pressed={mode === "global"}
-                className={`sn-pill h-10 px-4 text-[14px] ${mode === "global" ? "sn-active" : ""}`}
-              >
-                Every matching colour
-              </button>
-            </div>
-          </Group>
+      {/* Every sticker in this batch */}
+      <div className="no-scrollbar -mx-1 flex gap-2.5 overflow-x-auto px-1 py-1.5">
+        {items.map((it) => (
+          <div key={it.id} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setSelectedId(it.id)}
+              aria-label="Touch up this sticker"
+              aria-pressed={it.id === selectedId}
+              className={`grid h-[84px] w-[84px] place-items-center rounded-[18px] bg-[#f4f6fe] bg-[radial-gradient(#dfe3f5_1.2px,transparent_1.2px)] [background-size:12px_12px] p-1.5 transition ${
+                it.id === selectedId ? "ring-[3px] ring-[#94b2f6]" : "ring-1 ring-white"
+              }`}
+            >
+              {it.thumb && (
+                <img src={it.thumb} alt="" className="max-h-full max-w-full object-contain" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => remove(it.id)}
+              aria-label="Remove this one"
+              className="absolute -right-1.5 -top-1.5 grid h-7 w-7 place-items-center rounded-full border border-white bg-white text-[#c2416c] shadow-[var(--shadow-pill)]"
+            >
+              <X size={14} strokeWidth={2.2} />
+            </button>
+          </div>
+        ))}
+        {Array.from({ length: loading }).map((_, i) => (
+          <div
+            key={`l${i}`}
+            className="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-[18px] bg-white/60"
+          >
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#c9d8fd] border-t-[#7f9ef0]" />
+          </div>
+        ))}
+        {items.length + loading < MAX_BATCH && (
+          <label className="grid h-[84px] w-[84px] shrink-0 cursor-pointer place-items-center rounded-[18px] border border-dashed border-[#c9cfee] bg-white/45 text-[#5b6aa6] transition hover:bg-white/70">
+            <Plus size={22} strokeWidth={1.8} />
+            <span className="sr-only">Add more photos</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => addFiles(e.target.files)}
+              className="sr-only"
+            />
+          </label>
+        )}
+      </div>
 
-          <div className="relative flex aspect-video w-full touch-none items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f6fe] bg-[radial-gradient(#dfe3f5_1.5px,transparent_1.5px)] [background-size:16px_16px] p-2">
-            {processing && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/70 text-[14px] text-sn-ink backdrop-blur-xs">
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#c9d8fd] border-t-[#7f9ef0]" />
-                Cutting out…
-              </div>
-            )}
+      {/* The look, for the whole batch */}
+      <Group label={items.length > 1 ? `Look · all ${items.length}` : "Look"}>
+        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-0.5">
+          {BORDERS.map((b) => (
+            <button
+              key={b.label}
+              type="button"
+              onClick={() => setOutlineSize(b.size)}
+              className={chip(outlineSize === b.size)}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+        {outlineSize > 0 && (
+          <div className="flex flex-wrap gap-2.5">
+            {OUTLINE_COLORS.map((c) => {
+              const on = outlineColor === c.value;
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setOutlineColor(c.value)}
+                  aria-label={`${c.label} border`}
+                  aria-pressed={on}
+                  className={`grid h-10 w-10 place-items-center rounded-full border-2 transition ${on ? "border-[#94b2f6] ring-2 ring-white" : "border-white"}`}
+                  style={{ background: c.value }}
+                >
+                  {on && <Check size={16} strokeWidth={2.4} className="text-sn-navy" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex gap-2">
+          {EFFECTS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setEffect(f.id)}
+              className={chip(effect === f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </Group>
+
+      {/* Touch up the selected one */}
+      {selected && (
+        <Group label="Touch up this one">
+          <div className="relative flex aspect-[4/3] w-full touch-none items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f6fe] bg-[radial-gradient(#dfe3f5_1.5px,transparent_1.5px)] [background-size:16px_16px] p-2">
             <canvas
-              ref={previewCanvasRef}
-              onMouseDown={handleCanvasInteractionStart}
-              onMouseMove={handleCanvasInteractionMove}
-              onMouseUp={handleCanvasInteractionEnd}
-              onTouchStart={handleCanvasInteractionStart}
-              onTouchMove={handleCanvasInteractionMove}
-              onTouchEnd={handleCanvasInteractionEnd}
-              className="max-h-full max-w-full cursor-crosshair object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.15)]"
+              ref={editorRef}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+              className="max-h-full max-w-full cursor-crosshair object-contain"
             />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 py-0.5">
             {tools.map((t) => (
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setActiveTool(t.id)}
-                aria-pressed={activeTool === t.id}
-                className={`sn-pill h-10 px-3.5 text-[14px] ${activeTool === t.id ? "sn-active" : ""}`}
+                onClick={() => setTool(t.id)}
+                aria-pressed={tool === t.id}
+                className={chip(tool === t.id)}
               >
                 {t.icon}
                 {t.label}
@@ -411,59 +462,88 @@ export function AddStickerSheet({
             <button
               type="button"
               disabled={history.length <= 1}
-              onClick={handleUndo}
-              className="sn-ghost ml-auto h-10 px-3.5 text-[14px] disabled:opacity-40"
+              onClick={undo}
+              className="sn-ghost h-10 shrink-0 px-3.5 text-[14px] disabled:opacity-40"
             >
               <Undo2 size={16} strokeWidth={1.8} /> Undo
             </button>
           </div>
-
-          {activeTool !== "wand" && (
-            <Group label={`Brush · ${brushSize}px`}>
-              <input type="range" min="6" max="48" value={brushSize} onChange={(e) => setBrushSize(Number(e.target.value))} className={slider} />
-            </Group>
+          {tool !== "wand" && (
+            <label className="block">
+              <span className="text-[13px] text-sn-muted">Brush size</span>
+              <input
+                type="range"
+                min="6"
+                max="60"
+                value={brush}
+                onChange={(e) => setBrush(Number(e.target.value))}
+                className={slider}
+              />
+            </label>
           )}
-          <Group label={`Sensitivity · ${tolerance}`}>
-            <input type="range" min="10" max="100" value={tolerance} onChange={(e) => setTolerance(Number(e.target.value))} className={slider} />
-          </Group>
-          <Group label={`Border · ${outlineSize}px`}>
-            <input type="range" min="0" max="24" value={outlineSize} onChange={(e) => setOutlineSize(Number(e.target.value))} className={slider} />
-          </Group>
-
-          {outlineSize > 0 && (
-            <Group label="Border colour">
-              <div className="flex flex-wrap gap-2.5">
-                {OUTLINE_COLORS.map((c) => {
-                  const on = outlineColor === c.value;
-                  return (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => setOutlineColor(c.value)}
-                      aria-label={c.label}
-                      aria-pressed={on}
-                      title={c.label}
-                      className={`grid h-10 w-10 place-items-center rounded-full border-2 transition ${on ? "border-[#94b2f6] ring-2 ring-white" : "border-white"}`}
-                      style={{ background: c.value }}
-                    >
-                      {on && <Check size={16} strokeWidth={2.4} className="text-sn-navy" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </Group>
-          )}
-
-          <div className="flex gap-2.5">
-            <button type="button" onClick={() => setFile(null)} className="sn-ghost h-12 px-6 text-[15px]">
-              Start over
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => recut({ mode: "exterior" })}
+              className={chip(selected.mode === "exterior")}
+            >
+              Around the edges
             </button>
-            <PrimaryButton disabled={uploadSticker.isPending || processing} onClick={() => uploadSticker.mutate()} className="flex-1">
-              Save sticker
-            </PrimaryButton>
+            <button
+              type="button"
+              onClick={() => recut({ mode: "global" })}
+              className={chip(selected.mode === "global")}
+            >
+              Every matching colour
+            </button>
           </div>
-        </>
+          <label className="block">
+            <span className="text-[13px] text-sn-muted">How much background to take away</span>
+            <input
+              type="range"
+              min="10"
+              max="110"
+              value={selected.tolerance}
+              onChange={(e) =>
+                setItems((prev) =>
+                  prev.map((p) =>
+                    p.id === selected.id ? { ...p, tolerance: Number(e.target.value) } : p,
+                  ),
+                )
+              }
+              onPointerUp={(e) =>
+                recut({ tolerance: Number((e.target as HTMLInputElement).value) })
+              }
+              onKeyUp={(e) => recut({ tolerance: Number((e.target as HTMLInputElement).value) })}
+              className={slider}
+            />
+          </label>
+        </Group>
       )}
+
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => setItems([])}
+          disabled={!!saving}
+          className="sn-ghost h-12 px-5 text-[15px]"
+        >
+          Clear
+        </button>
+        <PrimaryButton
+          disabled={!!saving || loading > 0 || !items.length}
+          onClick={saveAll}
+          className="flex-1"
+        >
+          {saving
+            ? `Adding ${saving.done} of ${saving.total}…`
+            : loading > 0
+              ? "Cutting out…"
+              : items.length === 1
+                ? "Add sticker"
+                : `Add all ${items.length} stickers`}
+        </PrimaryButton>
+      </div>
     </FormStack>
   );
 }
