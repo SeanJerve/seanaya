@@ -52,14 +52,14 @@ export function useLiveFallback({
       const v = videoRef.current;
       if (!v || document.visibilityState !== "visible") return;
       // Unmirrored, like real video: your partner sees you the right way round.
-      const img = grabPortrait(v, 260, false, 0.55);
+      const img = grabPortrait(v, 330, false, 0.5);
       if (img)
         channelRef.current?.send({
           type: "broadcast",
           event: "frame",
           payload: { from: slot, img },
         });
-    }, 220);
+    }, 140);
     return () => clearInterval(t);
   }, [shouldSend, slot, videoRef]);
 

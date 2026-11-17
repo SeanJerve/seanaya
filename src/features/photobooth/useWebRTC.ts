@@ -7,10 +7,29 @@ interface UseWebRTCOptions {
   enabled: boolean;
 }
 
-const ICE_SERVERS = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
+/**
+ * STUN finds a direct path between the phones. On mobile data that path is often
+ * blocked, so a TURN relay is needed for live video: set VITE_TURN_URLS (comma
+ * separated), VITE_TURN_USERNAME and VITE_TURN_CREDENTIAL in the hosting settings.
+ */
+const turnUrls = (import.meta.env.VITE_TURN_URLS as string | undefined)
+  ?.split(",")
+  .map((u) => u.trim())
+  .filter(Boolean);
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  { urls: "stun:stun.cloudflare.com:3478" },
+  ...(turnUrls?.length
+    ? [
+        {
+          urls: turnUrls,
+          username: import.meta.env.VITE_TURN_USERNAME as string,
+          credential: import.meta.env.VITE_TURN_CREDENTIAL as string,
+        },
+      ]
+    : []),
 ];
+export const HAS_TURN = !!turnUrls?.length;
 
 /**
  * Live two-way camera between the two booth pages.
@@ -35,6 +54,10 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
   const partnerSeen = useRef(false);
   const camGen = useRef(0);
   const mounted = useRef(true);
+  // Reconnect on its own when the call drops or never gets through.
+  const retryRef = useRef<() => void>(() => {});
+  const retries = useRef(0);
+  const dropTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -59,10 +82,22 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     pendingIce.current = [];
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") setPeerConnected(true);
-      // "disconnected" often recovers on its own; only drop the stream when it's really gone.
-      if (pc.connectionState === "disconnected") setPeerConnected(false);
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") dropRemote();
+      if (pcRef.current !== pc) return;
+      if (dropTimer.current) clearTimeout(dropTimer.current);
+      if (pc.connectionState === "connected") {
+        retries.current = 0;
+        setPeerConnected(true);
+      }
+      // "disconnected" often recovers on its own; give it a few seconds, then redial.
+      if (pc.connectionState === "disconnected") {
+        setPeerConnected(false);
+        dropTimer.current = setTimeout(() => retryRef.current(), 5000);
+      }
+      if (pc.connectionState === "failed") {
+        dropRemote();
+        retryRef.current();
+      }
+      if (pc.connectionState === "closed") dropRemote();
     };
     pc.ontrack = (e) => {
       if (e.streams?.[0]) setRemoteStream(e.streams[0]);
@@ -104,6 +139,18 @@ export function useWebRTC({ relationshipId, userSlot, enabled }: UseWebRTCOption
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [makePc]);
+
+  // Redial with a short backoff: A makes a fresh offer, B asks A for one.
+  retryRef.current = () => {
+    if (!partnerSeen.current || retries.current >= 6) return;
+    const n = ++retries.current;
+    setTimeout(() => {
+      if (!mounted.current || !partnerSeen.current) return;
+      if (pcRef.current?.connectionState === "connected") return;
+      if (userSlot === "a") sendOffer();
+      else send("hello", { reply: false });
+    }, 800 * n);
+  };
 
   const startCamera = useCallback(async () => {
     const gen = ++camGen.current;
