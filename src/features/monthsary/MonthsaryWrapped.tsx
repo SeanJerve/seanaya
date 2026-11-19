@@ -175,18 +175,18 @@ function getChapterLetter(
     return `Happy 3rd monthsary! Thank you for three wonderful months of joy, sweetness and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, more stickers, and a lifetime together. I love you so much!`;
   }
   if (monthNum === 5) {
-    return `Happy 5th monthsary, ${nameB}. Five months and ${daysTogether} days together — even through all the misunderstandings and fights we've had along the way, we always find our way back to each other. Thank you for staying patient with me, for never giving up on us, and for making every single day worth it. No matter the distance or the rough days, I'll always keep choosing you. I love you so much!`;
+    return `Happy 5th monthsary, ${nameB}. 5 months together, and even through all the misunderstandings and fights we've had along the way, we always find our way back to each other. Thank you for staying patient with me, for never giving up on us, and for making every single day worth it. No matter the distance or the rough days, I'll always keep choosing you. I love you so much!`;
   }
   if (monthNum === 6) {
-    return `Half a year of us — happy 6th monthsary! Six months and ${daysTogether} days of laughter, patience, and building our own little world together. Thank you for being my safest place and my favorite person every single day.`;
+    return `Half a year of us, happy 6th monthsary! 6 months together of laughter, patience, and building our own little world. Thank you for being my safest place and my favorite person every single day.`;
   }
   if (monthNum >= 12 && monthNum % 12 === 0) {
     const years = Math.floor(monthNum / 12);
-    return `Happy ${getOrdinal(years)} anniversary (${ordinal} monthsary), ${nameB}! ${daysTogether} days of us — every season we've walked through has only made me love you deeper. Thank you for every memory, every hug, and for being my forever home.`;
+    return `Happy ${getOrdinal(years)} anniversary (${ordinal} monthsary), ${nameB}! ${daysTogether} days of us, and every season we've walked through has only made me love you deeper. Thank you for every memory, every hug, and for being my forever home.`;
   }
   return `Happy ${ordinal} monthsary! Thank you for ${monthWord} wonderful ${
     monthNum === 1 ? "month" : "months"
-  } — ${daysTogether} days of warmth, sweetness, and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, and a lifetime together. I love you so much!`;
+  } together of warmth, sweetness, and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, and a lifetime together. I love you so much!`;
 }
 
 export function MonthsaryWrapped({ relationshipId }: { relationshipId: string }) {
@@ -376,9 +376,9 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
       (m) => m.category === "photobooth" || (m.title || "").toLowerCase().includes("booth"),
     );
     if (hasBooth) {
-      return `From our monthsaries to our photo booth strip together — thank you for every memory across ${monthWord} ${activeMonth === 1 ? "month" : "months"} of us.`;
+      return `From our monthsaries to our photo booth strip together, thank you for every memory across ${monthWord} ${activeMonth === 1 ? "month" : "months"} of us.`;
     }
-    return `Every monthsary and snapshot we've kept across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together — thank you for always making me smile.`;
+    return `Every monthsary and snapshot we've kept across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together, thank you for always making me smile.`;
   }, [activeMonth, realMemories, monthWord]);
 
   // Ensure all 9 stickers are always available and rendered on the board
