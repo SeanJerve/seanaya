@@ -5,6 +5,7 @@ import { Play, Download, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPin, isAnniversaryMatch, pinStorage, type Slot } from "./pin-utils";
 import { PinKeypad } from "./PinKeypad";
+import { getCurrentMonthsaryNumber, getOrdinal } from "@/features/monthsary/monthsary-utils";
 import { useAppStore } from "@/features/app/store";
 import { ART } from "@/components/seanaya/art";
 import { useCoupleNames } from "@/hooks/useCouple";
@@ -877,7 +878,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
               animate="visible"
               className="mt-4 flex flex-wrap justify-center font-serif text-[36px] font-semibold leading-tight text-sn-navy sm:text-[44px]"
             >
-              {"Happy 3rd Monthsary, Aya!".split(" ").map((word, wordIdx) => (
+              {`Happy ${getOrdinal(getCurrentMonthsaryNumber())} Monthsary, Aya!`.split(" ").map((word, wordIdx) => (
                 <span key={wordIdx} className="inline-block whitespace-nowrap mr-2">
                   {Array.from(word).map((char, charIdx) => (
                     <motion.span key={charIdx} variants={letterVariants} className="inline-block">

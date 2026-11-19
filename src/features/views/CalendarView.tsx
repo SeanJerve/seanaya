@@ -28,6 +28,7 @@ import {
   Play,
 } from "lucide-react";
 import { useAppStore } from "@/features/app/store";
+import { getOrdinal, resolveMemoryMonthsaryNumber } from "@/features/monthsary/monthsary-utils";
 import { toast } from "sonner";
 import { LongPressModal } from "@/components/ui/LongPressModal";
 import { LevelPath, LEVEL_ROW } from "./LevelPath";
@@ -52,7 +53,7 @@ export const isWrappedMemory = (m?: Memory | null) => {
     m.tags?.includes("wrapped") ||
     m.tags?.includes("monthsary") ||
     m.category === "wrapped" ||
-    m.title?.toLowerCase().includes("3rd monthsary") ||
+    /\d+(?:st|nd|rd|th)\s+monthsary/i.test(m.title || "") ||
     m.title?.toLowerCase().includes("monthsary wrapped")
   );
 };
@@ -474,7 +475,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                           <button
                             onClick={() => {
                               if (isWrappedMemory(m)) {
-                                openMonthsary();
+                                openMonthsary(resolveMemoryMonthsaryNumber(m));
                               } else {
                                 setActiveMemory(m);
                               }
@@ -821,7 +822,7 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
                               onClick={() => {
                                 if (isWrappedMemory(m)) {
                                   setIsFullscreenTimeline(false);
-                                  openMonthsary();
+                                  openMonthsary(resolveMemoryMonthsaryNumber(m));
                                 } else {
                                   setIsFullscreenTimeline(false);
                                   setActiveMemory(m);
@@ -920,13 +921,14 @@ export function CalendarView({ relationshipId }: { relationshipId: string }) {
               {isWrappedMemory(activeMemory) && (
                 <button
                   onClick={() => {
+                    const monthNum = resolveMemoryMonthsaryNumber(activeMemory);
                     setActiveMemory(null);
-                    openMonthsary();
+                    openMonthsary(monthNum);
                   }}
                   className="sn-pill w-full h-12 text-[15px]"
                 >
                   <Play size={13} fill="currentColor" />
-                  Play monthsary story
+                  Play {getOrdinal(resolveMemoryMonthsaryNumber(activeMemory))} monthsary story
                 </button>
               )}
 

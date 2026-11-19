@@ -28,6 +28,7 @@ type State = {
   activeRoamingPetIds: string[];
   isPetVisible: boolean;
   isMonthsaryOpen: boolean;
+  monthsaryMonthOverride: number | null;
 };
 
 const getLocalPetIds = () => {
@@ -46,6 +47,7 @@ let state: State = {
   activeRoamingPetIds: getLocalPetIds(),
   isPetVisible: getLocalPetVisible(),
   isMonthsaryOpen: false, // Opens after password unlock once
+  monthsaryMonthOverride: null,
 };
 const listeners = new Set<() => void>();
 const subscribe = (fn: () => void) => {
@@ -67,19 +69,25 @@ export function useAppStore() {
     activeRoamingPetIds: s.activeRoamingPetIds,
     isPetVisible: s.isPetVisible,
     isMonthsaryOpen: s.isMonthsaryOpen,
-    openMonthsary: () => {
-      state = { ...state, isMonthsaryOpen: true };
+    monthsaryMonthOverride: s.monthsaryMonthOverride,
+    openMonthsary: (monthOverride?: number | null) => {
+      state = {
+        ...state,
+        isMonthsaryOpen: true,
+        monthsaryMonthOverride: typeof monthOverride === "number" ? monthOverride : null,
+      };
       emit();
     },
     closeMonthsary: () => {
       if (typeof window !== "undefined") {
         const slot = pinStorage.getSlot();
+        const ym = new Date().toISOString().slice(0, 7);
         if (slot) {
-          localStorage.setItem(`seanaya_3rd_monthsary_seen_${slot}`, "true");
+          localStorage.setItem(`seanaya_monthsary_seen_${ym}_${slot}`, "true");
         }
-        localStorage.setItem("seanaya_3rd_monthsary_seen", "true");
+        localStorage.setItem(`seanaya_monthsary_seen_${ym}`, "true");
       }
-      state = { ...state, isMonthsaryOpen: false };
+      state = { ...state, isMonthsaryOpen: false, monthsaryMonthOverride: null };
       emit();
     },
     setTab: (t: TabKey) => {
@@ -131,19 +139,24 @@ export function useAppStore() {
 }
 
 useAppStore.getState = getSnapshot;
-useAppStore.openMonthsary = () => {
-  state = { ...state, isMonthsaryOpen: true };
+useAppStore.openMonthsary = (monthOverride?: number | null) => {
+  state = {
+    ...state,
+    isMonthsaryOpen: true,
+    monthsaryMonthOverride: typeof monthOverride === "number" ? monthOverride : null,
+  };
   emit();
 };
 useAppStore.closeMonthsary = () => {
   if (typeof window !== "undefined") {
     const slot = pinStorage.getSlot();
+    const ym = new Date().toISOString().slice(0, 7);
     if (slot) {
-      localStorage.setItem(`seanaya_3rd_monthsary_seen_${slot}`, "true");
+      localStorage.setItem(`seanaya_monthsary_seen_${ym}_${slot}`, "true");
     }
-    localStorage.setItem("seanaya_3rd_monthsary_seen", "true");
+    localStorage.setItem(`seanaya_monthsary_seen_${ym}`, "true");
   }
-  state = { ...state, isMonthsaryOpen: false };
+  state = { ...state, isMonthsaryOpen: false, monthsaryMonthOverride: null };
   emit();
 };
 
@@ -156,12 +169,11 @@ declare global {
 // Local development helper only.
 if (typeof window !== "undefined" && import.meta.env.DEV) {
   window.resetMonthsary = () => {
-    localStorage.removeItem("seanaya_3rd_monthsary_seen");
-    localStorage.removeItem("seanaya_3rd_monthsary_seen_a");
-    localStorage.removeItem("seanaya_3rd_monthsary_seen_b");
-    console.log(
-      "[Seanaya] 3rd monthsary flags reset! Refresh or re-enter PIN to experience it again.",
-    );
+    const ym = new Date().toISOString().slice(0, 7);
+    localStorage.removeItem(`seanaya_monthsary_seen_${ym}`);
+    localStorage.removeItem(`seanaya_monthsary_seen_${ym}_a`);
+    localStorage.removeItem(`seanaya_monthsary_seen_${ym}_b`);
+    console.log("[Seanaya] Monthsary flags reset!");
   };
 }
 

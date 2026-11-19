@@ -5,7 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/features/app/store";
 import { useCoupleNames } from "@/hooks/useCouple";
 import { useRelationship } from "@/hooks/useRelationship";
-import { X, Heart, RotateCcw, ChevronRight, Camera, Layers } from "lucide-react";
+import { X, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { getMonthsaryDetails, getOrdinal } from "./monthsary-utils";
 
 type Pet = {
   id: string;
@@ -21,6 +23,8 @@ type Memory = {
   cover_url: string | null;
   memory_date: string | null;
   description: string | null;
+  category?: string | null;
+  tags?: string[] | null;
 };
 
 type StickerItem = {
@@ -160,20 +164,65 @@ function BackgroundSparkles() {
   );
 }
 
+function getChapterLetter(
+  monthNum: number,
+  ordinal: string,
+  monthWord: string,
+  daysTogether: number,
+  nameB: string,
+): string {
+  if (monthNum === 3) {
+    return `Happy 3rd monthsary! Thank you for three wonderful months of joy, sweetness and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, more stickers, and a lifetime together. I love you so much!`;
+  }
+  if (monthNum === 5) {
+    return `Happy 5th monthsary, ${nameB}. Five months and ${daysTogether} days of choosing each other across every quiet morning and late-night call. Every memory we keep here, every note on our wall, and every little moment with you makes this space feel like home. No matter the distance, my heart is always right there with you. I love you so much!`;
+  }
+  if (monthNum === 6) {
+    return `Half a year of us — happy 6th monthsary! Six months and ${daysTogether} days of laughter, patience, and building our own little world together. Thank you for being my safest place and my favorite person every single day.`;
+  }
+  if (monthNum >= 12 && monthNum % 12 === 0) {
+    const years = Math.floor(monthNum / 12);
+    return `Happy ${getOrdinal(years)} anniversary (${ordinal} monthsary), ${nameB}! ${daysTogether} days of us — every season we've walked through has only made me love you deeper. Thank you for every memory, every hug, and for being my forever home.`;
+  }
+  return `Happy ${ordinal} monthsary! Thank you for ${monthWord} wonderful ${
+    monthNum === 1 ? "month" : "months"
+  } — ${daysTogether} days of warmth, sweetness, and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, and a lifetime together. I love you so much!`;
+}
+
 export function MonthsaryWrapped({ relationshipId }: { relationshipId: string }) {
-  const { isMonthsaryOpen, closeMonthsary } = useAppStore();
+  const { isMonthsaryOpen, monthsaryMonthOverride, closeMonthsary } = useAppStore();
   const couple = useCoupleNames();
   const nameA = couple.slot === "a" ? couple.me : couple.partner;
   const nameB = couple.slot === "a" ? couple.partner : couple.me;
   const { data: rel } = useRelationship();
   const startISO = rel?.anniversary || "2026-06-19";
-  const startLabel = new Date(startISO + "T00:00:00").toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isMonthsaryOpen) {
+      setSelectedChapter(monthsaryMonthOverride ?? null);
+      setCurrentSlide(0);
+    }
+  }, [isMonthsaryOpen, monthsaryMonthOverride]);
+
+  const details = useMemo(
+    () => getMonthsaryDetails(selectedChapter ?? monthsaryMonthOverride, startISO),
+    [selectedChapter, monthsaryMonthOverride, startISO],
+  );
+  const {
+    activeMonth,
+    currentMaxMonth,
+    ordinal,
+    monthWord,
+    monthWordCap,
+    startFormatted: startLabel,
+    milestoneShortDate,
+    milestoneLongDate,
+    milestoneDateISO,
+    daysTogether,
+  } = details;
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -205,9 +254,9 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
           .order("created_at", { ascending: true }),
         supabase
           .from("memories")
-          .select("id,title,cover_url,memory_date,description")
+          .select("id,title,cover_url,memory_date,description,category,tags")
           .eq("relationship_id", relationshipId)
-          .order("memory_date", { ascending: true }),
+          .order("memory_date", { ascending: false }),
         supabase
           .from("hugs")
           .select("id", { count: "exact", head: true })
@@ -224,11 +273,42 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
     },
   });
 
-  // Calculate days together since June 19, 2026
-  const daysTogether = useMemo(() => {
-    const start = new Date(startISO + "T00:00:00");
-    return Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24)));
-  }, [startISO]);
+  // Real memories (excluding wrapped meta-entries, filtered up to the selected chapter)
+  const realMemories = useMemo(() => {
+    const all = stats?.memories ?? [];
+    const nonWrapped = all.filter(
+      (m) =>
+        !m.tags?.includes("wrapped") &&
+        m.category !== "wrapped" &&
+        !m.title?.toLowerCase().includes("monthsary wrapped"),
+    );
+    const pool = nonWrapped.length > 0 ? nonWrapped : all;
+    const upToChapter = pool.filter((m) => !m.memory_date || m.memory_date <= milestoneDateISO);
+    return upToChapter.length > 0 ? upToChapter : pool;
+  }, [stats?.memories, milestoneDateISO]);
+
+  // Featured text note from Love Wall
+  const featuredNote = useMemo(() => {
+    const list = (stats?.notes ?? []).filter(
+      (n) => n.body && n.body.trim() !== "" && n.body !== "(photo)",
+    );
+    return list[0] ?? null;
+  }, [stats?.notes]);
+
+  // Dynamic caption for memories slide
+  const memoriesCaption = useMemo(() => {
+    if (activeMonth === 3) {
+      return "From our 1st and 2nd monthsary to my 22nd birthday with your sweet donut cake, thank you for always making me smile.";
+    }
+    const titles = realMemories
+      .slice(0, 3)
+      .map((m) => m.title?.trim())
+      .filter(Boolean);
+    if (titles.length >= 2) {
+      return `From "${titles[titles.length - 1]}" to "${titles[0]}" — thank you for every little snapshot we've kept across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together.`;
+    }
+    return `Every snapshot we've saved across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together — thank you for always making me smile.`;
+  }, [activeMonth, realMemories, monthWord]);
 
   // Ensure all 9 stickers are always available and rendered on the board
   const displayStickers = useMemo(() => {
@@ -483,7 +563,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="3rd monthsary story"
+        aria-label={`${ordinal} monthsary story`}
         className="fixed inset-0 z-50 flex select-none flex-col justify-between overflow-hidden"
         style={{ background: "var(--gradient-sky)" }}
         onPointerDown={startHold}
@@ -537,7 +617,40 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
             })}
           </div>
           <div className="flex items-center justify-between">
-            <span className="sn-label">3rd monthsary</span>
+            <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
+              <span className="sn-label">
+                {ordinal} monthsary · {milestoneShortDate}
+              </span>
+              {currentMaxMonth > 1 && (
+                <div className="inline-flex items-center gap-0.5 rounded-full border border-white/75 bg-white/55 px-1.5 py-0.5 text-[11px] font-semibold text-sn-navy backdrop-blur-sm">
+                  <button
+                    type="button"
+                    disabled={activeMonth <= 1}
+                    onClick={() => {
+                      setSelectedChapter(Math.max(1, activeMonth - 1));
+                      setCurrentSlide(0);
+                    }}
+                    aria-label="Previous monthsary chapter"
+                    className="p-0.5 text-sn-navy/70 transition hover:text-sn-navy disabled:opacity-30"
+                  >
+                    <ChevronLeft size={13} strokeWidth={2} />
+                  </button>
+                  <span className="px-1 tabular-nums">{ordinal}</span>
+                  <button
+                    type="button"
+                    disabled={activeMonth >= currentMaxMonth}
+                    onClick={() => {
+                      setSelectedChapter(Math.min(currentMaxMonth, activeMonth + 1));
+                      setCurrentSlide(0);
+                    }}
+                    aria-label="Next monthsary chapter"
+                    className="p-0.5 text-sn-navy/70 transition hover:text-sn-navy disabled:opacity-30"
+                  >
+                    <ChevronRight size={13} strokeWidth={2} />
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -555,14 +668,14 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
         <div className="relative z-20 mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col items-center justify-center px-6 text-center">
           <AnimatePresence mode="wait">
             {currentSlide === 0 && (
-              <motion.div key="s0" {...slideMotion} className="flex w-full flex-col items-center">
+              <motion.div key={`s0-${activeMonth}`} {...slideMotion} className="flex w-full flex-col items-center">
                 <motion.h1
                   variants={sentenceVariants}
                   initial="hidden"
                   animate="visible"
                   className={`${title} flex flex-wrap justify-center`}
                 >
-                  {`Happy 3rd monthsary, ${nameB}`.split(" ").map((word, wi) => (
+                  {`Happy ${ordinal} monthsary, ${nameB}`.split(" ").map((word, wi) => (
                     <span key={wi} className="mr-2.5 inline-block whitespace-nowrap">
                       {Array.from(word).map((ch, ci) => (
                         <motion.span key={ci} variants={letterVariants} className="inline-block">
@@ -578,7 +691,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                   transition={{ delay: 0.4, duration: 0.5 }}
                   className="sn-hand mt-2 text-[22px] text-sn-ink"
                 >
-                  three months of us
+                  {monthWord} {activeMonth === 1 ? "month" : "months"} of us
                 </motion.p>
                 <motion.div
                   initial={{ scale: 0.85, opacity: 0 }}
@@ -615,8 +728,10 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
             )}
 
             {currentSlide === 1 && (
-              <motion.div key="s1" {...slideMotion} className="flex w-full flex-col items-center">
-                <h2 className={title}>Three months together</h2>
+              <motion.div key={`s1-${activeMonth}`} {...slideMotion} className="flex w-full flex-col items-center">
+                <h2 className={title}>
+                  {monthWordCap} {activeMonth === 1 ? "month" : "months"} together
+                </h2>
                 <div className="mt-8 flex items-baseline gap-3">
                   <span className="font-serif text-[96px] font-bold leading-none tracking-[-0.02em] text-sn-navy tabular-nums sm:text-[120px]">
                     {daysTogether}
@@ -642,11 +757,14 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
             )}
 
             {currentSlide === 2 && (
-              <motion.div key="s2" {...slideMotion} className="flex w-full flex-col items-center">
+              <motion.div key={`s2-${activeMonth}`} {...slideMotion} className="flex w-full flex-col items-center">
                 <h2 className={title}>Memories we kept</h2>
                 <div className="mt-8 flex w-full items-start justify-center gap-3 sm:gap-5">
-                  {(stats?.memories.slice(0, 3) || []).map((m, idx) => {
+                  {realMemories.slice(0, 3).map((m, idx) => {
                     const rot = [-4, 3, -2][idx % 3];
+                    const dateLabel = m.memory_date
+                      ? format(new Date(`${m.memory_date.split("T")[0]}T00:00:00`), "MMM d")
+                      : null;
                     return (
                       <motion.figure
                         key={m.id}
@@ -665,13 +783,15 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                         <figcaption className="mt-2 truncate text-left font-serif text-[14px] font-semibold text-sn-navy">
                           {m.title}
                         </figcaption>
+                        {dateLabel && (
+                          <div className="text-left text-[11px] text-sn-muted">{dateLabel}</div>
+                        )}
                       </motion.figure>
                     );
                   })}
                 </div>
                 <p className="sn-hand mt-8 max-w-[440px] text-[20px] leading-snug text-sn-ink">
-                  From our 1st and 2nd monthsary to my 22nd birthday with your sweet donut cake,
-                  thank you for always making me smile.
+                  {memoriesCaption}
                 </p>
               </motion.div>
             )}
@@ -718,6 +838,11 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                     );
                   })}
                 </div>
+                {featuredNote && (
+                  <p className="sn-hand mt-4 max-w-[420px] line-clamp-2 text-[19px] leading-snug text-sn-ink">
+                    "{featuredNote.body}"
+                  </p>
+                )}
               </motion.div>
             )}
 
@@ -753,17 +878,19 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
             )}
 
             {currentSlide === 5 && (
-              <motion.div key="s5" {...slideMotion} className="flex w-full flex-col items-center">
+              <motion.div key={`s5-${activeMonth}`} {...slideMotion} className="flex w-full flex-col items-center">
                 <h2 className={title}>
                   {nameA} &amp; {nameB}
                 </h2>
-                <div className="mt-1 text-[15px] text-sn-muted">3rd monthsary · September 19, 2026</div>
+                <div className="mt-1 text-[15px] text-sn-muted">
+                  {ordinal} monthsary · {milestoneLongDate}
+                </div>
                 <div className="mt-7 grid w-full grid-cols-4 gap-2">
                   {[
                     [daysTogether, "days"],
-                    [stats?.memories.length ?? 0, "memories"],
+                    [realMemories.length, "memories"],
                     [stats?.stickers.length ?? 0, "stickers"],
-                    [pets.length, "cats"],
+                    [pets.length, pets.length === 1 ? "cat" : "cats"],
                   ].map(([n, label]) => (
                     <div key={label as string}>
                       <div className="font-serif text-[30px] font-semibold leading-none text-sn-navy tabular-nums">{n}</div>
@@ -775,10 +902,7 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                 <div className="sn-card mt-7 w-full rotate-[-0.6deg] p-6 text-left">
                   <p className="font-serif text-[20px] font-semibold text-sn-navy">Dearest {nameB},</p>
                   <p className="mt-2 text-[15px] leading-relaxed text-sn-ink">
-                    Happy 3rd monthsary! Thank you for three wonderful months of joy, sweetness and
-                    comfort. Even through the distance, you always make me feel like the happiest boy.
-                    Here's to endless more months, more memories, more stickers, and a lifetime
-                    together. I love you so much!
+                    {getChapterLetter(activeMonth, ordinal, monthWord, daysTogether, nameB)}
                   </p>
                   <p className="sn-hand mt-3 text-right text-[22px] text-sn-navy">Forever yours, {nameA}</p>
                 </div>

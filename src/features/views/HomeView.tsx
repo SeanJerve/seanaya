@@ -122,6 +122,11 @@ export function HomeView({
     (nextMonthsary.getFullYear() - start.getFullYear()) * 12 +
       (nextMonthsary.getMonth() - start.getMonth()),
   );
+  const currentMonthsaryNumber = Math.max(
+    1,
+    (thisMonthsary.getFullYear() - start.getFullYear()) * 12 +
+      (thisMonthsary.getMonth() - start.getMonth()),
+  );
   const upcoming = nextEvent
     ? {
         date: new Date(nextEvent.starts_at),
@@ -165,14 +170,16 @@ export function HomeView({
     <div className="relative mx-auto w-full max-w-[640px] px-4 pb-32 pt-5 sm:px-6 lg:max-w-[1186px] lg:pt-4">
       {isMonthsaryToday && (
         <button
-          onClick={openMonthsary}
+          onClick={() => openMonthsary(currentMonthsaryNumber)}
           className="sn-card mb-[18px] flex w-full items-center justify-between gap-4 p-5 text-left sm:px-7"
         >
           <div>
             <div className="font-serif text-[22px] font-semibold text-sn-navy">
-              Happy monthsary, {partner}
+              Happy {ordinal(currentMonthsaryNumber)} monthsary, {partner}
             </div>
-            <p className="mt-0.5 text-[14.5px] text-sn-muted">This month's story is ready.</p>
+            <p className="mt-0.5 text-[14.5px] text-sn-muted">
+              Our {currentMonthsaryNumber}-month story is ready.
+            </p>
           </div>
           <span className="sn-pill h-10 shrink-0 px-5 text-[14px]">Open story</span>
         </button>
@@ -344,7 +351,7 @@ export function HomeView({
 
             {/* ───── Monthly milestone ───── */}
             <section
-              onClick={openMonthsary}
+              onClick={() => openMonthsary()}
               title="Open our monthsary story"
               className="@container flex cursor-pointer flex-col justify-center"
             >
