@@ -175,7 +175,7 @@ function getChapterLetter(
     return `Happy 3rd monthsary! Thank you for three wonderful months of joy, sweetness and comfort. Even through the distance, you always make me feel like the happiest boy. Here's to endless more months, more memories, more stickers, and a lifetime together. I love you so much!`;
   }
   if (monthNum === 5) {
-    return `Happy 5th monthsary, ${nameB}. Five months and ${daysTogether} days of choosing each other across every quiet morning and late-night call. Every memory we keep here, every note on our wall, and every little moment with you makes this space feel like home. No matter the distance, my heart is always right there with you. I love you so much!`;
+    return `Happy 5th monthsary, ${nameB}. Five months and ${daysTogether} days together — even through all the misunderstandings and fights we've had along the way, we always find our way back to each other. Thank you for staying patient with me, for never giving up on us, and for making every single day worth it. No matter the distance or the rough days, I'll always keep choosing you. I love you so much!`;
   }
   if (monthNum === 6) {
     return `Half a year of us — happy 6th monthsary! Six months and ${daysTogether} days of laughter, patience, and building our own little world together. Thank you for being my safest place and my favorite person every single day.`;
@@ -236,56 +236,128 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
     queryKey: ["wrapped-stats", relationshipId],
     enabled: isMonthsaryOpen,
     queryFn: async () => {
-      const [notesRes, stickersRes, petsRes, memoriesRes, hugsRes] = await Promise.all([
-        supabase
-          .from("notes")
-          .select("id,body,image_url,created_at")
-          .eq("relationship_id", relationshipId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("stickers")
-          .select("id,image_url,created_at")
-          .eq("relationship_id", relationshipId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("pets")
-          .select("id,name,species,photos,created_at")
-          .eq("relationship_id", relationshipId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("memories")
-          .select("id,title,cover_url,memory_date,description,category,tags")
-          .eq("relationship_id", relationshipId)
-          .order("memory_date", { ascending: false }),
-        supabase
-          .from("hugs")
-          .select("id", { count: "exact", head: true })
-          .eq("relationship_id", relationshipId),
-      ]);
+      const db = supabase as any;
+      const [notesRes, stickersRes, petsRes, memoriesRes, hugsRes, albumPagesRes] =
+        await Promise.all([
+          supabase
+            .from("notes")
+            .select("id,body,image_url,created_at")
+            .eq("relationship_id", relationshipId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("stickers")
+            .select("id,image_url,created_at")
+            .eq("relationship_id", relationshipId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("pets")
+            .select("id,name,species,photos,created_at")
+            .eq("relationship_id", relationshipId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("memories")
+            .select("id,title,cover_url,memory_date,description,category,tags")
+            .eq("relationship_id", relationshipId)
+            .order("memory_date", { ascending: false }),
+          supabase
+            .from("hugs")
+            .select("id", { count: "exact", head: true })
+            .eq("relationship_id", relationshipId),
+          db
+            .from("album_pages")
+            .select("id,name,created_at,album_items(id,image_url,item_type,created_at)")
+            .eq("relationship_id", relationshipId)
+            .order("created_at", { ascending: false }),
+        ]);
+
+      // Extract saved Photo Booth strips from the Album book
+      const boothMemories: Memory[] = [];
+      for (const page of (albumPagesRes?.data as any[]) || []) {
+        const pageName = String(page.name || "");
+        const items = Array.isArray(page.album_items) ? page.album_items : [];
+        const pic = items.find(
+          (it: any) =>
+            it?.image_url &&
+            (pageName.toLowerCase().includes("booth") ||
+              String(it.image_url).toLowerCase().includes("booth-")),
+        );
+        if (pic?.image_url) {
+          const dateISO = String(pic.created_at || page.created_at || "2026-11-17").slice(0, 10);
+          boothMemories.push({
+            id: `booth-${pic.id || page.id}`,
+            title: pageName || "Photo booth",
+            cover_url: pic.image_url,
+            memory_date: dateISO,
+            description: "Taken in our photo booth.",
+            category: "photobooth",
+            tags: ["photobooth"],
+          });
+        }
+      }
 
       return {
         notes: (notesRes.data as NoteItem[]) || [],
         stickers: (stickersRes.data as StickerItem[]) || [],
         pets: (petsRes.data as Pet[]) || [],
         memories: (memoriesRes.data as Memory[]) || [],
+        boothMemories,
         hugsCount: hugsRes.count ?? 0,
       };
     },
   });
 
-  // Real memories (excluding wrapped meta-entries, filtered up to the selected chapter)
+  // Curated memories for Slide 2: only Monthsary memories + Photo Booth (Nov 17), excluding birthday & Day 1 ni Sj
   const realMemories = useMemo(() => {
     const all = stats?.memories ?? [];
-    const nonWrapped = all.filter(
-      (m) =>
-        !m.tags?.includes("wrapped") &&
-        m.category !== "wrapped" &&
-        !m.title?.toLowerCase().includes("monthsary wrapped"),
+    const boothFromAlbum = stats?.boothMemories ?? [];
+
+    const isExcluded = (m: Memory) => {
+      const t = (m.title || "").toLowerCase();
+      return (
+        m.tags?.includes("wrapped") ||
+        m.category === "wrapped" ||
+        t.includes("monthsary wrapped") ||
+        /\b(bday|b-day|birthday)\b/i.test(t) ||
+        /\bday\s*1\b/i.test(t)
+      );
+    };
+
+    const isMonthsaryOrBooth = (m: Memory) => {
+      const t = (m.title || "").toLowerCase();
+      const d = m.memory_date || "";
+      return (
+        t.includes("monthsary") ||
+        t.includes("booth") ||
+        m.category === "photobooth" ||
+        m.tags?.includes("photobooth") ||
+        d.endsWith("-19") ||
+        d.endsWith("-11-17")
+      );
+    };
+
+    const filteredMemories = all.filter((m) => !isExcluded(m) && isMonthsaryOrBooth(m));
+    const upToChapter = filteredMemories.filter(
+      (m) => !m.memory_date || m.memory_date <= milestoneDateISO,
     );
-    const pool = nonWrapped.length > 0 ? nonWrapped : all;
-    const upToChapter = pool.filter((m) => !m.memory_date || m.memory_date <= milestoneDateISO);
-    return upToChapter.length > 0 ? upToChapter : pool;
-  }, [stats?.memories, milestoneDateISO]);
+
+    // Prioritize Nov 17 photo booth strip first, then other booth strips up to chapter
+    const eligibleBooth = boothFromAlbum
+      .filter((b) => !b.memory_date || b.memory_date <= milestoneDateISO)
+      .sort((a, b) => {
+        const aNov17 = (a.memory_date || "").endsWith("-11-17") || (a.title || "").toLowerCase().includes("nov 17");
+        const bNov17 = (b.memory_date || "").endsWith("-11-17") || (b.title || "").toLowerCase().includes("nov 17");
+        if (aNov17 && !bNov17) return -1;
+        if (!aNov17 && bNov17) return 1;
+        return (b.memory_date || "").localeCompare(a.memory_date || "");
+      });
+
+    const primaryBooth = eligibleBooth.slice(0, 1);
+    const combined = [...primaryBooth, ...upToChapter];
+    if (combined.length > 0) return combined;
+
+    // Fallback to any non-excluded memories if none matched strictly
+    return all.filter((m) => !isExcluded(m));
+  }, [stats?.memories, stats?.boothMemories, milestoneDateISO]);
 
   // Featured text note from Love Wall
   const featuredNote = useMemo(() => {
@@ -298,16 +370,15 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
   // Dynamic caption for memories slide
   const memoriesCaption = useMemo(() => {
     if (activeMonth === 3) {
-      return "From our 1st and 2nd monthsary to my 22nd birthday with your sweet donut cake, thank you for always making me smile.";
+      return "From our 1st and 2nd monthsary to every milestone along the way, thank you for always making me smile.";
     }
-    const titles = realMemories
-      .slice(0, 3)
-      .map((m) => m.title?.trim())
-      .filter(Boolean);
-    if (titles.length >= 2) {
-      return `From "${titles[titles.length - 1]}" to "${titles[0]}" — thank you for every little snapshot we've kept across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together.`;
+    const hasBooth = realMemories.some(
+      (m) => m.category === "photobooth" || (m.title || "").toLowerCase().includes("booth"),
+    );
+    if (hasBooth) {
+      return `From our monthsaries to our photo booth strip together — thank you for every memory across ${monthWord} ${activeMonth === 1 ? "month" : "months"} of us.`;
     }
-    return `Every snapshot we've saved across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together — thank you for always making me smile.`;
+    return `Every monthsary and snapshot we've kept across ${monthWord} ${activeMonth === 1 ? "month" : "months"} together — thank you for always making me smile.`;
   }, [activeMonth, realMemories, monthWord]);
 
   // Ensure all 9 stickers are always available and rendered on the board
@@ -759,9 +830,13 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
             {currentSlide === 2 && (
               <motion.div key={`s2-${activeMonth}`} {...slideMotion} className="flex w-full flex-col items-center">
                 <h2 className={title}>Memories we kept</h2>
-                <div className="mt-8 flex w-full items-start justify-center gap-3 sm:gap-5">
-                  {realMemories.slice(0, 3).map((m, idx) => {
-                    const rot = [-4, 3, -2][idx % 3];
+                <div className="mt-8 flex w-full flex-wrap items-start justify-center gap-3 sm:gap-4">
+                  {realMemories.slice(0, 4).map((m, idx) => {
+                    const rot = [-4, 3, -2, 2.5][idx % 4];
+                    const isBooth =
+                      m.category === "photobooth" ||
+                      m.tags?.includes("photobooth") ||
+                      (m.title || "").toLowerCase().includes("booth");
                     const dateLabel = m.memory_date
                       ? format(new Date(`${m.memory_date.split("T")[0]}T00:00:00`), "MMM d")
                       : null;
@@ -770,17 +845,25 @@ export function MonthsaryWrapped({ relationshipId }: { relationshipId: string })
                         key={m.id}
                         initial={{ opacity: 0, y: 16, rotate: 0 }}
                         animate={{ opacity: 1, y: 0, rotate: rot }}
-                        transition={{ delay: 0.12 * idx, duration: 0.4 }}
-                        className="w-[30%] max-w-[150px] rounded-[3px] bg-white p-2 pb-3 shadow-[0_16px_30px_-16px_rgba(50,70,150,0.6)]"
+                        transition={{ delay: 0.1 * idx, duration: 0.4 }}
+                        className="w-[42%] max-w-[132px] rounded-[3px] bg-white p-2 pb-3 shadow-[0_16px_30px_-16px_rgba(50,70,150,0.6)] sm:w-[23%]"
                       >
-                        <div className="aspect-square w-full overflow-hidden bg-[#e6ecfc]">
+                        <div className="aspect-square w-full overflow-hidden bg-[#eef3fe]">
                           {m.cover_url ? (
-                            <img src={m.cover_url} alt={m.title} className="h-full w-full object-cover" />
+                            <img
+                              src={m.cover_url}
+                              alt={m.title}
+                              className={
+                                isBooth
+                                  ? "h-full w-full object-contain p-0.5"
+                                  : "h-full w-full object-cover"
+                              }
+                            />
                           ) : (
                             <img src="/lily2.webp" alt="" className="h-full w-full object-contain p-3" />
                           )}
                         </div>
-                        <figcaption className="mt-2 truncate text-left font-serif text-[14px] font-semibold text-sn-navy">
+                        <figcaption className="mt-2 truncate text-left font-serif text-[13px] font-semibold text-sn-navy">
                           {m.title}
                         </figcaption>
                         {dateLabel && (
